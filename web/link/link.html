@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="zh-CN">
+{{template "layout/head.html" .}}
+<header class="not-home-page" id="page-header">
+    {{template "layout/nav.html" .}}
+    <div id="page-site-info">
+        <h1 id="site-title">{{ .title}}</h1>
+    </div>
+</header>
+<body>
+{{template "sidebar/sidebar.html"}}
+<div class="page" id="body-wrap">
+    <main class="layout" id="content-inner">
+        <div id="page">
+            <div id="article-container">
+                <div class="flink">
+                    <h2 id="友情链接">
+                        <a class="headerlink" href="#友情链接" title="友情链接"></a>友情链接</h2>
+                    <div class="flink-desc">那些人，那些事</div>
+                    <div class="flink-list">
+                        {{range $i, $v := .links}}
+                        {{if eq  $v.Type 1 }}
+                        <div class="flink-list-item">
+                            <a href="{{$v.LinkUrl}}" target="_blank" title="{{$v.Title}}">
+                                <div class="flink-item-icon">
+                                    <img alt="{{$v.Title}}" class="no-lightbox" src="{{$v.LinkIcon}}"/>
+                                </div>
+                                <div class="flink-item-name">{{$v.Title}}</div>
+                                <div class="flink-item-desc" title="{{$v.LinkDesc}}">{{$v.LinkDesc}}</div>
+                            </a>
+                        </div>
+                        {{end}}
+                        {{end}}
+                    </div>
+                    <h2 id="网站"><a class="headerlink" href="#网站" title="网站"></a>网站</h2>
+                    <div class="flink-desc">值得推荐的网站</div>
+                    <div class="flink-list">
+                        {{range $i, $v := .links}}
+                        {{if eq  $v.Type 0 }}
+                        <div class="flink-list-item">
+                            <a href="{{$v.LinkUrl}}" target="_blank" title="{{$v.Title}}">
+                                <div class="flink-item-icon">
+                                    <img alt="{{$v.Title}}" class="no-lightbox" src="{{$v.LinkIcon}}"/>
+                                </div>
+                                <div class="flink-item-name">{{$v.Title}}</div>
+                                <div class="flink-item-desc" title="{{$v.LinkDesc}}">{{$v.LinkDesc}}</div>
+                            </a>
+                        </div>
+                        {{end}}
+                        {{end}}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="aside-content" id="aside-content">
+            {{template "card-info.html" .}}
+            {{template "card-announcement.html" .}}
+            {{template "aside/sticky_layout.html" .}}
+        </div>
+    </main>
+    {{template "layout/footer.html" .}}
+</div>
+<script>
+    GLOBAL_CONFIG_SITE.isToc = false
+</script>
+{{template "layout/foot.html" .}}
+</body>
+</html>

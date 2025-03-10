@@ -1,0 +1,30 @@
+http:
+  port: 8000
+
+# 服务端链接地址主要为前端提供服务
+system:
+  baseUrl: http://192.168.2.166:8000
+
+# 百度定时推送 方便收绿
+baidu:
+  push: true
+  url: https://www.keepon.online
+  token: VzXKVoNrqnSAWINA
+
+
+minio:
+  serverUrl: http://192.168.3.36:9000
+  endpoint: 192.168.1.116:9000
+  accessKeyID: root
+  secretAccessKey: 123456abc
+  useSSL: false
+  bucketName: test
+
+gitalk:
+  enable: true
+  clientID: '4b719059ee103950a239'
+  clientSecret: 'b9d642cffab418205da3c8c1a0bf762a9d10817b'
+  repo: 'gitalk'
+  owner: 'keepon-online'
+  admin:
+    - 'keepon-online'

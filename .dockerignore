@@ -1,0 +1,6 @@
+.idea
+.workflow
+logs
+*.exe
+go-site
+test.db

@@ -1,0 +1,11 @@
+<div class="card-widget card-tags">
+  <div class="item-headline">
+    <i class="fas fa-tags"></i><span>标签</span></div>
+  <div class="card-tag-cloud">
+    {{range $i, $v := .tags}}
+    <a href="/tags/{{$v.TagName}}" style="{{$v.CardTagStyle | css}}">
+     {{$v.TagName}}
+    </a>
+    {{end}}
+  </div>
+</div>

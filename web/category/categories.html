@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="zh-CN">
+{{template "layout/head.html" .}}
+<header class="not-home-page" id="page-header">
+    {{template "layout/nav.html" .}}
+    <div id="page-site-info">
+        <h1 id="site-title">{{ .title}}</h1>
+    </div>
+</header>
+<body>
+{{template "sidebar/sidebar.html"}}
+<div class="page" id="body-wrap">
+    <main class="layout" id="content-inner">
+        <div>
+            <div class="category-lists">
+                <ul class="category-list">
+                    {{range $i, $v := .categories}}
+                    <li class="category-list-item">
+                        <a class="category-list-link" href="/categories/{{$v.CategoryName}}">{{$v.CategoryName}}</a>
+                        <span class="category-list-count">{{$v.Total}}</span>
+                    </li>
+                    {{end}}
+                </ul>
+            </div>
+        </div>
+        <div class="aside-content" id="aside-content">
+            {{template "card-info.html" .}}
+            {{template "card-announcement.html" .}}
+            {{template "aside/sticky_layout.html" .}}
+        </div>
+    </main>
+    {{template "layout/footer.html" .}}
+</div>
+{{template "layout/foot.html" .}}
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="zh-CN">
+{{template "layout/head.html" .}}
+<header class="not-home-page" id="page-header">
+    {{template "layout/nav.html" .}}
+    <div id="page-site-info">
+        <h1 id="site-title">{{ .title}}</h1>
+    </div>
+</header>
+<body>
+{{template "sidebar/sidebar.html"}}
+<div class="page" id="body-wrap">
+    <main class="layout" id="content-inner">
+        <div class="recent-posts" id="tag">
+            <div class="article-sort-title">标签--{{.tagName}}</div>
+            <div class="article-sort">
+                {{range $i, $v := .tagsPosts}}
+                <div class="article-sort-item">
+                    <a class="article-sort-item-img" href="/post/{{$v.PostSlug}}" title="{{ $v.Title}}">
+                        <img  alt="{{$v.Title}}" src="{{$v.CoverImage}}">
+                    </a>
+                    <div class="article-sort-item-info">
+                        <div class="article-sort-item-time"><i class="far fa-calendar-alt"></i>
+                            <time class="post-meta-date-created" datetime="{{ $v.PubTime | time}}"
+                                  title="发表于 {{ $v.PubTime | time}}">{{ $v.PubTime | time}}
+                            </time>
+                        </div>
+                        <a class="article-sort-item-title" href="/post/{{$v.PostSlug}}" title="{{$v.Title}}"> {{$v.Title}}</a>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+            {{template "page/pagination.html" .}}
+        </div>
+        <div class="aside-content" id="aside-content">
+            {{template "card-info.html" .}}
+            {{template "card-announcement.html" .}}
+            {{template "aside/sticky_layout.html" .}}
+        </div>
+    </main>
+    {{template "layout/footer.html" .}}
+</div>
+{{template "layout/foot.html" .}}
+</body>
+</html>

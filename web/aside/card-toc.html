@@ -1,0 +1,13 @@
+<div class="card-widget" id="card-toc">
+    <div class="item-headline">
+        <i class="fas fa-stream"></i>
+        <span>目录</span>
+        <span class="toc-percentage"></span>
+    </div>
+    <div class="toc-content is-expand">
+        {{.toc | unescaped}}
+    </div>
+</div>
+<script>
+    let $ol = document.querySelectorAll("ol");for (let i = 0; i < $ol.length; i++) {if (i === 0) {$ol.item(i).classList.add("toc")} else {$ol.item(i).classList.add("toc-child")}}let $li = document.querySelectorAll("li");for (let i = 0; i < $li.length; i++) {$li.item(i).classList.add("toc-item")}let $a = document.querySelectorAll("a");for (let i = 0; i < $a.length; i++) {$a.item(i).classList.add("toc-link")}
+</script>

@@ -1,0 +1,15 @@
+<div class="card-widget card-recent-post">
+    <div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div>
+    <div class="aside-list">
+        {{range $i, $v := .latestPosts}}
+        <div class="aside-list-item">
+            <a class="thumbnail" href="/post/{{$v.PostSlug}}" title="{{$v.Title}}">
+                <img alt="{{$v.Title}}" class="post_bg" src="{{$v.CoverImage}}">
+            </a>
+            <div class="content"><a class="title" href="/post/{{$v.PostSlug}}" title="{{$v.Title}}">{{$v.Title}}</a>
+                <time title="发表于 {{$v.PubTime | time}}">{{$v.PubTime | time}}</time>
+            </div>
+        </div>
+        {{end}}
+    </div>
+</div>

@@ -1,0 +1,69 @@
+package home
+
+import (
+	"gitee.com/jieepre/go-site/internal/pkg/core"
+	"gitee.com/jieepre/go-site/pkg"
+	"gitee.com/jieepre/go-site/pkg/daily"
+	"gitee.com/jieepre/go-site/pkg/page"
+	"gitee.com/jieepre/go-site/pkg/result"
+	"github.com/gin-gonic/gin"
+	"github.com/gookit/slog"
+	"html/template"
+	"net/http"
+	"strconv"
+)
+
+type Handler struct {
+	*core.Context
+}
+
+func (h *Handler) Home(c *gin.Context) {
+	pageNum := c.Param("page")
+	num, _ := strconv.ParseInt(pageNum, 10, 64)
+	coverPosts, _, err := h.Service.PostService.GetCoverPosts(int(num))
+	total := h.Service.PostService.Total()
+	sidebarInfo := h.Service.SidebarService.Sidebar()
+	site, err := h.Service.WebSiteService.GetWebSite()
+	if err != nil {
+		slog.Errorf("首页错误: %s", err.Error())
+		c.HTML(http.StatusOK, "error.html", nil)
+		return
+	}
+	//传到模板中需要转换成template.HTML类型，否则html代码会被转义
+	paginationTpl, err := page.HandleIndex(int(total), int(num), "page")
+	if err != nil {
+		slog.Errorf("首页错误: %s", err.Error())
+		c.HTML(http.StatusOK, "error.html", nil)
+		return
+	}
+	pagination := template.HTML(paginationTpl)
+	c.HTML(http.StatusOK, "index.html", gin.H{
+		"coverPosts":      coverPosts,
+		"site":            site,
+		"pages":           pagination,
+		"tags":            sidebarInfo.Tag,
+		"categories":      sidebarInfo.Category,
+		"cardInfo":        sidebarInfo.CardInfo,
+		"latestPosts":     sidebarInfo.LatestPosts,
+		"sidebarArchives": sidebarInfo.SidebarArchives,
+		"wallpaperURL":    pkg.GetBingImage(),
+		"title":           "首页",
+	})
+}
+
+func (h *Handler) Search(c *gin.Context) {
+	keyword := c.Param("keyword")
+	res, err := h.Service.PostService.Search(keyword)
+	if err != nil {
+		result.Error(c, "暂无记录")
+		return
+	}
+	result.Ok(c, res)
+}
+
+func (h *Handler) Daily(c *gin.Context) {
+
+	report := daily.GetDailyReport()
+
+	c.String(200, report)
+}

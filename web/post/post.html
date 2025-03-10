@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="zh-CN">
+{{template "layout/head.html" .}}
+<link href="https://unpkg.com/gitalk/dist/gitalk.css" rel="stylesheet">
+<header class="post-bg" id="page-header"
+        style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')">
+    {{template "layout/nav.html" .}}
+    <div id="post-info">
+        <h1 class="post-title">{{.posts.Title}}</h1>
+        <div id="post-meta">
+            <div class="meta-firstline"><span class="post-meta-date"><i
+                    class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time
+                    class="post-meta-date-created" datetime="{{.posts.CreateTime|time}}"
+                    title="发表于 {{.posts.CreateTime |time}}"> {{.posts.CreateTime|time}}</time><span
+                    class="post-meta-separator">|</span><i
+                    class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time
+                    class="post-meta-date-updated" datetime="{{.posts.LastModifiedTime|time}}"
+                    title="更新于 {{.posts.LastModifiedTime|time}}"> {{.posts.LastModifiedTime|time}}</time></span><span
+                    class="post-meta-categories"><span class="post-meta-separator">|</span><i
+                    class="fas fa-inbox fa-fw post-meta-icon"></i><a
+                    class="post-meta-categories" href="/categories/{{.posts.CategoryName}}">{{.posts.CategoryName}}</a></span>
+            </div>
+            <div class="meta-secondline"><span class="post-meta-separator">|</span><span
+                    class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span
+                    class="post-meta-label">字数总计:</span><span class="word-count">{{.posts.WordCount}}</span><span
+                    class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span
+                    class="post-meta-label">阅读时长:</span><span>{{.posts.WordCount}}</span></span><span
+                    class="post-meta-separator">|</span>
+                <span class="post-meta-pv-cv" data-flag-title="{{.posts.Title}}" id="">
+                <i class="far fa-eye fa-fw post-meta-icon"></i>
+                    <span class="post-meta-label">阅读量:</span><span>{{.posts.ReadCount}}</span>
+                </span>
+            </div>
+        </div>
+    </div>
+</header>
+<body>
+{{template "sidebar/sidebar.html" .}}
+<div class="page" id="body-wrap">
+    <main class="layout" id="content-inner">
+        <div id="post">
+            <article class="post-content" id="article-container">
+                {{.content | unescaped}}
+            </article>
+            <div class="post-copyright">
+                <div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span
+                        class="post-copyright-info"><a href="{{.site.URL}}">{{.posts.Author}}</a></span></div>
+                <div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span
+                        class="post-copyright-info"><a href="{{.site.URL}}/post/{{.posts.PostSlug}}">{{.site.URL}}/post/{{.posts.PostSlug}}</a></span>
+                </div>
+                <div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span
+                        class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a
+                        href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a
+                        href="{{.site.URL}}" target="_blank">{{.site.Title}}</a>！</span></div>
+            </div>
+            <div class="tag_share">
+                <div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/{{.posts.TagName}}">{{.posts.TagName}}</a>
+                </div>
+            </div>
+            <nav class="pagination-post" id="pagination"></nav>
+            <hr>
+            {{if .gitalk.Enable}}
+            <div id="post-comment">
+                <div class="comment-head">
+                    <div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div>
+                </div>
+                <div class="comment-wrap">
+                    <div>
+                        <div id="gitalk-container">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{ end }}
+        </div>
+        <div class="aside-content" id="aside-content">
+            {{template "card-info.html" .}}
+            <div class="sticky_layout">
+                {{template "card-announcement.html" .}}
+                {{template "card-toc.html" .}}
+                {{template "card-recent-post.html" .}}
+            </div>
+        </div>
+    </main>
+    {{template "layout/footer.html" .}}
+</div>
+{{if .gitalk.Enable}}
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+<script>
+    GLOBAL_CONFIG_SITE.isToc = true;
+    GLOBAL_CONFIG_SITE.isPost = true;
+    let gitalk = new Gitalk({
+        clientID: '{{.gitalk.ClientID}}',
+        clientSecret: '{{.gitalk.ClientSecret}}',
+        repo: '{{.gitalk.Repo}}',
+        owner: '{{.gitalk.Owner}}',
+        admin: '{{.gitalk.Admin}}',
+        language:"zh-CN",
+        title:"{{.posts.Title}}",
+        id: location.pathname,      // Ensure uniqueness and length less than 50
+        distractionFreeMode: false  // Facebook-like distraction free mode
+    })
+
+    gitalk.render('gitalk-container')
+</script>
+{{ end }}
+{{template "layout/foot.html" .}}
+</body>
+</html>

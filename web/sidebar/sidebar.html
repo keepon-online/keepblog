@@ -1,0 +1,34 @@
+{{define "sidebar/sidebar.html"}}
+<div id="sidebar">
+  <div id="menu-mask"></div>
+  <div id="sidebar-menus">
+    <div class="avatar-img is-center">
+      <img alt="avatar" src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png"/></div>
+    <div class="sidebar-site-data site-data is-center"><a href="/archives/">
+      <div class="headline">文章</div>
+      <div class="length-num">1</div>
+    </a><a href="/tags/">
+      <div class="headline">标签</div>
+      <div class="length-num">1</div>
+    </a><a href="/categories/">
+      <div class="headline">分类</div>
+      <div class="length-num">1</div>
+    </a></div>
+    <hr/>
+    <div class="menus_items">
+      <div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a>
+      </div>
+      <div class="menus_item"><a class="site-page" href="/archives/"><i
+              class="fa-fw fas fa-archive"></i><span> 归档</span></a></div>
+      <div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a>
+      </div>
+      <div class="menus_item"><a class="site-page" href="/categories/"><i
+              class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div>
+      <div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a>
+      </div>
+      <div class="menus_item"><a class="site-page" href="/about/"><i
+              class="fa-fw fas fa-heart"></i><span> 关于</span></a></div>
+    </div>
+  </div>
+</div>
+{{end}}

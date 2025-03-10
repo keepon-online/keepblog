@@ -1,0 +1,12 @@
+<div class="card-widget card-archives">
+  <div class="item-headline"><i class="fas fa-archive"></i><span>归档</span></div>
+  <ul class="card-archive-list">
+    {{range $i, $v := .sidebarArchives}}
+    <li class="card-archive-list-item">
+      <a class="card-archive-list-link" href="/archives/{{$v.Year}}">
+        <span class="card-archive-list-date">{{$v.Year | archiveTime }}</span>
+        <span class="card-archive-list-count">{{$v.Total}}</span></a>
+    </li>
+    {{end}}
+  </ul>
+</div>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="zh-CN">
+{{template "layout/head.html" .}}
+<body>
+<div class="error404" id="body-wrap">
+    <header class="not-top-img" id="page-header">
+        {{template "layout/nav.html" .}}
+    </header>
+    <div id="error-wrap">
+        <div class="error-content">
+            <div class="error-img">
+                <img alt="Page not found" src="https://i.loli.net/2020/05/19/aKOcLiyPl2JQdFD.png">
+            </div>
+            <div class="error-info">
+                <h1 class="error_title">404</h1>
+                <div class="error_subtitle">Page Not Found</div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="rightside">
+    <div id="rightside-config-hide">
+        <button id="darkmode" title="浅色和深色模式转换" type="button"><i class="fas fa-adjust"></i></button>
+        <button id="hide-aside-btn" title="单栏和双栏切换" type="button"><i class="fas fa-arrows-alt-h"></i></button>
+    </div>
+    <div id="rightside-config-show">
+        <button id="rightside_config" title="设置" type="button"><i class="fas fa-cog fa-spin"></i></button>
+        <button id="go-up" title="回到顶部" type="button"><i class="fas fa-arrow-up"></i></button>
+    </div>
+</div>
+<div id="menu-mask"></div>
+<div>
+    <script src="/js/utils.js"></script>
+    <script src="/js/main.js"></script>
+    <div class="aplayer no-destroy" data-autoplay="true" data-fixed="true" data-id="60198" data-lrctype="0"
+         data-preload="auto" data-server="netease" data-type="playlist" data-volume="0.5"></div>
+    <canvas class="fireworks" mobile="false"></canvas>
+    <script src="/plugins/butterfly-extsrc/dist/fireworks.min.js"></script>
+    <script src="/plugins/butterfly-extsrc/dist/activate-power-mode.min.js"></script>
+    <script>
+        POWERMODE.colorful = true;
+        POWERMODE.shake = true;
+        POWERMODE.mobile = false;
+        document.body.addEventListener('input', POWERMODE);
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/meting/1.2.0/Meting.min.js"></script>
+    <link href="/plugins/aplayer/dist/APlayer.min.css" media="print" onload="this.media='all'" rel="stylesheet">
+    <script src="/plugins/aplayer/dist/APlayer.min.js"></script>
+    <script src="/plugins/pjax/pjax.min.js"></script>
+    <script async src="/js/busuanzi.js"></script>
+</div>
+</body>
+</html>
