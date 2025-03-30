@@ -9,7 +9,18 @@ trigger:
     - push
 
 steps:
+  # 添加 Gitee 状态通知（关键步骤）
+  - name: notify-gitee
+    image: plugins/git
+    settings:
+      gitee_token:
+        from_secret: GITEE_TOKEN  # 需在 Drone 中配置此密钥
+      context: drone-ci/build     # 在 Gitee 上显示的状态标题
+      status: success             # 可选值: success/failure/pending
+    when:
+      status: [ success, failure ] # 仅在成功或失败时触发
   - name: say-hello
     image: busybox
     commands:
       - echo hello-world
+
