@@ -53,30 +53,54 @@
     <script src="/plugins/aplayer/dist/APlayer.min.js"></script>
     <script src="/plugins/pjax/pjax.min.js"></script>
     <script>
-        const ap = new APlayer({
-            container: document.getElementById('player'),
-            fixed: true,
-            autoplay: true,
-            theme: '#b7daff',
-            loop: 'all',
-            order: 'random',
-            preload: 'auto',
-            lrcType: 0,
-            volume: 0.5,
-            mutex: true,
-            listFolded: false,
-            storageName: 'aplayer-setting',
-            audio: [{
-                name: '平凡之路',
-                artist: '平凡之路',
-                url: 'http://music.163.com/song/media/outer/url?id=500665346.mp3',
-                cover: 'http://p2.music.126.net/IwEI0tFPh4w9OjY6RM2IJQ==/109951163009071893.jpg?param=90y90',
-                type: 'auto'
-            }]
+        // 全局保存播放器实例
+        let ap = null;
+        document.addEventListener('DOMContentLoaded', function () {
+            // 初始化播放器（仅首次加载）
+            if (!ap) {
+                ap = new APlayer({
+                    container: document.getElementById('player'),
+                    fixed: true,
+                    autoplay: true,
+                    theme: '#b7daff',
+                    loop: 'all',
+                    order: 'random',
+                    preload: 'auto',
+                    lrcType: 0,
+                    volume: 0.5,
+                    mutex: true,
+                    listFolded: false,
+                    storageName: 'aplayer-setting',
+                    audio: [{
+                        name: '平凡之路',
+                        artist: '平凡之路',
+                        url: 'http://music.163.com/song/media/outer/url?id=1497917991.mp3',
+                        cover: 'http://p2.music.126.net/IwEI0tFPh4w9OjY6RM2IJQ==/109951163009071893.jpg?param=90y90',
+                        type: 'auto'
+                    }]
+                });
+                // 恢复播放状态
+                const savedState = localStorage.getItem('musicState');
+                if (savedState === 'playing') {
+                    ap.play();
+                }
+            }
+            // 初始化 PJAX
+            const pjax = new Pjax({
+                selectors: ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"], // 仅替换这个容器的内容
+                cacheBust: false
+            });
+
+            // PJAX 加载完成后保持播放器状态
+            document.addEventListener('pjax:success', function () {
+                if (ap && ap.audio.paused && localStorage.getItem('musicState') === 'playing') {
+                    ap.play();
+                }
+            });
         });
-        ap.play()
+
     </script>
-    {{if BaiduStat  .site.BaiduStat}}
+    {{if BaiduStat .site.BaiduStat}}
     <script>
         var _hmt = _hmt || [];
         (function () {
