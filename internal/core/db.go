@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/gookit/slog"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -10,6 +11,12 @@ import (
 )
 
 func InitDB() *gorm.DB {
+	const (
+		maxOpenConns    = 10
+		maxIdleConns    = 5 // 调整为更合理的空闲连接数
+		connMaxLifetime = 60 * time.Minute
+	)
+
 	newLogger := logger.New(
 		Writer{}, // io writer
 		logger.Config{
@@ -19,7 +26,8 @@ func InitDB() *gorm.DB {
 			Colorful:                  false,       // Disable color
 		},
 	)
-	db, err := gorm.Open(sqlite.Open("site.db"), &gorm.Config{
+	dsn := "file:site1.db?_journal=WAL&mode=rwc"
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true,
 		},
@@ -30,24 +38,22 @@ func InitDB() *gorm.DB {
 	})
 
 	if err != nil {
-		return nil
+		panic(fmt.Sprintf("数据库连接失败: %v", err))
 	}
-
-	db.Set("gorm:table_options", "CHARSET=utf8mb4")
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		return nil
+		panic(fmt.Sprintf("获取数据库实例失败: %v", err))
 	}
 
 	// 设置连接池 用于设置最大打开的连接数，默认值为0表示不限制.设置最大的连接数，可以避免并发太高导致连接mysql出现too many connections的错误。
-	sqlDB.SetMaxOpenConns(10)
+	sqlDB.SetMaxOpenConns(maxOpenConns)
 
 	// 设置最大连接数 用于设置闲置的连接数.设置闲置的连接数则当开启的一个连接使用完成后可以放在池里等候下一次使用。
-	sqlDB.SetMaxIdleConns(60)
+	sqlDB.SetMaxIdleConns(maxIdleConns)
 
 	// 设置最大连接超时
-	sqlDB.SetConnMaxLifetime(time.Minute * 60)
+	sqlDB.SetConnMaxLifetime(connMaxLifetime)
 
 	// 使用插件
 	//db.Use(nil)
