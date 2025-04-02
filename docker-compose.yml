@@ -7,8 +7,16 @@ services:
     working_dir: /app
     volumes:
       - ./logs:/app/logs
+      - ./config.yaml:/app/config.yaml
+      - ./site.db:/app/site.db
     environment:
       TZ: Asia/Shanghai
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
     ports:
       - "8589:8589"
       - "8000:8000"
