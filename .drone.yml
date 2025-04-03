@@ -73,18 +73,18 @@ steps:
     settings:
       repo: jieepre/site
       dockerfile: ./Dockerfile
-      tag:
-        - "{{ .Major }}.{{ .Minor }}.{{ .Patch }}" # 自动生成 v2.0.0
+      purge: true
+      insecure: false
       auto_tag: true
       username:
         from_secret: docker_username
       password:
         from_secret: docker_password
     when:
-      event:
-        - tag
+      event: tag
       ref:
-        - refs/tags/v[0-9]+.*  # 正则约束标签格式
+        - refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$  # 严格匹配语义化版本
+        - refs/tags/v[0-9]+\.[0-9]+\.[0-9]+-rc[0-9]+  # 允许候选版本
   # 添加 Gitee 状态通知（关键步骤）
   - name: notify-gitee
     image: plugins/git
