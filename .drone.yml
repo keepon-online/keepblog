@@ -19,40 +19,35 @@ steps:
     image: appleboy/drone-scp
     settings:
       host:
-        - 192.168.2.11
-      username:
-        from_secret: username
-      password:
-        from_secret: password
+        from_secret: ssh_host
+      key:
+        from_secret: ssh_key
       port: 22
       source:
-        - vehicle-tmp
+        - /bin/site
       target:
-        - /home/tcx/docker/tmp
+        - /home/ubuntu/tmp
   - name: 部署
     image: appleboy/drone-ssh
     settings:
       host:
-        - 192.168.2.11
-      username:
-        from_secret: username
-      password:
-        from_secret: password
+        from_secret: ssh_host
+      key:
+        from_secret: ssh_key
       port: 22
       script:
-        - sh /home/tcx/docker/vehicle/deploy.sh
+        - sh /home/ubuntu/tmp/deploy.sh
   - name: release
-    image: plugins/gitea-release
+    image: plugins/gitee-release
     settings:
       api_key:
-        from_secret: release_key
-      base_url: https://git.tuochexia.cn
+        from_secret: GITEE_TOKEN
+      base_url: https://gitee.com/api/v5
       files:
-        - bin/vehicle
+        - bin/site
         - config.yaml
-        - sql/*.sql
-      node: vehicle
-      title: vehicle
+      node: "自动构建版本:${DRONE_TAG}"
+      title: ${DRONE_TAG}
     when:
       event:
         - tag
