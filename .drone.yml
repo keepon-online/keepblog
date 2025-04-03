@@ -70,6 +70,9 @@ steps:
   # 镜像推送（仅限 release 标签）
   - name: docker-push
     image: plugins/docker
+    environment:
+      HTTP_PROXY: http://127.0.0.1:7890
+      HTTPS_PROXY: http://127.0.0.1:7890
     settings:
       repo: jieepre/site
       dockerfile: ./Dockerfile
