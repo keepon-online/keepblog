@@ -13,7 +13,7 @@ workspace:
 
 volumes:
   - name: gocache
-    temp: {}
+    temp: { }
 
 steps:
   - name: 开始构建
@@ -53,34 +53,36 @@ steps:
       script:
         - chmod +x /home/ubuntu/tmp/deploy.sh
         - sh /home/ubuntu/tmp/deploy.sh
-#  - name: release
-#    image: plugins/gitee-release
-#    settings:
-#      api_key:
-#        from_secret: GITEE_TOKEN
-#      base_url: https://gitee.com/api/v5
-#      files:
-#        - bin/site
-#        - config.yaml
-#      node: "自动构建版本:${DRONE_TAG}"
-#      title: ${DRONE_TAG}
-#    when:
-#      event:
-#        - tag
+  #  - name: release
+  #    image: plugins/gitee-release
+  #    settings:
+  #      api_key:
+  #        from_secret: GITEE_TOKEN
+  #      base_url: https://gitee.com/api/v5
+  #      files:
+  #        - bin/site
+  #        - config.yaml
+  #      node: "自动构建版本:${DRONE_TAG}"
+  #      title: ${DRONE_TAG}
+  #    when:
+  #      event:
+  #        - tag
   # 镜像推送（仅限 release 标签）
   - name: docker-push
     image: plugins/docker
     settings:
       repo: jieepre/site
       dockerfile: ./Dockerfile
+      tag:
+        - "{{ .Major }}.{{ .Minor }}.{{ .Patch }}" # 自动生成 v2.0.0
       auto_tag: true
       username:
         from_secret: docker_username
       password:
         from_secret: docker_password
     when:
-      event:
-       - tag
+      event: tag
+      ref: refs/tags/v[0-9]+.*  # 正则约束标签格式
   # 添加 Gitee 状态通知（关键步骤）
   - name: notify-gitee
     image: plugins/git
