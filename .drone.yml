@@ -53,20 +53,20 @@ steps:
       script:
         - chmod +x /home/ubuntu/tmp/deploy.sh
         - sh /home/ubuntu/tmp/deploy.sh
-  - name: release
-    image: plugins/gitee-release
-    settings:
-      api_key:
-        from_secret: GITEE_TOKEN
-      base_url: https://gitee.com/api/v5
-      files:
-        - bin/site
-        - config.yaml
-      node: "自动构建版本:${DRONE_TAG}"
-      title: ${DRONE_TAG}
-    when:
-      event:
-        - tag
+#  - name: release
+#    image: plugins/gitee-release
+#    settings:
+#      api_key:
+#        from_secret: GITEE_TOKEN
+#      base_url: https://gitee.com/api/v5
+#      files:
+#        - bin/site
+#        - config.yaml
+#      node: "自动构建版本:${DRONE_TAG}"
+#      title: ${DRONE_TAG}
+#    when:
+#      event:
+#        - tag
   # 镜像推送（仅限 release 标签）
   - name: docker-push
     image: plugins/docker
