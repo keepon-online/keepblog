@@ -71,8 +71,8 @@ steps:
   - name: docker-push
     image: plugins/docker
     environment:
-      HTTP_PROXY: http://127.0.0.1:7890
-      HTTPS_PROXY: http://127.0.0.1:7890
+      HTTP_PROXY: http://10.0.12.17:7890
+      HTTPS_PROXY: http://10.0.12.17:7890
     settings:
       repo: jieepre/site
       dockerfile: ./Dockerfile
