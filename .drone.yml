@@ -79,8 +79,8 @@ steps:
       password:
         from_secret: docker_password
     when:
-      event: tag
-      ref: refs/tags/release-*
+      event:
+       - tag
   # 添加 Gitee 状态通知（关键步骤）
   - name: notify-gitee
     image: plugins/git
