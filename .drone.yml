@@ -2,15 +2,25 @@ kind: pipeline
 type: docker
 name: 小助理
 
-trigger:
-  branch:
-    - master
-  event:
-    - push
+when:
+  branch: master
+  event: [ push, tag ]
+
+workspace:
+  base: /go
+  path: src/go-site
+
+
+volumes:
+  - name: gocache
+    temp: {}
 
 steps:
   - name: 开始构建
     image: golang:1.21.4-bookworm
+    volumes:
+      - name: gocache
+        path: /go/cache
     commands:
       - ls -la
       - go env -w GOPROXY=https://goproxy.cn,direct
@@ -24,7 +34,7 @@ steps:
         from_secret: ssh_key
       port: 22
       source:
-        - /bin/site
+        - ./bin/site
       target:
         - /home/ubuntu/tmp
   - name: 部署
@@ -35,7 +45,9 @@ steps:
       key:
         from_secret: ssh_key
       port: 22
+      script_stop: true
       script:
+        - chmod +x /home/ubuntu/tmp/deploy.sh
         - sh /home/ubuntu/tmp/deploy.sh
   - name: release
     image: plugins/gitee-release
@@ -55,10 +67,9 @@ steps:
   - name: docker-push
     image: plugins/docker
     settings:
-      repo: your-docker-registry/your-project
-      dockerfile: Dockerfile
+      repo: jieepre/site
+      dockerfile: ./Dockerfile
       auto_tag: true
-      registry: docker.io  # 示例：docker.io
       username:
         from_secret: docker_username
       password:
