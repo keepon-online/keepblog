@@ -32,6 +32,8 @@ steps:
         from_secret: ssh_host
       key:
         from_secret: ssh_key
+      username:
+        from_secret: ssh_username
       port: 22
       source:
         - ./bin/site
@@ -44,6 +46,8 @@ steps:
         from_secret: ssh_host
       key:
         from_secret: ssh_key
+      username:
+        from_secret: ssh_username
       port: 22
       script_stop: true
       script:
