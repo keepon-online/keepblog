@@ -68,7 +68,7 @@ func (LoginLog) TableName() string {
 
 // WebSite 网站配置
 type WebSite struct {
-	Id          *int   `json:"id" gorm:"autoIncrement:id;primaryKey;comment:''"`
+	Id          int    `json:"id" gorm:"autoIncrement:id;primaryKey;comment:''"`
 	Icp         string `json:"icp"`         //icp备案号
 	Notice      string `json:"notice"`      //公告
 	Title       string `json:"title"`       //页面标题
