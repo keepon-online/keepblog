@@ -9,7 +9,7 @@ import (
 
 func Area(intIP uint32) string {
 	// 1、从 dbPath 加载整个 xdb 到内存
-	cBuff, err := xdb.LoadContentFromFile("ip2region.xdb")
+	cBuff, err := xdb.LoadContentFromFile("./data/ip2region.xdb")
 	if err != nil {
 		fmt.Printf("failed: %s\n", err.Error())
 		return ""

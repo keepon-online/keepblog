@@ -3,4 +3,4 @@
 logs
 *.exe
 go-site
-test.db
+*.db

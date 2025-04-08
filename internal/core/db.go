@@ -26,7 +26,7 @@ func InitDB() *gorm.DB {
 			Colorful:                  false,       // Disable color
 		},
 	)
-	dsn := "file:site.db?&mode=rwc"
+	dsn := "file:./data/site.db?&mode=rwc"
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true,
