@@ -58,13 +58,14 @@ func isLANIp(IP net.IP) bool {
 }
 func getLocation(ip string) string {
 	url := "https://whois.pconline.com.cn/ipJson.jsp?json=true&ip=" + ip
-	bytes := ghttp.GetBytes(url)
+	bytes := ghttp.NewClient().GetBytes(url)
 	src := string(bytes)
 	srcCharset := "GBK"
 	tmp, _ := gcharset.ToUTF8(srcCharset, src)
 	json, err := gjson.DecodeToJson(tmp)
 	if err != nil {
-		fmt.Println()
+		fmt.Println(err.Error())
+		return ""
 	}
 	if json.GetInt("code") == 0 {
 		addr := json.GetString("addr")

@@ -33,7 +33,7 @@ func RandInt64(min, max int64) int64 {
 	if min >= max || min == 0 || max == 0 {
 		return max
 	}
-	rand.Seed(time.Now().UnixNano())
+	rand.NewSource(time.Now().UnixNano())
 	return rand.Int63n(max-min+1) + min
 }
 
