@@ -11,19 +11,20 @@ import (
 	"time"
 )
 
+var ignoreURIS = []string{
+	"/css",
+	"/js",
+	"/images",
+	"/plugins",
+	"/robots.txt",
+}
+
 func Statistics() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		url := c.Request.URL.Path
-		ignoreURIS := []string{
-			"/css",
-			"/js",
-			"/images",
-			"/plugins",
-			"/robots.txt",
-		}
 		for _, uri := range ignoreURIS {
-
 			if strings.Contains(url, uri) {
+				c.Next()
 				return
 			}
 
