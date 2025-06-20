@@ -74,6 +74,8 @@ func ParseToken(tokensStr string) (*MyClaims, error) {
 			} else {
 				return nil, errors.New("couldn't handle this token")
 			}
+		} else {
+			return nil, errors.New("couldn't handle this token")
 		}
 	}
 	if claims, ok := token.Claims.(*MyClaims); ok && token.Valid {
