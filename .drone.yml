@@ -80,6 +80,9 @@ steps:
         from_secret: docker_username
       password:
         from_secret: docker_password
+    environment:
+      HTTP_PROXY: "http://10.0.12.17:7890"  # HTTP代理地址
+      HTTPS_PROXY: "http://10.0.12.17:7890" # HTTPS代理地址
     when:
       event: push
   # 添加 Gitee 状态通知（关键步骤）
