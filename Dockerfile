@@ -12,7 +12,8 @@ RUN groupadd -r appuser && \
     useradd -r -g appuser appuser && \
     mkdir -p /app/data && \
     chown -R appuser:appuser /app/data && \
-    chmod 755 /app/data \
+    chmod 755 /app/data
+
 WORKDIR /app
 USER appuser
 COPY --from=builder /app/site /app/site
