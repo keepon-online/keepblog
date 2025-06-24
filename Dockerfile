@@ -11,14 +11,19 @@ FROM ubuntu:22.04
 RUN groupadd -r appuser && \
     useradd -r -g appuser appuser && \
     mkdir -p /app/data && \
-    chown -R appuser:appuser /app/data && \
-    chmod 755 /app/data
+    chown -R appuser:appuser /app/data
 
 WORKDIR /app
-USER appuser
+
 COPY --from=builder /app/site /app/site
-COPY --from=builder /app/data/ip2region.xdb /app/data/ip2region.xdb
-COPY --from=builder /app/config.yaml /app/config.yaml
+COPY --from=builder /app/config.yaml /app/default/config.yaml
+COPY --from=builder /app/data/ip2region.xdb /app/default/ip2region.xdb
+
+# 添加入口点脚本
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 ENV TZ=Asia/Shanghai
 EXPOSE 8000 8589 8890
-ENTRYPOINT ["./site"]
+
+ENTRYPOINT ["/app/entrypoint.sh"]
