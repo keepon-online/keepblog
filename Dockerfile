@@ -14,7 +14,6 @@ RUN groupadd -r appuser && \
     chown -R appuser:appuser /app/data && \
     chmod 755 /app/data \
 WORKDIR /app
-VOLUME /app/data
 USER appuser
 COPY --from=builder /app/site /app/site
 COPY --from=builder /app/data/ip2region.xdb /app/data/ip2region.xdb
