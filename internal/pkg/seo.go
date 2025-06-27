@@ -13,7 +13,7 @@ import (
 func PushSite(urls []string, api string) *system.PushSite {
 	ch := &http.Client{}
 	var site system.PushSite
-	req, err := http.NewRequest("POST", api, bytes.NewBufferString(strings.Join(urls, "\n")))
+	req, err := http.NewRequest(http.MethodPost, api, bytes.NewBufferString(strings.Join(urls, "\n")))
 	if err != nil {
 		slog.Error(err)
 		return nil
