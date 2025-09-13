@@ -3,8 +3,11 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"gitee.com/jieepre/go-site/config"
 	"gitee.com/jieepre/go-site/global"
+	"gitee.com/jieepre/go-site/internal/logger"
 	"gitee.com/jieepre/go-site/internal/model"
 	"gitee.com/jieepre/go-site/internal/model/system"
 	inpkg "gitee.com/jieepre/go-site/internal/pkg"
@@ -13,9 +16,6 @@ import (
 	"gitee.com/jieepre/go-site/pkg/hash"
 	"github.com/go-co-op/gocron"
 	"github.com/gookit/slog"
-	"github.com/gookit/slog/handler"
-	"github.com/gookit/slog/rotatefile"
-	"time"
 )
 
 func init() {
@@ -23,15 +23,26 @@ func init() {
 }
 
 func InitLog() {
-	slog.Configure(func(logger *slog.SugaredLogger) {
-		f := logger.Formatter.(*slog.TextFormatter)
-		f.EnableColor = true
-	})
-	fileHandler, err := handler.NewRotateFileHandler("./logs/site.log", rotatefile.EveryDay, handler.WithLogLevels(slog.AllLevels))
-	if err != nil {
-		return
+	// 使用新的结构化日志系统
+	logConfig := logger.LogConfig{
+		Level:      "info",
+		Format:     "text",
+		Output:     "both", // 同时输出到控制台和文件
+		Path:       "./logs",
+		MaxSize:    100,
+		MaxBackups: 10,
+		MaxAge:     30,
+		Compress:   true,
 	}
-	slog.PushHandler(fileHandler)
+
+	if err := logger.InitLogger(logConfig); err != nil {
+		fmt.Printf("Failed to initialize logger: %v\n", err)
+		// 退回到默认日志配置
+		slog.Configure(func(logger *slog.SugaredLogger) {
+			f := logger.Formatter.(*slog.TextFormatter)
+			f.EnableColor = true
+		})
+	}
 }
 
 func InitResource() {
@@ -40,6 +51,8 @@ func InitResource() {
 		initAdmin()
 		initData()
 	}
+	// 初始化数据库索引
+	InitIndexes()
 }
 
 func initAdmin() {

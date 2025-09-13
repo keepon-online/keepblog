@@ -4,20 +4,21 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 // 自定义一个结构体，实现 gin.ResponseWriter interface
-type responseWriter struct {
+type printResponseWriter struct {
 	gin.ResponseWriter
 	b *bytes.Buffer
 }
 
 // 重写 Write([]byte) (int, error) 方法
-func (w responseWriter) Write(b []byte) (int, error) {
+func (w *printResponseWriter) Write(b []byte) (int, error) {
 	//向一个bytes.buffer中写一份数据来为获取body使用
 	w.b.Write(b)
 	//完成gin.Context.Writer.Write()原有功能
@@ -52,7 +53,7 @@ func PrintMiddleware() gin.HandlerFunc {
 		//客户端IP
 		ip := c.ClientIP()
 
-		writer := responseWriter{
+		writer := &printResponseWriter{
 			c.Writer,
 			bytes.NewBuffer([]byte{}),
 		}

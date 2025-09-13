@@ -1,4 +1,4 @@
-http:
+ttp:
   port: 8000
 
 # 服务端链接地址主要为前端提供服务
@@ -11,6 +11,13 @@ baidu:
   url: https://www.keepon.online
   token: VzXKVoNrqnSAWINA
 
+# Redis配置
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  database: 0
+  enable: false
 
 minio:
   serverUrl: http://192.168.3.36:9000

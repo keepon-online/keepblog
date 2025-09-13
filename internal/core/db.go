@@ -2,28 +2,31 @@ package core
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/gookit/slog"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
-	"time"
 )
 
 func InitDB() *gorm.DB {
 	const (
-		maxOpenConns    = 10
-		maxIdleConns    = 5 // 调整为更合理的空闲连接数
-		connMaxLifetime = 60 * time.Minute
+		maxOpenConns    = 25               // 增加最大连接数
+		maxIdleConns    = 10               // 增加空闲连接数
+		connMaxLifetime = 2 * time.Hour    // 增加连接生命周期
+		connMaxIdleTime = 30 * time.Minute // 新增：空闲连接最大存活时间
 	)
 
 	newLogger := logger.New(
 		Writer{}, // io writer
 		logger.Config{
-			SlowThreshold:             time.Second, // Slow SQL
-			LogLevel:                  logger.Info, // Log level
-			IgnoreRecordNotFoundError: true,        // Ignore ErrRecordNotFound error for logger
-			Colorful:                  false,       // Disable color
+			SlowThreshold:             200 * time.Millisecond, // 降低慢查询阈值
+			LogLevel:                  logger.Warn,            // 调整为Warn级别
+			IgnoreRecordNotFoundError: true,                   // Ignore ErrRecordNotFound error for logger
+			Colorful:                  false,                  // Disable color
+			ParameterizedQueries:      true,                   // 启用参数化查询
 		},
 	)
 	dsn := "file:./data/site.db?&mode=rwc"
@@ -31,10 +34,13 @@ func InitDB() *gorm.DB {
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true,
 		},
-		Logger: newLogger, // 日志配置
+		Logger: newLogger,
 		NowFunc: func() time.Time {
 			return time.Now().Local()
 		},
+		// 性能优化配置
+		PrepareStmt:                              true, // 缓存预编译语句
+		DisableForeignKeyConstraintWhenMigrating: true, // 禁用外键约束，提升性能
 	})
 
 	if err != nil {
@@ -54,6 +60,9 @@ func InitDB() *gorm.DB {
 
 	// 设置最大连接超时
 	sqlDB.SetConnMaxLifetime(connMaxLifetime)
+
+	// 设置空闲连接最大存活时间
+	sqlDB.SetConnMaxIdleTime(connMaxIdleTime)
 
 	// 使用插件
 	//db.Use(nil)
