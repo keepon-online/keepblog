@@ -1,6 +1,8 @@
 package router
 
 import (
+	"net/http"
+
 	"gitee.com/jieepre/go-site/api/admin/about"
 	"gitee.com/jieepre/go-site/api/admin/category"
 	"gitee.com/jieepre/go-site/api/admin/common"
@@ -14,7 +16,6 @@ import (
 	"gitee.com/jieepre/go-site/api/admin/website"
 	"gitee.com/jieepre/go-site/internal/pkg/core"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 func RegisterAdminRouter(ctx *core.Context) {
@@ -88,6 +89,12 @@ func monitorRouter(ctx *core.Context) {
 			Method:     http.MethodGet,
 			Path:       "/server",
 			Handler:    handler.Monitor,
+			Middleware: []gin.HandlerFunc{},
+		},
+		{
+			Method:     http.MethodGet,
+			Path:       "/realtime",
+			Handler:    handler.GetRealtime,
 			Middleware: []gin.HandlerFunc{},
 		},
 		{
