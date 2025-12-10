@@ -18,7 +18,7 @@ type ServerConfig struct {
 // GetServerConfig 获取服务器配置
 func GetServerConfig() *ServerConfig {
 	return &ServerConfig{
-		AdminPort:    ":8000",
+		AdminPort:    ":8001",
 		ConsolePort:  ":8890",
 		WebPort:      ":8589",
 		ReadTimeout:  5 * time.Second,

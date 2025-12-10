@@ -1,12 +1,13 @@
 package post
 
 import (
+	"net/http"
+
 	"gitee.com/jieepre/go-site/config"
 	"gitee.com/jieepre/go-site/internal/pkg/core"
 	"gitee.com/jieepre/go-site/pkg/hash"
 	"gitee.com/jieepre/go-site/pkg/md"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 type Handler struct {
@@ -21,6 +22,10 @@ func (h *Handler) Post(c *gin.Context) {
 		return
 	}
 	posts, err := h.Service.PostService.GetPost(postIds[0])
+	if posts == nil {
+		c.HTML(http.StatusOK, "500.html", nil)
+		return
+	}
 	site, err := h.Service.WebSiteService.GetWebSite()
 	if err != nil {
 		c.HTML(http.StatusOK, "404.html", nil)

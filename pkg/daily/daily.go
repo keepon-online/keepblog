@@ -3,12 +3,13 @@ package daily
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/6tail/lunar-go/calendar"
-	"github.com/gookit/slog"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/6tail/lunar-go/calendar"
+	"github.com/gookit/slog"
 )
 
 type Result struct {
@@ -61,7 +62,7 @@ func GetDailyReport() string {
 
 func GetTitle(dateStr string) string {
 	location, _ := time.LoadLocation("Asia/Shanghai")
-	date, _ := time.ParseInLocation("2006-01-02", dateStr, location)
+	date, _ := time.ParseInLocation(time.DateOnly, dateStr, location)
 	solar := calendar.NewSolarFromDate(date)
 	year := solar.GetYear()
 	month := solar.GetMonth()

@@ -5,6 +5,14 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"net/url"
+	"os"
+	"path"
+	"time"
+
 	"gitee.com/jieepre/go-site/config"
 	"gitee.com/jieepre/go-site/pkg"
 	"github.com/google/uuid"
@@ -13,13 +21,6 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/pkg/errors"
-	"io"
-	"log"
-	"net/http"
-	"net/url"
-	"os"
-	"path"
-	"time"
 )
 
 const (
@@ -49,7 +50,7 @@ func init() {
 func createBucket(bucketName string) {
 	err = client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{Region: "cn-south-1", ObjectLocking: false})
 	if err != nil {
-		slog.Errorf("创建bucket错误: ", err.Error())
+		slog.Errorf("创建bucket错误: %s", err.Error())
 		exists, _ := client.BucketExists(ctx, bucketName)
 		if exists {
 			slog.Errorf("bucket: %s已经存在", bucketName)

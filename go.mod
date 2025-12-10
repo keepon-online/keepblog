@@ -1,10 +1,10 @@
 module gitee.com/jieepre/go-site
 
-go 1.21.4
+go 1.24.0
 
 require (
 	github.com/6tail/lunar-go v1.3.9
-	github.com/88250/lute v1.7.5
+	github.com/88250/lute v1.7.6
 	github.com/alecthomas/chroma v0.10.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gin-contrib/gzip v0.0.6
@@ -12,9 +12,9 @@ require (
 	github.com/go-co-op/gocron v1.36.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gogf/gf v1.16.9
-	github.com/golang-jwt/jwt/v4 v4.5.0
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/uuid v1.4.0
-	github.com/gookit/slog v0.5.4
+	github.com/gookit/slog v0.6.0
 	github.com/lionsoul2014/ip2region/binding/golang v0.0.0-20231013030745-3066d243cd04
 	github.com/mdigger/goldmark-stats v0.0.0-20191227115725-9826a267d573
 	github.com/minio/minio-go/v7 v7.0.63
@@ -24,13 +24,13 @@ require (
 	github.com/shirou/gopsutil/v3 v3.23.10
 	github.com/speps/go-hashids/v2 v2.0.1
 	github.com/spf13/viper v1.17.0
-	github.com/yuin/goldmark v1.6.0
+	github.com/yuin/goldmark v1.7.13
 	github.com/yuin/goldmark-highlighting v0.0.0-20220208100518-594be1970594
-	go.abhg.dev/goldmark/toc v0.7.0
-	golang.org/x/crypto v0.15.0
-	golang.org/x/sync v0.5.0
-	gorm.io/driver/sqlite v1.5.4
-	gorm.io/gorm v1.25.5
+	go.abhg.dev/goldmark/toc v0.12.0
+	golang.org/x/crypto v0.45.0
+	golang.org/x/sync v0.18.0
+	gorm.io/driver/sqlite v1.6.0
+	gorm.io/gorm v1.31.1
 )
 
 require (
@@ -54,9 +54,9 @@ require (
 	github.com/go-playground/validator/v10 v10.16.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gomodule/redigo v1.8.9 // indirect
-	github.com/gookit/color v1.5.4 // indirect
-	github.com/gookit/goutil v0.6.14 // indirect
-	github.com/gookit/gsr v0.1.0 // indirect
+	github.com/gookit/color v1.6.0 // indirect
+	github.com/gookit/goutil v0.7.2 // indirect
+	github.com/gookit/gsr v0.1.1 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/grokify/html-strip-tags-go v0.0.1 // indirect
@@ -72,7 +72,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
-	github.com/mattn/go-sqlite3 v1.14.18 // indirect
+	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -107,9 +107,10 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.6.0 // indirect
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa // indirect
-	golang.org/x/net v0.18.0 // indirect
-	golang.org/x/sys v0.14.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/term v0.37.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
