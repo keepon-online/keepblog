@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strconv"
 	"time"
 
 	"gitee.com/jieepre/go-site/internal/pkg/core"
@@ -211,14 +212,14 @@ func (h *Handler) DiskIOStat(c *gin.Context) {
 	// 转换为旧格式
 	header := []string{"Device", "Total", "Used", "Free", "Use%", "Mounted"}
 	var list [][]string
-	for _, disk := range diskInfo {
+	for _, info := range diskInfo {
 		row := []string{
-			disk.Device,
-			disk.TotalFormat,
-			disk.UsedFormat,
-			disk.FreeFormat,
-			fmt.Sprintf("%.1f%%", disk.UsedPercent),
-			disk.Mountpoint,
+			info.Device,
+			info.TotalFormat,
+			info.UsedFormat,
+			info.FreeFormat,
+			fmt.Sprintf("%.1f%%", info.UsedPercent),
+			info.Mountpoint,
 		}
 		list = append(list, row)
 	}
@@ -358,7 +359,7 @@ func (h *Handler) getMemoryInfo() (*MemoryInfo, error) {
 		Used:        memStat.Used,
 		Free:        memStat.Free,
 		Available:   memStat.Available,
-		UsedPercent: memStat.UsedPercent,
+		UsedPercent: h.formatPercent(memStat.UsedPercent),
 		TotalFormat: h.formatBytes(memStat.Total),
 		UsedFormat:  h.formatBytes(memStat.Used),
 		FreeFormat:  h.formatBytes(memStat.Free),
@@ -374,8 +375,18 @@ func (h *Handler) getDiskInfo() ([]DiskInfo, error) {
 
 	var diskInfos []DiskInfo
 	for _, partition := range partitions {
+
+		// 过滤掉虚拟文件系统和临时分区，只保留真实的硬盘分区
+		if h.isVirtualFilesystem(partition.Fstype) || h.isTempPartition(partition.Mountpoint) {
+			continue
+		}
+
 		usage, err := disk.Usage(partition.Mountpoint)
 		if err != nil {
+			continue
+		}
+		// 只显示有实际容量的分区（过滤掉容量为0的分区）
+		if usage.Total == 0 {
 			continue
 		}
 
@@ -396,6 +407,40 @@ func (h *Handler) getDiskInfo() ([]DiskInfo, error) {
 	return diskInfos, nil
 }
 
+// isVirtualFilesystem 判断是否为虚拟文件系统
+func (h *Handler) isVirtualFilesystem(fstype string) bool {
+	virtualFilesystems := []string{
+		"tmpfs", "devtmpfs", "sysfs", "proc", "cgroup",
+		"cgroup2", "pstore", "squashfs", "overlay",
+		"debugfs", "tracefs", "securityfs", "sockfs",
+		"pipefs", "rpc_pipefs", "rpc_pipe", "binfmt_misc",
+		"devpts", "ramfs", "hugetlbfs", "mqueue",
+	}
+
+	for _, vfs := range virtualFilesystems {
+		if fstype == vfs {
+			return true
+		}
+	}
+	return false
+}
+
+// isTempPartition 判断是否为临时分区或无关紧要的分区
+func (h *Handler) isTempPartition(mountpoint string) bool {
+	tempPartitions := []string{
+		"/dev", "/run", "/sys", "/proc", "/tmp", "/var/tmp",
+		"/boot/efi", "/snap", "/var/lib/docker", "/var/lib/lxc",
+		"/var/lib/kubelet", "/var/lib/containerd", "/lost+found",
+	}
+
+	for _, tp := range tempPartitions {
+		if mountpoint == tp || len(mountpoint) >= len(tp) && mountpoint[:len(tp)] == tp {
+			return true
+		}
+	}
+	return false
+}
+
 // 获取网络信息
 func (h *Handler) getNetworkInfo() ([]NetworkInfo, error) {
 	interfaces, err := psNet.IOCounters(true)
@@ -405,8 +450,16 @@ func (h *Handler) getNetworkInfo() ([]NetworkInfo, error) {
 
 	var networkInfos []NetworkInfo
 	for _, iface := range interfaces {
+		// 过滤掉虚拟网络接口和无用接口
+		if h.isVirtualInterface(iface.Name) {
+			continue
+		}
 		// 检查网络接口状态
 		isUp := h.isNetworkInterfaceUp(iface.Name)
+		// 如果接口未启用且没有流量，则跳过
+		if !isUp && iface.BytesRecv == 0 && iface.BytesSent == 0 {
+			continue
+		}
 
 		networkInfos = append(networkInfos, NetworkInfo{
 			Name:        iface.Name,
@@ -421,6 +474,22 @@ func (h *Handler) getNetworkInfo() ([]NetworkInfo, error) {
 	}
 
 	return networkInfos, nil
+}
+
+// isVirtualInterface 判断是否为虚拟网络接口
+func (h *Handler) isVirtualInterface(name string) bool {
+	virtualInterfaces := []string{
+		"lo", "docker", "br-", "veth", "tun", "tap", "virbr",
+		"vmnet", "vboxnet", "ppp", "ip6gre", "ipip", "sit",
+		"gre", "stf", "gif", "dummy", "nlmon", "zt",
+	}
+
+	for _, prefix := range virtualInterfaces {
+		if len(name) >= len(prefix) && name[:len(prefix)] == prefix {
+			return true
+		}
+	}
+	return false
 }
 
 // 获取系统负载信息
@@ -543,6 +612,11 @@ func (h *Handler) isNetworkInterfaceUp(name string) bool {
 		}
 	}
 	return false
+}
+func (h *Handler) formatPercent(percent float64) float64 {
+	sprintf := fmt.Sprintf("%.1f", percent)
+	float, _ := strconv.ParseFloat(sprintf, 64)
+	return float
 }
 
 // Dashboard相关的兼容性接口（保留）
