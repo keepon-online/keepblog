@@ -1,6 +1,6 @@
 module gitee.com/jieepre/go-site
 
-go 1.24.0
+go 1.24.11
 
 require (
 	github.com/6tail/lunar-go v1.3.9
