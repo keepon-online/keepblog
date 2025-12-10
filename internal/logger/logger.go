@@ -37,7 +37,7 @@ func InitLogger(config LogConfig) error {
 		} else {
 			f := logger.Formatter.(*slog.TextFormatter)
 			f.EnableColor = config.Output == "console" || config.Output == "both"
-			f.TimeFormat = "2006-01-02 15:04:05"
+			f.TimeFormat = time.DateTime
 		}
 	})
 
