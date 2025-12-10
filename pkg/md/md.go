@@ -3,7 +3,8 @@ package md
 import (
 	"bytes"
 	"fmt"
-	"github.com/88250/lute"
+	"strings"
+
 	formathtml "github.com/alecthomas/chroma/formatters/html"
 	stats "github.com/mdigger/goldmark-stats"
 	"github.com/yuin/goldmark"
@@ -14,7 +15,6 @@ import (
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 	"go.abhg.dev/goldmark/toc"
-	"strings"
 )
 
 func Goldmark2html(content []byte) []byte {
@@ -89,15 +89,4 @@ func Goldmarkstats(content []byte) *stats.Info {
 	}
 	doc := goldmark.DefaultParser().Parse(text.NewReader(content))
 	return stats.New(doc, content)
-}
-
-func LuneTet(content string) string {
-	luteEngine := lute.New() // 默认已经启用 GFM 支持以及中文语境优化
-	luteEngine.SetCodeSyntaxHighlightStyleName("xcode-dark")
-	luteEngine.SetCodeSyntaxHighlightLineNum(true)
-	luteEngine.SetCodeSyntaxHighlight(true)
-	luteEngine.SetCodeSyntaxHighlightInlineStyle(true)
-	//luteEngine.SetCodeSyntaxHighlightDetectLang(true)
-	luteEngine.SetToC(true)
-	return luteEngine.MarkdownStr("demo", content)
 }

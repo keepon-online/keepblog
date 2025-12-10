@@ -1,10 +1,11 @@
 package about
 
 import (
+	"net/http"
+
 	"gitee.com/jieepre/go-site/internal/pkg/core"
 	"gitee.com/jieepre/go-site/pkg/md"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 type Handler struct {
@@ -20,10 +21,9 @@ func (h Handler) About(c *gin.Context) {
 		return
 	}
 
-	note := md.LuneTet(about.Note)
 	c.HTML(http.StatusOK, "about.html", gin.H{
 		"about":           about,
-		"note":            note,
+		"note":            string(md.Goldmark2html([]byte(about.Note))),
 		"site":            site,
 		"tags":            sidebarInfo.Tag,
 		"categories":      sidebarInfo.Category,

@@ -4,7 +4,6 @@ go 1.24.0
 
 require (
 	github.com/6tail/lunar-go v1.3.9
-	github.com/88250/lute v1.7.6
 	github.com/alecthomas/chroma v0.10.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gin-contrib/gzip v0.0.6
@@ -57,7 +56,6 @@ require (
 	github.com/gookit/color v1.6.0 // indirect
 	github.com/gookit/goutil v0.7.2 // indirect
 	github.com/gookit/gsr v0.1.1 // indirect
-	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/grokify/html-strip-tags-go v0.0.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
