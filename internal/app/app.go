@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"gitee.com/jieepre/go-site/internal/core"
 	"gitee.com/jieepre/go-site/internal/monitor"
 	"gitee.com/jieepre/go-site/internal/service"
+	"github.com/gookit/slog"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -106,10 +108,10 @@ func (app *Application) newHTTPServer(addr string, handler http.Handler) *http.S
 
 // startServer 启动服务器
 func (app *Application) startServer(server *http.Server, name string) error {
-	log.Printf("%s server starting on %s\n", name, server.Addr)
+	slog.Infof("%s server starting on %s\n", name, server.Addr)
 	err := server.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		log.Printf("%s server failed: %v", name, err)
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		slog.Errorf("%s server failed: %v", name, err)
 		return err
 	}
 	return nil
