@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/gookit/slog"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
@@ -74,14 +75,13 @@ type redis struct {
 
 // Config file found and successfully parsed
 func init() {
-	fmt.Println("初始化配置")
+	slog.Infof("初始化配置")
 
 	// 设置配置文件名和类型
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath("./")
-	viper.AddConfigPath("/etc/go-site/")
-	viper.AddConfigPath("$HOME/.go-site")
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("./config")
 
 	// 设置环境变量前缀
 	viper.SetEnvPrefix("GOSITE")
