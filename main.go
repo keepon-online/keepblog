@@ -1,9 +1,8 @@
 package main
 
 import (
-	"log"
-
 	"gitee.com/jieepre/go-site/internal/app"
+	"github.com/gookit/slog"
 )
 
 func main() {
@@ -12,7 +11,7 @@ func main() {
 
 	// 初始化应用
 	if err := application.Initialize(); err != nil {
-		log.Fatalf("Failed to initialize application: %v", err)
+		slog.Fatalf("Failed to initialize application: %v", err)
 	}
 
 	// 设置服务器
@@ -20,9 +19,6 @@ func main() {
 
 	// 运行应用
 	if err := application.Run(); err != nil {
-		log.Fatalf("Application failed: %v", err)
+		slog.Fatalf("Application failed: %v", err)
 	}
 }
-
-// 以下函数已移动到 internal/app/ 包中
-// 这些函数现在由 Application 结构体管理

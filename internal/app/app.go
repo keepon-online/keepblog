@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -54,7 +53,7 @@ func (app *Application) Initialize() error {
 
 	// 初始化Redis
 	if err := cache.InitRedis(); err != nil {
-		log.Printf("Redis initialization failed: %v", err)
+		slog.Errorf("Redis initialization failed: %v", err)
 	}
 
 	// 初始化资源
@@ -124,7 +123,7 @@ func (app *Application) setupGracefulShutdown() {
 
 	go func() {
 		<-quit
-		log.Println("Shutting down servers...")
+		slog.Println("Shutting down servers...")
 
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer shutdownCancel()
@@ -132,22 +131,22 @@ func (app *Application) setupGracefulShutdown() {
 		for i, server := range app.servers {
 			serverNames := []string{"admin", "console", "web"}
 			if err := app.shutdownServer(server, shutdownCtx, serverNames[i]); err != nil {
-				log.Printf("Error shutting down %s server: %v", serverNames[i], err)
+				slog.Printf("Error shutting down %s server: %v", serverNames[i], err)
 			}
 		}
 
-		log.Println("All servers exited")
+		slog.Println("All servers exited")
 		os.Exit(0)
 	}()
 }
 
 // shutdownServer 关闭服务器
 func (app *Application) shutdownServer(server *http.Server, ctx context.Context, name string) error {
-	log.Printf("Shutting down %s server...", name)
+	slog.Printf("Shutting down %s server...", name)
 	if err := server.Shutdown(ctx); err != nil {
 		return err
 	}
-	log.Printf("%s server gracefully stopped", name)
+	slog.Printf("%s server gracefully stopped", name)
 	return nil
 }
 
