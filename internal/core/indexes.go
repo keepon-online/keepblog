@@ -39,14 +39,14 @@ func InitIndexes() {
 		"CREATE INDEX IF NOT EXISTS idx_comment_create_time ON comment (create_time);",
 
 		// 访问日志索引
-		"CREATE INDEX IF NOT EXISTS idx_access_log_ip ON access_log (ip);",
-		"CREATE INDEX IF NOT EXISTS idx_access_log_url ON access_log (url);",
-		"CREATE INDEX IF NOT EXISTS idx_access_log_create_time ON access_log (create_at);",
-		"CREATE INDEX IF NOT EXISTS idx_access_log_status ON access_log (status);",
+		"CREATE INDEX IF NOT EXISTS idx_access_log_ip ON system_access_log (ip);",
+		"CREATE INDEX IF NOT EXISTS idx_access_log_url ON system_access_log (url);",
+		"CREATE INDEX IF NOT EXISTS idx_access_log_create_time ON system_access_log (create_at);",
+		"CREATE INDEX IF NOT EXISTS idx_access_log_status ON system_access_log (status);",
 
 		// 登录日志索引
-		"CREATE INDEX IF NOT EXISTS idx_login_log_create_time ON login_log (create_at);",
-		"CREATE INDEX IF NOT EXISTS idx_login_log_success ON login_log (success);",
+		"CREATE INDEX IF NOT EXISTS idx_login_log_create_time ON system_login_log (create_at);",
+		"CREATE INDEX IF NOT EXISTS idx_login_log_success ON system_login_log (success);",
 
 		// 友情链接索引
 		"CREATE INDEX IF NOT EXISTS idx_friend_link_state ON friend_link (state);",
