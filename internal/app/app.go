@@ -67,12 +67,8 @@ func (app *Application) Initialize() error {
 
 // SetupServers 设置服务器
 func (app *Application) SetupServers() {
-	// 创建服务器实例
-	adminServer := app.newHTTPServer(app.config.AdminPort, app.createAdminRouter())
-	consoleServer := app.newHTTPServer(app.config.ConsolePort, app.createConsoleRouter())
-	webServer := app.newHTTPServer(app.config.WebPort, app.createWebRouter())
-
-	app.servers = []*http.Server{adminServer, consoleServer, webServer}
+	server := app.newHTTPServer(app.config.AdminPort, app.createRouter())
+	app.servers = []*http.Server{server}
 }
 
 // Run 运行应用
@@ -82,14 +78,9 @@ func (app *Application) Run() error {
 	// 设置优雅关闭
 	app.setupGracefulShutdown()
 
-	// 启动所有服务器
-	serverNames := []string{"admin", "console", "web"}
-	for i, server := range app.servers {
-		server := server
-		name := serverNames[i]
-		g.Go(func() error {
-			return app.startServer(server, name)
-		})
+	if err := app.startServer(app.servers[0], "admin"); err != nil {
+		slog.Errorf("Failed to start %s server: %v", "admin", err)
+		return err
 	}
 
 	return g.Wait()
@@ -150,17 +141,6 @@ func (app *Application) shutdownServer(server *http.Server, ctx context.Context,
 	return nil
 }
 
-// createAdminRouter 创建管理路由
-func (app *Application) createAdminRouter() http.Handler {
-	return CreateAdminRouter(app.service, app.healthChecker, app.metrics)
-}
-
-// createConsoleRouter 创建控制台路由（稍后实现）
-func (app *Application) createConsoleRouter() http.Handler {
-	return CreateConsoleRouter()
-}
-
-// createWebRouter 创建Web路由（稍后实现）
-func (app *Application) createWebRouter() http.Handler {
-	return CreateWebRouter(app.service)
+func (app *Application) createRouter() http.Handler {
+	return CreateRouters(app.service, app.healthChecker, app.metrics)
 }

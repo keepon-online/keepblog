@@ -15,14 +15,9 @@ type Configs struct {
 	Http   *http   `yaml:"http"`
 	Mysql  *mysql  `yaml:"mysql"`
 	Minio  *minio  `yaml:"minio"`
-	System *system `yaml:"system"`
 	Baidu  *baidu  `yaml:"system"`
 	Gitalk *gitalk `yaml:"gitalk"`
 	Redis  *redis  `yaml:"redis"`
-}
-
-type system struct {
-	BaseUrl string `yaml:"baseUrl"`
 }
 
 // 百度收录
@@ -152,9 +147,6 @@ func setDefaults() {
 	viper.SetDefault("redis.database", 0)
 	viper.SetDefault("redis.enable", false)
 
-	// 系统默认配置
-	viper.SetDefault("system.baseUrl", "http://localhost:8000")
-
 	// Baidu 默认配置
 	viper.SetDefault("baidu.push", false)
 	viper.SetDefault("baidu.url", "")
@@ -180,11 +172,6 @@ func setDefaults() {
 // ValidateConfig 验证配置
 func ValidateConfig() error {
 	cfg := Get()
-
-	// 验证基本配置
-	if cfg.System == nil || cfg.System.BaseUrl == "" {
-		return fmt.Errorf("system.baseUrl 不能为空")
-	}
 
 	// 验证Redis配置（如果启用）
 	if cfg.Redis != nil && cfg.Redis.Enable {
