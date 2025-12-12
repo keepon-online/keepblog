@@ -430,24 +430,8 @@ func dashboardRouter(ctx *core.Context) {
 	routes := []Route{
 		{
 			Method:     http.MethodGet,
-			Path:       "/panel-group",
-			Handler:    handler.PanelGroup,
-			Middleware: []gin.HandlerFunc{},
-		}, {
-			Method:     http.MethodGet,
-			Path:       "/pie",
-			Handler:    handler.Pie,
-			Middleware: []gin.HandlerFunc{},
-		},
-		{
-			Method:     http.MethodGet,
-			Path:       "/bar",
-			Handler:    handler.Bar,
-			Middleware: []gin.HandlerFunc{},
-		}, {
-			Method:     http.MethodGet,
-			Path:       "/line",
-			Handler:    handler.Line,
+			Path:       "/data",
+			Handler:    handler.DashboardData,
 			Middleware: []gin.HandlerFunc{},
 		},
 	}

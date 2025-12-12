@@ -10,3 +10,10 @@ type PanelGroup struct {
 	//访问
 	Visit uint `json:"visit"`
 }
+
+type DashboardData struct {
+	Panel PanelGroup       `json:"panel"`
+	Pie   []map[string]any `json:"pie"`
+	Bar   []map[string]any `json:"bar"`
+	Line  []map[string]any `json:"line"`
+}

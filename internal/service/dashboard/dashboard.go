@@ -13,7 +13,17 @@ func NewDashboardService() *Service {
 	return &Service{}
 }
 
-func (s Service) PanelGroup() *model.PanelGroup {
+func (s Service) DashboardData() *model.DashboardData {
+
+	return &model.DashboardData{
+		Panel: s.PanelGroup(),
+		Pie:   s.Pie(),
+		Bar:   s.Bar(),
+		Line:  s.Line(),
+	}
+}
+
+func (s Service) PanelGroup() model.PanelGroup {
 
 	var categoryTotal int64
 	var tagTotal int64
@@ -23,8 +33,9 @@ func (s Service) PanelGroup() *model.PanelGroup {
 	global.GORM.Table(model.TCategoryTable).Count(&categoryTotal)
 	global.GORM.Table(model.TPostsTable).Where("is_published=1 and is_deleted=0").Count(&postTotal)
 	global.GORM.Model(system.AccessLog{}).Select("COUNT(DISTINCT ip )").Scan(&visit)
+	global.GORM.Model(model.Tag{}).Select("COUNT(DISTINCT tag_name )").Scan(&tagTotal)
 
-	return &model.PanelGroup{
+	return model.PanelGroup{
 		CategoryTotal: uint(categoryTotal),
 		TagTotal:      uint(tagTotal),
 		PostTotal:     uint(postTotal),

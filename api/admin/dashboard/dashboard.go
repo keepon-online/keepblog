@@ -10,19 +10,7 @@ type Handler struct {
 	*core.Context
 }
 
-func (h *Handler) PanelGroup(c *gin.Context) {
-	group := h.Service.Dashboard.PanelGroup()
-	result.Ok(c, group)
-}
-func (h *Handler) Pie(c *gin.Context) {
-	group := h.Service.Dashboard.Pie()
-	result.Ok(c, group)
-}
-func (h *Handler) Bar(c *gin.Context) {
-	group := h.Service.Dashboard.Bar()
-	result.Ok(c, group)
-}
-func (h *Handler) Line(c *gin.Context) {
-	group := h.Service.Dashboard.Line()
+func (h *Handler) DashboardData(c *gin.Context) {
+	group := h.Service.Dashboard.DashboardData()
 	result.Ok(c, group)
 }
