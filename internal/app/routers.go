@@ -26,6 +26,7 @@ func CreateRouters(service *service.AppService, healthChecker *monitor.HealthChe
 
 	// 全局中间件
 	engine.Use(middleware.GinLogger(), middleware.GinRecovery(true))
+	engine.Use(middleware.Cors())
 	engine.Use(gzip.Gzip(gzip.DefaultCompression))
 
 	// 静态文件服务 - 控制台
@@ -77,7 +78,7 @@ func CreateRouters(service *service.AppService, healthChecker *monitor.HealthChe
 	adminGroup := engine.Group("/api")
 	{
 		// 后台专用中间件
-		adminGroup.Use(middleware.Cors())
+		//adminGroup.Use(middleware.Cors())
 		adminGroup.Use(middleware.ErrorHandler())
 		adminGroup.Use(monitor.MetricsMiddleware(metrics))
 		adminGroup.Use(middleware.APIRateLimit(100, time.Minute)) // 每分钟100次请求
