@@ -4,7 +4,7 @@ ENV GO111MODULE=on \
 WORKDIR /app
 COPY . .
 COPY data/ip2region.xdb /app/data/ip2region.xdb
-COPY config.yaml /app/config.yaml
+COPY config-example.yaml /app/config.yaml
 RUN go mod tidy
 RUN go env && go build -ldflags="-s -w"  -o site .
 FROM ubuntu:22.04

@@ -1,0 +1,34 @@
+http:
+  port: 8589
+
+
+# 百度定时推送 方便收绿
+baidu:
+  push: false
+  url: https://www.xxx.com
+  token: VXXKVoNrqnSAWINAA
+
+# Redis配置
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  database: 0
+  enable: false
+
+minio:
+  serverUrl: http://192.168.2.166:9000
+  endpoint: 192.168.2.166:9000
+  accessKeyID: tSvV3zWF8692PfCiUrlZ
+  secretAccessKey: Z7dqowc5nHfYmhLglj6OyECNF98KM13x4k2XtviS
+  useSSL: false
+  bucketName: test
+
+gitalk:
+  enable: false
+  clientID: '4b719159ee203950a239'
+  clientSecret: 'b9d643cffab418205da3c8c1a1bf762a9d19817b'
+  repo: 'gitalk'
+  owner: 'xxx'
+  admin:
+    - 'xxx'
