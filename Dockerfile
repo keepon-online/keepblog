@@ -24,6 +24,6 @@ COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 ENV TZ=Asia/Shanghai
-EXPOSE 8000 8589 8890
+EXPOSE  8589
 
 ENTRYPOINT ["/app/entrypoint.sh"]
