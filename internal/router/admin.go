@@ -10,6 +10,7 @@ import (
 	"gitee.com/jieepre/go-site/api/admin/link"
 	"gitee.com/jieepre/go-site/api/admin/login"
 	"gitee.com/jieepre/go-site/api/admin/monitor"
+	"gitee.com/jieepre/go-site/api/admin/music"
 	"gitee.com/jieepre/go-site/api/admin/post"
 	"gitee.com/jieepre/go-site/api/admin/system"
 	"gitee.com/jieepre/go-site/api/admin/tags"
@@ -30,6 +31,7 @@ func RegisterAdminRouter(ctx *core.Context) {
 	websiteBackendRouter(ctx)
 	logsRouter(ctx)
 	dashboardRouter(ctx)
+	musicRouter(ctx)
 }
 
 func userRouter(ctx *core.Context) {
@@ -433,6 +435,54 @@ func dashboardRouter(ctx *core.Context) {
 			Path:       "/data",
 			Handler:    handler.DashboardData,
 			Middleware: []gin.HandlerFunc{},
+		},
+	}
+	RegisterRouter(group, routes)
+}
+
+func musicRouter(ctx *core.Context) {
+	handler := music.Handler{Context: ctx}
+	routeGroup := RouteGroup{
+		Name:   "音乐管理",
+		Prefix: "/api/v1/site/music",
+	}
+	group := ctx.Engine.Group(routeGroup.Prefix)
+	routes := []Route{
+		{
+			Method:     http.MethodPost,
+			Path:       "/save",
+			Handler:    handler.SaveMusic,
+			Middleware: []gin.HandlerFunc{},
+		},
+		{
+			Method:     http.MethodPut,
+			Path:       "/update",
+			Handler:    handler.UpdateMusic,
+			Middleware: nil,
+		},
+		{
+			Method:     http.MethodPut,
+			Path:       "/update-state",
+			Handler:    handler.UpdateMusicState,
+			Middleware: nil,
+		},
+		{
+			Method:     http.MethodDelete,
+			Path:       "/delete/:id",
+			Handler:    handler.DeleteMusic,
+			Middleware: nil,
+		},
+		{
+			Method:     http.MethodGet,
+			Path:       "/detail/:id",
+			Handler:    handler.DetailMusic,
+			Middleware: nil,
+		},
+		{
+			Method:     http.MethodGet,
+			Path:       "/list",
+			Handler:    handler.GetMusicList,
+			Middleware: nil,
 		},
 	}
 	RegisterRouter(group, routes)

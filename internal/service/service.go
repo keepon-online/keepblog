@@ -5,6 +5,7 @@ import (
 	"gitee.com/jieepre/go-site/internal/service/category"
 	"gitee.com/jieepre/go-site/internal/service/dashboard"
 	"gitee.com/jieepre/go-site/internal/service/link"
+	"gitee.com/jieepre/go-site/internal/service/music"
 	"gitee.com/jieepre/go-site/internal/service/post"
 	"gitee.com/jieepre/go-site/internal/service/sidebar"
 	"gitee.com/jieepre/go-site/internal/service/system"
@@ -22,6 +23,7 @@ type AppService struct {
 	LinkService     *link.Service
 	WebSiteService  *website.Service
 	Dashboard       *dashboard.Service
+	MusicService    *music.Service
 }
 
 func InitAppService() *AppService {
@@ -35,5 +37,6 @@ func InitAppService() *AppService {
 		LinkService:     link.NewLinkService(),
 		WebSiteService:  website.NewWebSiteService(),
 		Dashboard:       dashboard.NewDashboardService(),
+		MusicService:    music.NewMusicService(),
 	}
 }

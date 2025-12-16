@@ -89,6 +89,7 @@ func initTable() {
 		&model.PostTag{},
 		&model.About{},
 		&model.User{},
+		&model.Music{},
 		&system.AccessLog{},
 		&system.WebSite{},
 		&system.LoginLog{},

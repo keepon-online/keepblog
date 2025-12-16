@@ -1,0 +1,82 @@
+/* NProgress Styles */
+#nprogress {
+  pointer-events: none;
+}
+
+#nprogress .bar {
+  background: linear-gradient(90deg, #49b1f5, #ff7242, #49b1f5);
+  background-size: 200% 100%;
+  animation: nprogress-gradient 2s linear infinite;
+  position: fixed;
+  z-index: 1031;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+}
+
+@keyframes nprogress-gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+#nprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0;
+  width: 100px;
+  height: 100%;
+  box-shadow: 0 0 10px #49b1f5, 0 0 5px #49b1f5;
+  opacity: 1;
+  transform: rotate(3deg) translate(0px, -4px);
+}
+
+#nprogress .spinner {
+  display: block;
+  position: fixed;
+  z-index: 1031;
+  top: 15px;
+  right: 15px;
+}
+
+#nprogress .spinner-icon {
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: solid 2px transparent;
+  border-top-color: #49b1f5;
+  border-left-color: #49b1f5;
+  border-radius: 50%;
+  animation: nprogress-spinner 400ms linear infinite;
+}
+
+.nprogress-custom-parent {
+  overflow: hidden;
+  position: relative;
+}
+
+.nprogress-custom-parent #nprogress .spinner,
+.nprogress-custom-parent #nprogress .bar {
+  position: absolute;
+}
+
+@keyframes nprogress-spinner {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 深色模式适配 */
+[data-theme="dark"] #nprogress .bar {
+  background: linear-gradient(90deg, #ff7242, #49b1f5, #ff7242);
+  background-size: 200% 100%;
+}
+
+[data-theme="dark"] #nprogress .peg {
+  box-shadow: 0 0 10px #ff7242, 0 0 5px #ff7242;
+}
+
+[data-theme="dark"] #nprogress .spinner-icon {
+  border-top-color: #ff7242;
+  border-left-color: #ff7242;
+}

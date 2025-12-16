@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 $figureHighlight.forEach(function (item) {
                     const langName = item.getAttribute('data-language') ? item.getAttribute('data-language') : 'Code'
                     const highlightLangEle = `<div class="code-lang">${langName}</div>`
-                    btf.wrap(item, 'figure', {class: 'highlight'})
+                    btf.wrap(item, 'figure', { class: 'highlight' })
                     createEle(highlightLangEle, item)
                 })
             } else {
@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             if (isPrismjs) {
                 $figureHighlight.forEach(function (item) {
-                    btf.wrap(item, 'figure', {class: 'highlight'})
+                    btf.wrap(item, 'figure', { class: 'highlight' })
                     createEle('', item)
                 })
             } else {
@@ -571,7 +571,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const $table = document.querySelectorAll('#post-container :not(.highlight) > table, #post-container > table')
         if ($table.length) {
             $table.forEach(item => {
-                btf.wrap(item, 'div', {class: 'table-wrap'})
+                btf.wrap(item, 'div', { class: 'table-wrap' })
             })
         }
     }
@@ -740,9 +740,15 @@ document.addEventListener('DOMContentLoaded', function () {
         tabsFn.clickFnOfTabs()
         tabsFn.backToTop()
         switchComments()
-        document.getElementById('toggle-menu').addEventListener('click', () => {
-            sidebarFn.open()
-        })
+
+        // 防止 PJAX 重复绑定事件
+        const toggleMenu = document.getElementById('toggle-menu')
+        if (toggleMenu && !toggleMenu._bindClick) {
+            toggleMenu.addEventListener('click', () => {
+                sidebarFn.open()
+            })
+            toggleMenu._bindClick = true
+        }
     }
 
     refreshFn()

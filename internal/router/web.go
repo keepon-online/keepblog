@@ -1,18 +1,20 @@
 package router
 
 import (
+	"io/fs"
+	"net/http"
+
 	"gitee.com/jieepre/go-site/api/web/about"
 	"gitee.com/jieepre/go-site/api/web/archive"
 	"gitee.com/jieepre/go-site/api/web/category"
 	"gitee.com/jieepre/go-site/api/web/home"
 	"gitee.com/jieepre/go-site/api/web/link"
+	"gitee.com/jieepre/go-site/api/web/music"
 	"gitee.com/jieepre/go-site/api/web/post"
 	"gitee.com/jieepre/go-site/api/web/tags"
 	"gitee.com/jieepre/go-site/internal/pkg/core"
 	"gitee.com/jieepre/go-site/static"
 	"github.com/gin-gonic/gin"
-	"io/fs"
-	"net/http"
 )
 
 func RegisterWebRouter(ctx *core.Context) {
@@ -24,6 +26,7 @@ func RegisterWebRouter(ctx *core.Context) {
 	categoriesRouter(ctx)
 	postsRouter(ctx)
 	homeRouter(ctx)
+	musicWebRouter(ctx)
 }
 
 func staticRouter(ctx *core.Context) {
@@ -211,6 +214,24 @@ func postsRouter(ctx *core.Context) {
 			Method:     http.MethodGet,
 			Path:       "/post/:hashids",
 			Handler:    handler.Post,
+			Middleware: []gin.HandlerFunc{},
+		},
+	}
+	RegisterRouter(group, routes)
+}
+
+func musicWebRouter(ctx *core.Context) {
+	handler := music.Handler{Context: ctx}
+	routeGroup := RouteGroup{
+		Name:   "音乐",
+		Prefix: "/api",
+	}
+	group := ctx.Engine.Group(routeGroup.Prefix)
+	routes := []Route{
+		{
+			Method:     http.MethodGet,
+			Path:       "/music/list",
+			Handler:    handler.GetMusicList,
 			Middleware: []gin.HandlerFunc{},
 		},
 	}
