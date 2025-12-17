@@ -141,6 +141,7 @@
                 selectors: [
                     "head > title",
                     "#config-diff",
+                    "#page-header",
                     "#body-wrap",
                     "#rightside-config-hide",
                     "#rightside-config-show",
