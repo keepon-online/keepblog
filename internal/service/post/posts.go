@@ -122,6 +122,57 @@ func (service Service) GetArchivePosts(year, month string) (*model.ArchivesPosts
 	return &archives, nil
 }
 
+// GetArchivePostsPaged 分页获取归档文章（按年月分组）
+// pageNum: 当前页码, pageSize: 每页显示的年月分组数量
+// 返回: archives按年月分组的文章, totalGroups总分组数, totalPosts总文章数, error
+func (service Service) GetArchivePostsPaged(pageNum, pageSize int) (*model.ArchivesPosts, int, int, error) {
+	// 获取所有年月分组，按时间倒序
+	var yearMonths []string
+	global.GORM.Raw(`SELECT strftime('%Y-%m', pub_time, 'unixepoch') as year_month 
+		FROM post 
+		WHERE is_published = 1 AND is_deleted = 0 
+		GROUP BY year_month 
+		ORDER BY year_month DESC`).Scan(&yearMonths)
+
+	totalGroups := len(yearMonths)
+
+	// 获取总文章数
+	var totalPosts int64
+	global.GORM.Table(model.TPostsTable).Where("is_published = 1").Where("is_deleted = 0").Count(&totalPosts)
+
+	// 计算分页
+	if pageNum <= 0 {
+		pageNum = 1
+	}
+	start := (pageNum - 1) * pageSize
+	end := start + pageSize
+
+	if start >= totalGroups {
+		// 超出范围，返回空
+		return &model.ArchivesPosts{Archives: make(map[string][]model.ArchivePosts)}, totalGroups, int(totalPosts), nil
+	}
+
+	if end > totalGroups {
+		end = totalGroups
+	}
+
+	// 获取当前页的年月分组
+	pagedYearMonths := yearMonths[start:end]
+
+	// 为每个年月分组获取文章
+	m := make(map[string][]model.ArchivePosts)
+	for _, ym := range pagedYearMonths {
+		posts := make([]model.ArchivePosts, 0)
+		global.GORM.Table(model.TPostsTable).
+			Raw("SELECT title, post_slug, pub_time, cover_image FROM post WHERE is_published = 1 AND is_deleted = 0 AND strftime('%Y-%m', pub_time, 'unixepoch') = ? ORDER BY pub_time DESC", ym).
+			Scan(&posts)
+		m[ym] = posts
+	}
+
+	archives := &model.ArchivesPosts{Archives: m}
+	return archives, totalGroups, int(totalPosts), nil
+}
+
 func (service Service) GetPostsByCategory(category string, pageNum int) ([]model.TagCategoryPosts, int64, error) {
 	pageSize := 10
 	var total int64

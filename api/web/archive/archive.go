@@ -21,18 +21,25 @@ func (h Handler) Archives(c *gin.Context) {
 	if pageNum == 0 {
 		pageNum = 1
 	}
-	archivePosts, err := h.Service.PostService.GetArchivePosts("", "")
 
-	// 计算归档中的文章总数用于分页
-	totalPosts := 0
-	if archivePosts != nil && archivePosts.Archives != nil {
-		for _, posts := range archivePosts.Archives {
-			totalPosts += len(posts)
-		}
+	// 每页显示6个年月分组
+	pageSize := 6
+
+	// 使用分页方法获取归档数据
+	archivePosts, totalGroups, totalPosts, err := h.Service.PostService.GetArchivePostsPaged(int(pageNum), pageSize)
+	if err != nil {
+		c.HTML(http.StatusOK, "error.html", nil)
+		return
+	}
+
+	// 计算总页数（基于年月分组数量）
+	totalPages := totalGroups / pageSize
+	if totalGroups%pageSize != 0 {
+		totalPages++
 	}
 
 	//传到模板中需要转换成template.HTML类型，否则html代码会被转义
-	index, err := page.HandleIndex(totalPosts, int(pageNum), "archives/page")
+	index, _ := page.HandleIndexWithPageSize(totalGroups, int(pageNum), pageSize, "archives/page")
 	site, err := h.Service.WebSiteService.GetWebSite()
 	if err != nil {
 		c.HTML(http.StatusOK, "error.html", nil)
@@ -50,6 +57,9 @@ func (h Handler) Archives(c *gin.Context) {
 		"sidebarArchives": sidebarInfo.SidebarArchives,
 		"webInfo":         sidebarInfo.WebInfo,
 		"title":           "归档",
+		"totalPosts":      totalPosts,
+		"currentPage":     pageNum,
+		"totalPages":      totalPages,
 	})
 }
 
@@ -58,11 +68,27 @@ func (h Handler) ArchivesInfo(c *gin.Context) {
 	month := c.Param("month")
 	sidebarInfo := h.Service.SidebarService.Sidebar()
 	archivePosts, _ := h.Service.PostService.GetArchivePosts(year, month)
+
+	// 计算当前筛选条件下的文章总数
+	totalPosts := 0
+	if archivePosts != nil && archivePosts.Archives != nil {
+		for _, posts := range archivePosts.Archives {
+			totalPosts += len(posts)
+		}
+	}
+
 	site, err := h.Service.WebSiteService.GetWebSite()
 	if err != nil {
 		c.HTML(http.StatusOK, "error.html", nil)
 		return
 	}
+
+	// 格式化标题
+	title := "归档"
+	if year != "" && month != "" {
+		title = year + "年" + month + "月 归档"
+	}
+
 	c.HTML(http.StatusOK, "archives.html", gin.H{
 		"archives":        archivePosts,
 		"site":            site,
@@ -72,6 +98,11 @@ func (h Handler) ArchivesInfo(c *gin.Context) {
 		"cardInfo":        sidebarInfo.CardInfo,
 		"sidebarArchives": sidebarInfo.SidebarArchives,
 		"webInfo":         sidebarInfo.WebInfo,
-		"title":           "归档",
+		"title":           title,
+		"totalPosts":      totalPosts,
+		"currentPage":     1,
+		"totalPages":      1,
+		"filterYear":      year,
+		"filterMonth":     month,
 	})
 }
