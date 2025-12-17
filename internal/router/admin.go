@@ -8,6 +8,7 @@ import (
 	"gitee.com/jieepre/go-site/api/admin/common"
 	"gitee.com/jieepre/go-site/api/admin/dashboard"
 	"gitee.com/jieepre/go-site/api/admin/link"
+	logviewer "gitee.com/jieepre/go-site/api/admin/log"
 	"gitee.com/jieepre/go-site/api/admin/login"
 	"gitee.com/jieepre/go-site/api/admin/monitor"
 	"gitee.com/jieepre/go-site/api/admin/music"
@@ -32,6 +33,7 @@ func RegisterAdminRouter(ctx *core.Context) {
 	logsRouter(ctx)
 	dashboardRouter(ctx)
 	musicRouter(ctx)
+	logViewerRouter(ctx)
 }
 
 func userRouter(ctx *core.Context) {
@@ -483,6 +485,48 @@ func musicRouter(ctx *core.Context) {
 			Path:       "/list",
 			Handler:    handler.GetMusicList,
 			Middleware: nil,
+		},
+	}
+	RegisterRouter(group, routes)
+}
+
+func logViewerRouter(ctx *core.Context) {
+	handler := logviewer.Handler{Context: ctx}
+	routeGroup := RouteGroup{
+		Name:   "日志管理",
+		Prefix: "/api/log",
+	}
+	group := ctx.Engine.Group(routeGroup.Prefix)
+	routes := []Route{
+		{
+			Method:     http.MethodGet,
+			Path:       "/level",
+			Handler:    handler.GetLogLevel,
+			Middleware: []gin.HandlerFunc{},
+		},
+		{
+			Method:     http.MethodPut,
+			Path:       "/level",
+			Handler:    handler.SetLogLevel,
+			Middleware: []gin.HandlerFunc{},
+		},
+		{
+			Method:     http.MethodGet,
+			Path:       "/stats",
+			Handler:    handler.GetLogStats,
+			Middleware: []gin.HandlerFunc{},
+		},
+		{
+			Method:     http.MethodGet,
+			Path:       "/list",
+			Handler:    handler.GetLogList,
+			Middleware: []gin.HandlerFunc{},
+		},
+		{
+			Method:     http.MethodGet,
+			Path:       "/read",
+			Handler:    handler.ReadLog,
+			Middleware: []gin.HandlerFunc{},
 		},
 	}
 	RegisterRouter(group, routes)
