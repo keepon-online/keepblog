@@ -172,6 +172,87 @@
 
             // 请求失败
             document.addEventListener('pjax:error', this.onError.bind(this));
+
+            // 绑定分页事件（内容级 PJAX）
+            this.bindPaginationEvents();
+        },
+
+        /**
+         * 绑定分页链接事件（只刷新内容，不刷新 header）
+         */
+        bindPaginationEvents() {
+            document.addEventListener('click', (e) => {
+                // 查找是否点击了分页链接
+                const link = e.target.closest('a[data-pjax-content="true"]');
+                if (!link) return;
+
+                e.preventDefault();
+                const url = link.getAttribute('href');
+                if (!url || url === '#') return;
+
+                // 显示进度条
+                ProgressBar.start();
+                document.body.classList.add('pjax-loading');
+
+                // 保存音乐状态
+                MusicState.save();
+
+                // 使用 fetch 加载新页面
+                fetch(url)
+                    .then(response => response.text())
+                    .then(html => {
+                        // 解析新页面
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+
+                        // 只替换 body-wrap 内容（不包含 header）
+                        const newBodyWrap = doc.getElementById('body-wrap');
+                        const currentBodyWrap = document.getElementById('body-wrap');
+
+                        if (newBodyWrap && currentBodyWrap) {
+                            currentBodyWrap.innerHTML = newBodyWrap.innerHTML;
+                        }
+
+                        // 更新标题
+                        const newTitle = doc.querySelector('title');
+                        if (newTitle) {
+                            document.title = newTitle.textContent;
+                        }
+
+                        // 更新 URL
+                        history.pushState(null, '', url);
+
+                        // 平滑滚动到内容顶部
+                        const contentInner = document.getElementById('content-inner');
+                        if (contentInner) {
+                            const headerHeight = document.getElementById('page-header')?.offsetHeight || 0;
+                            window.scrollTo({
+                                top: headerHeight - 60,
+                                behavior: 'smooth'
+                            });
+                        }
+
+                        // 完成进度条
+                        ProgressBar.done();
+                        document.body.classList.remove('pjax-loading');
+
+                        // 重新初始化页面功能
+                        if (typeof window.refreshFn === 'function') {
+                            window.refreshFn();
+                        }
+
+                        // 执行回调
+                        this.executePjaxCallbacks();
+                        this.reloadScripts();
+                    })
+                    .catch(err => {
+                        console.error('[Pagination] 加载失败:', err);
+                        ProgressBar.done();
+                        document.body.classList.remove('pjax-loading');
+                        // 降级为传统导航
+                        window.location.href = url;
+                    });
+            });
         },
 
         /**

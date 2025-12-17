@@ -2,6 +2,7 @@ package page
 
 import (
 	"fmt"
+
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -120,7 +121,7 @@ func HandleIndex(totalRecords, page int, temp string) (string, error) {
 
 		// 上一页
 		if page > 1 {
-			paginationHTML += fmt.Sprintf(`<li><a class="extend prev" href="/%s/%d"><i class="fas fa-chevron-left fa-fw"></i></a></li>`, temp, page-1)
+			paginationHTML += fmt.Sprintf(`<li><a class="extend prev" href="/%s/%d" data-pjax-content="true"><i class="fas fa-chevron-left fa-fw"></i></a></li>`, temp, page-1)
 		} else {
 			paginationHTML += `<li class="disabled" style="pointer-events: none;cursor: not-allowed;" ><a href="#" style="cursor: not-allowed;pointer-events:none"><i class="fas fa-chevron-left fa-fw"></i></a></li>`
 		}
@@ -140,7 +141,7 @@ func HandleIndex(totalRecords, page int, temp string) (string, error) {
 		}
 
 		if start > 1 {
-			paginationHTML += fmt.Sprintf(`<li><a href="/%s/%d">1</a></li>`, temp, 1)
+			paginationHTML += fmt.Sprintf(`<li><a href="/%s/%d" data-pjax-content="true">1</a></li>`, temp, 1)
 			if start > 2 {
 				paginationHTML += `<li class="disabled"><a  style="pointer-events: none;cursor: not-allowed;" >...</a></li>`
 			}
@@ -148,9 +149,9 @@ func HandleIndex(totalRecords, page int, temp string) (string, error) {
 
 		for _, p := range pages[start-1 : end] {
 			if p == page {
-				paginationHTML += fmt.Sprintf(`<li class="page-number current"><a href="/%s/%d">%d</a></li>`, temp, p, p)
+				paginationHTML += fmt.Sprintf(`<li class="page-number current"><a href="/%s/%d" data-pjax-content="true">%d</a></li>`, temp, p, p)
 			} else {
-				paginationHTML += fmt.Sprintf(`<li><a href="/%s/%d">%d</a></li>`, temp, p, p)
+				paginationHTML += fmt.Sprintf(`<li><a href="/%s/%d" data-pjax-content="true">%d</a></li>`, temp, p, p)
 			}
 		}
 
@@ -158,12 +159,12 @@ func HandleIndex(totalRecords, page int, temp string) (string, error) {
 			if end < totalPages-1 {
 				paginationHTML += `<li class="disabled"><a  style="pointer-events: none;cursor: not-allowed;" >...</a></li>`
 			}
-			paginationHTML += fmt.Sprintf(`<li><a href="/%s/%d">%d</a></li>`, temp, totalPages, totalPages)
+			paginationHTML += fmt.Sprintf(`<li><a href="/%s/%d" data-pjax-content="true">%d</a></li>`, temp, totalPages, totalPages)
 		}
 
 		// 下一页
 		if page < totalPages {
-			paginationHTML += fmt.Sprintf(`<li><a class="extend next" href="/%s/%d"><i class="fas fa-chevron-right fa-fw"></i></a></li>`, temp, page+1)
+			paginationHTML += fmt.Sprintf(`<li><a class="extend next" href="/%s/%d" data-pjax-content="true"><i class="fas fa-chevron-right fa-fw"></i></a></li>`, temp, page+1)
 		} else {
 			paginationHTML += `<li class="disabled" style="pointer-events: none;cursor: not-allowed;"><a href="#" style="cursor: not-allowed;pointer-events:none"><i class="fas fa-chevron-right fa-fw"></i></a></li>`
 		}
