@@ -30,6 +30,7 @@ func (h Handler) About(c *gin.Context) {
 		"latestPosts":     sidebarInfo.LatestPosts,
 		"cardInfo":        sidebarInfo.CardInfo,
 		"sidebarArchives": sidebarInfo.SidebarArchives,
+		"webInfo":         sidebarInfo.WebInfo,
 		"title":           "关于",
 	})
 }

@@ -38,5 +38,14 @@ func TemplateFunc() template.FuncMap {
 		"BaiduSite": func(t string) bool {
 			return t != ""
 		},
+		"divf": func(a, b int64) float64 {
+			if b == 0 {
+				return 0
+			}
+			return float64(a) / float64(b)
+		},
+		"gt": func(a, b int64) bool {
+			return a > b
+		},
 	}
 }

@@ -26,6 +26,7 @@ func (h *Handler) Links(c *gin.Context) {
 		"latestPosts":     sidebarInfo.LatestPosts,
 		"cardInfo":        sidebarInfo.CardInfo,
 		"sidebarArchives": sidebarInfo.SidebarArchives,
+		"webInfo":         sidebarInfo.WebInfo,
 		"title":           "友链",
 	})
 }

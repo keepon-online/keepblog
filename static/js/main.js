@@ -749,6 +749,62 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             toggleMenu._bindClick = true
         }
+
+        // 侧边栏懒加载和动画
+        initSidebarLazyLoad()
+    }
+
+    // 侧边栏懒加载函数
+    const initSidebarLazyLoad = () => {
+        const lazyCards = document.querySelectorAll('.card-widget[data-lazy="true"]')
+
+        if ('IntersectionObserver' in window) {
+            const cardObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const card = entry.target
+                        // 延迟添加 loaded 类以触发动画
+                        setTimeout(() => {
+                            card.classList.add('loaded')
+                        }, 100)
+                        cardObserver.unobserve(card)
+                    }
+                })
+            }, {
+                rootMargin: '50px',
+                threshold: 0.1
+            })
+
+            lazyCards.forEach(card => cardObserver.observe(card))
+        } else {
+            // 降级处理 - 直接显示
+            lazyCards.forEach(card => card.classList.add('loaded'))
+        }
+
+        // 运行时间实时更新
+        updateRuntimeDisplay()
+    }
+
+    // 更新运行时间显示
+    const updateRuntimeDisplay = () => {
+        const runtimeEl = document.getElementById('runtimeshow')
+        if (!runtimeEl || !runtimeEl.dataset.start) return
+
+        const startDate = new Date(runtimeEl.dataset.start)
+
+        const update = () => {
+            const now = new Date()
+            const diff = now - startDate
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+
+            runtimeEl.textContent = `${days} 天 ${hours} 时 ${minutes} 分`
+        }
+
+        update()
+        // 每分钟更新一次
+        setInterval(update, 60000)
     }
 
     refreshFn()

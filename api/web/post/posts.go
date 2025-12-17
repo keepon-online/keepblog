@@ -44,5 +44,6 @@ func (h *Handler) Post(c *gin.Context) {
 		"latestPosts":     sidebarInfo.LatestPosts,
 		"cardInfo":        sidebarInfo.CardInfo,
 		"sidebarArchives": sidebarInfo.SidebarArchives,
+		"webInfo":         sidebarInfo.WebInfo,
 	})
 }

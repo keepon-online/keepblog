@@ -1,6 +1,10 @@
 package home
 
 import (
+	"html/template"
+	"net/http"
+	"strconv"
+
 	"gitee.com/jieepre/go-site/internal/pkg/core"
 	"gitee.com/jieepre/go-site/pkg"
 	"gitee.com/jieepre/go-site/pkg/daily"
@@ -8,9 +12,6 @@ import (
 	"gitee.com/jieepre/go-site/pkg/result"
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/slog"
-	"html/template"
-	"net/http"
-	"strconv"
 )
 
 type Handler struct {
@@ -46,6 +47,7 @@ func (h *Handler) Home(c *gin.Context) {
 		"cardInfo":        sidebarInfo.CardInfo,
 		"latestPosts":     sidebarInfo.LatestPosts,
 		"sidebarArchives": sidebarInfo.SidebarArchives,
+		"webInfo":         sidebarInfo.WebInfo,
 		"wallpaperURL":    pkg.GetBingImage(),
 		"title":           "首页",
 	})

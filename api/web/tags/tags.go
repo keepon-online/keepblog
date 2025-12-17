@@ -29,6 +29,7 @@ func (h *Handler) Tags(c *gin.Context) {
 		"latestPosts":     sidebarInfo.LatestPosts,
 		"cardInfo":        sidebarInfo.CardInfo,
 		"sidebarArchives": sidebarInfo.SidebarArchives,
+		"webInfo":         sidebarInfo.WebInfo,
 		"title":           "标签",
 	})
 }
@@ -57,6 +58,7 @@ func (h *Handler) TagsPage(c *gin.Context) {
 		"latestPosts":     sidebarInfo.LatestPosts,
 		"cardInfo":        sidebarInfo.CardInfo,
 		"sidebarArchives": sidebarInfo.SidebarArchives,
+		"webInfo":         sidebarInfo.WebInfo,
 		"title":           "标签",
 	})
 }

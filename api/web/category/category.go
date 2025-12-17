@@ -28,6 +28,7 @@ func (h *Handler) Categories(c *gin.Context) {
 		"latestPosts":     sidebarInfo.LatestPosts,
 		"cardInfo":        sidebarInfo.CardInfo,
 		"sidebarArchives": sidebarInfo.SidebarArchives,
+		"webInfo":         sidebarInfo.WebInfo,
 		"title":           "分类",
 	})
 }
@@ -59,6 +60,7 @@ func (h *Handler) CategoriesPage(c *gin.Context) {
 		"latestPosts":     sidebarInfo.LatestPosts,
 		"cardInfo":        sidebarInfo.CardInfo,
 		"sidebarArchives": sidebarInfo.SidebarArchives,
+		"webInfo":         sidebarInfo.WebInfo,
 		"title":           "分类",
 	})
 }

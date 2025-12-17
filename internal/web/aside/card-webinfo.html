@@ -3,29 +3,34 @@
     <div class="webinfo">
         <div class="webinfo-item">
             <div class="item-name">文章数目 :</div>
-            <div class="item-count">***</div>
+            <div class="item-count">{{.webInfo.PostCount}}</div>
         </div>
         <div class="webinfo-item">
             <div class="item-name">已运行时间 :</div>
-            <div class="item-count" data-publishDate="2023-05-20T14:00:00.000Z" id="runtimeshow">***</div>
+            <div class="item-count" id="runtimeshow" data-start="{{.webInfo.SiteStartDate}}">{{.webInfo.RuntimeDays}} 天
+            </div>
         </div>
         <div class="webinfo-item">
             <div class="item-name">本站总字数 :</div>
-            <div class="item-count">***</div>
+            <div class="item-count">
+                {{if gt .webInfo.TotalWordCount 10000}}
+                {{printf "%.1f" (divf .webInfo.TotalWordCount 10000)}}k
+                {{else}}
+                {{.webInfo.TotalWordCount}}
+                {{end}}
+            </div>
         </div>
         <div class="webinfo-item">
             <div class="item-name">本站访客数 :</div>
-            <div class="item-count" id="busuanzi_value_site_uv">***</div>
+            <div class="item-count" id="busuanzi_value_site_uv">...</div>
         </div>
         <div class="webinfo-item">
             <div class="item-name">本站总访问量 :</div>
-            <div class="item-count" id="busuanzi_value_site_pv">***</div>
+            <div class="item-count" id="busuanzi_value_site_pv">...</div>
         </div>
         <div class="webinfo-item">
             <div class="item-name">最后更新时间 :</div>
-            <div class="item-count"  data-lastpushdate="2023-05-24T07:30:16.947Z" id="last-push-date">
-                2023年5月20日
-            </div>
+            <div class="item-count" id="last-push-date">{{.webInfo.LastUpdateTime}}</div>
         </div>
     </div>
 </div>

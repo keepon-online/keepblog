@@ -1,6 +1,8 @@
 package sidebar
 
 import (
+	"time"
+
 	"gitee.com/jieepre/go-site/global"
 	"gitee.com/jieepre/go-site/internal/model"
 	"gitee.com/jieepre/go-site/internal/service/category"
@@ -22,6 +24,7 @@ func (service Service) Sidebar() *model.Sidebar {
 		CardInfo:        service.CardInfo(),
 		LatestPosts:     service.LatestPosts(),
 		SidebarArchives: service.SidebarArchives(),
+		WebInfo:         service.WebInfo(),
 	}
 	return &sidebar
 }
@@ -79,4 +82,44 @@ func (service Service) SidebarArchives() []model.SidebarArchives {
 		sidebarArchives = append(sidebarArchives, sidebarArchive)
 	}
 	return sidebarArchives
+}
+
+// WebInfo 获取网站资讯详细数据
+func (service Service) WebInfo() model.WebInfo {
+	var webInfo model.WebInfo
+
+	// 文章数目
+	global.GORM.Table(model.TPostsTable).
+		Where("is_published", 1).
+		Where("is_deleted", 0).
+		Count(&webInfo.PostCount)
+
+	// 总字数
+	var totalWordCount int64
+	global.GORM.Table(model.TPostsTable).
+		Select("COALESCE(SUM(word_count), 0)").
+		Where("is_published", 1).
+		Where("is_deleted", 0).
+		Scan(&totalWordCount)
+	webInfo.TotalWordCount = totalWordCount
+
+	// 网站运行天数 (假设网站从2023年5月20日开始)
+	siteStartDate := time.Date(2023, 5, 20, 0, 0, 0, 0, time.Local)
+	webInfo.SiteStartDate = siteStartDate.Format("2006-01-02")
+	webInfo.RuntimeDays = int64(time.Since(siteStartDate).Hours() / 24)
+
+	// 最后更新时间
+	var lastUpdateTime uint64
+	global.GORM.Table(model.TPostsTable).
+		Select("MAX(last_modified_time)").
+		Where("is_published", 1).
+		Where("is_deleted", 0).
+		Scan(&lastUpdateTime)
+	if lastUpdateTime > 0 {
+		webInfo.LastUpdateTime = time.Unix(int64(lastUpdateTime), 0).Format("2006年1月2日")
+	} else {
+		webInfo.LastUpdateTime = "暂无更新"
+	}
+
+	return webInfo
 }

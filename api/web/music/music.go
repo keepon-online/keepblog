@@ -10,7 +10,7 @@ type Handler struct {
 	*core.Context
 }
 
-// GetMusicList 获取启用的音乐列表 (前台接口)
+// GetMusicList get enabled music list for frontend
 func (h *Handler) GetMusicList(c *gin.Context) {
 	musicList, err := h.Service.MusicService.GetEnabledMusicList()
 	if err != nil {

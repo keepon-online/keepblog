@@ -189,9 +189,19 @@ type Sidebar struct {
 	Category        []CategoryCount   `json:"categories"`
 	Tag             []Tag             `json:"tags"`
 	SidebarArchives []SidebarArchives `json:"sidebarArchives"`
+	WebInfo         WebInfo           `json:"webInfo"`
 }
 
 type SidebarArchives struct {
 	Year  string `json:"year"`
 	Total int64  `json:"total"`
+}
+
+// WebInfo 网站资讯数据
+type WebInfo struct {
+	PostCount      int64  `json:"postCount"`      // 文章数目
+	TotalWordCount int64  `json:"totalWordCount"` // 总字数
+	RuntimeDays    int64  `json:"runtimeDays"`    // 运行天数
+	LastUpdateTime string `json:"lastUpdateTime"` // 最后更新时间
+	SiteStartDate  string `json:"siteStartDate"`  // 网站创建日期
 }
