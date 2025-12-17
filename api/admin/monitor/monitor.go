@@ -66,6 +66,13 @@ type MemoryInfo struct {
 	TotalFormat string  `json:"totalFormat"` // 格式化显示
 	UsedFormat  string  `json:"usedFormat"`  // 格式化显示
 	FreeFormat  string  `json:"freeFormat"`  // 格式化显示
+	// Swap内存信息
+	SwapTotal       uint64  `json:"swapTotal"`       // Swap总量
+	SwapUsed        uint64  `json:"swapUsed"`        // Swap已用
+	SwapFree        uint64  `json:"swapFree"`        // Swap空闲
+	SwapUsedPercent float64 `json:"swapUsedPercent"` // Swap使用率
+	SwapTotalFormat string  `json:"swapTotalFormat"` // 格式化显示
+	SwapUsedFormat  string  `json:"swapUsedFormat"`  // 格式化显示
 }
 
 // DiskInfo 磁盘信息
@@ -354,7 +361,10 @@ func (h *Handler) getMemoryInfo() (*MemoryInfo, error) {
 		return nil, err
 	}
 
-	return &MemoryInfo{
+	// 获取Swap信息
+	swapStat, _ := mem.SwapMemory()
+
+	memInfo := &MemoryInfo{
 		Total:       memStat.Total,
 		Used:        memStat.Used,
 		Free:        memStat.Free,
@@ -363,7 +373,19 @@ func (h *Handler) getMemoryInfo() (*MemoryInfo, error) {
 		TotalFormat: h.formatBytes(memStat.Total),
 		UsedFormat:  h.formatBytes(memStat.Used),
 		FreeFormat:  h.formatBytes(memStat.Free),
-	}, nil
+	}
+
+	// 添加Swap信息
+	if swapStat != nil {
+		memInfo.SwapTotal = swapStat.Total
+		memInfo.SwapUsed = swapStat.Used
+		memInfo.SwapFree = swapStat.Free
+		memInfo.SwapUsedPercent = h.formatPercent(swapStat.UsedPercent)
+		memInfo.SwapTotalFormat = h.formatBytes(swapStat.Total)
+		memInfo.SwapUsedFormat = h.formatBytes(swapStat.Used)
+	}
+
+	return memInfo, nil
 }
 
 // 获取磁盘信息
