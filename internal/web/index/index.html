@@ -1,98 +1,104 @@
 <!DOCTYPE html>
 <html data-theme="light" lang="zh-CN">
 {{template "layout/head.html" .}}
-<header class="full_page" id="page-header"
-        style="background-image: url('{{.wallpaperURL}}')">
+<header class="full_page" id="page-header" style="background-image: url('{{.wallpaperURL}}')">
     {{template "layout/nav.html" .}}
     <div id="site-info">
         <div id="site-title">
             <span class="typing" style="color:#eee;"></span>
         </div>
         <div id="site_social_icons">
+            {{if .site.Github}}
             <a class="social-icon" href="{{.site.Github}}" target="_blank" title="Github">
                 <i class="fab fa-github"></i></a>
-            <a class="social-icon" href="mailto:jieepre@outlook.com" target="_blank" title="Email">
+            {{end}}
+            {{if .site.Email}}
+            <a class="social-icon" href="mailto:{{.site.Email}}" target="_blank" title="Email">
                 <i class="fas fa-envelope"></i>
             </a>
+            {{end}}
         </div>
     </div>
     <div id="scroll-down"><i class="fas fa-angle-down scroll-down-effects"></i></div>
 </header>
-<body>
-{{template "sidebar/sidebar.html"}}
-<div class="page" id="body-wrap">
-    <main class="layout" id="content-inner">
-        <div class="recent-posts" id="recent-posts">
-            {{range $i, $v := .coverPosts}}
-            <div class="recent-post-item">
-                {{if even $i }}
-                <div class="post_cover left">
-                    <a href="/post/{{$v.PostSlug}}" title="{{$v.Title}}">
-                        <img alt="{{$v.Title}}" class="post_bg" src="{{$v.CoverImage}}">
-                    </a>
-                </div>
-                {{ else }}
-                <div class="post_cover right">
-                    <a href="/post/{{$v.PostSlug}}" title="{{$v.Title}}">
-                        <img alt="{{$v.Title}}" class="post_bg" src="{{$v.CoverImage}}">
-                    </a>
-                </div>
-                {{end }}
-                <div class="recent-post-info">
-                    <a class="article-title" href="/post/{{$v.PostSlug}}" title="{{$v.Title}}"> {{$v.Title}}</a>
-                    <div class="article-meta-wrap">
-                        {{if eq  $v.Top 1}}
-                        <span class="article-meta">
-                            <i class="fas fa-thumbtack article-meta__icon sticky"></i>
-                            <span class="sticky">置頂</span>
-                            <span class="article-meta__separator">|</span>
-                        </span>
-                        {{end}}
-                        <span class="post-meta-date"><i class="far fa-calendar-alt"></i>
-                        <span class="article-meta-label">发表于</span>
-                        <time datetime="{{$v.PubTime | time }}" title="发表于 {{$v.PubTime | time }}">{{$v.PubTime | time }}</time></span>
-                        <span class="article-meta"><span class="article-meta-separator">|</span>
-                            <i class="fas fa-inbox"></i><a class="article-meta__categories"
-                                                           href="/categories/{{$v.CategoryName}}">{{$v.CategoryName}}</a></span>
-                        <span class="article-meta tags"><span class="article-meta-separator">|</span><i
-                                class="fas fa-tag"></i>
-                            <a class="article-meta__tags" href="/tags/{{$v.TagName}}">{{$v.TagName}}</a></span>
-                    </div>
-                    <div class="content">
-                        {{$v.ContentAbstract}}
-                    </div>
-                </div>
-            </div>
-            {{end}}
-            {{template "page/pagination.html" .}}
-        </div>
-        <div class="aside-content" id="aside-content">
-            {{template "card-info.html" .}}
-            {{template "card-announcement.html" .}}
-            {{template "aside/sticky_layout.html" .}}
-        </div>
-    </main>
-    {{template "layout/footer.html" .}}
-</div>
-<script src="/plugins/typed.js/lib/typed.min.js"></script>
-<script>
-    const xhr = new XMLHttpRequest();
-    xhr.open("Get", 'https://api.btstu.cn/yan/api.php?charset=utf-8&encode=json', true)
-    xhr.responseType = 'json';
-    xhr.onload = function (e) {
-        if (this.status === 200 || this.status === 304) {
-            new Typed(document.querySelector('.typing'), {
-                strings: [this.response.text],
-                loop: true,
-                startDelay: 300,
-                typeSpeed: 150,
-                backSpeed: 50
-            })
-        }
-    };
-    xhr.send()
 
-</script>
-{{template "layout/foot.html" .}}
+<body>
+    {{template "sidebar/sidebar.html"}}
+    <div class="page" id="body-wrap">
+        <main class="layout" id="content-inner">
+            <div class="recent-posts" id="recent-posts">
+                {{range $i, $v := .coverPosts}}
+                <div class="recent-post-item">
+                    {{if even $i }}
+                    <div class="post_cover left">
+                        <a href="/post/{{$v.PostSlug}}" title="{{$v.Title}}">
+                            <img alt="{{$v.Title}}" class="post_bg" src="{{$v.CoverImage}}">
+                        </a>
+                    </div>
+                    {{ else }}
+                    <div class="post_cover right">
+                        <a href="/post/{{$v.PostSlug}}" title="{{$v.Title}}">
+                            <img alt="{{$v.Title}}" class="post_bg" src="{{$v.CoverImage}}">
+                        </a>
+                    </div>
+                    {{end }}
+                    <div class="recent-post-info">
+                        <a class="article-title" href="/post/{{$v.PostSlug}}" title="{{$v.Title}}"> {{$v.Title}}</a>
+                        <div class="article-meta-wrap">
+                            {{if eq $v.Top 1}}
+                            <span class="article-meta">
+                                <i class="fas fa-thumbtack article-meta__icon sticky"></i>
+                                <span class="sticky">置頂</span>
+                                <span class="article-meta__separator">|</span>
+                            </span>
+                            {{end}}
+                            <span class="post-meta-date"><i class="far fa-calendar-alt"></i>
+                                <span class="article-meta-label">发表于</span>
+                                <time datetime="{{$v.PubTime | time }}" title="发表于 {{$v.PubTime | time }}">{{$v.PubTime
+                                    | time }}</time></span>
+                            <span class="article-meta"><span class="article-meta-separator">|</span>
+                                <i class="fas fa-inbox"></i><a class="article-meta__categories"
+                                    href="/categories/{{$v.CategoryName}}">{{$v.CategoryName}}</a></span>
+                            <span class="article-meta tags"><span class="article-meta-separator">|</span><i
+                                    class="fas fa-tag"></i>
+                                <a class="article-meta__tags" href="/tags/{{$v.TagName}}">{{$v.TagName}}</a></span>
+                        </div>
+                        <div class="content">
+                            {{$v.ContentAbstract}}
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+                {{template "page/pagination.html" .}}
+            </div>
+            <div class="aside-content" id="aside-content">
+                {{template "card-info.html" .}}
+                {{template "card-announcement.html" .}}
+                {{template "aside/sticky_layout.html" .}}
+            </div>
+        </main>
+        {{template "layout/footer.html" .}}
+    </div>
+    <script src="/plugins/typed.js/lib/typed.min.js"></script>
+    <script>
+        const xhr = new XMLHttpRequest();
+        xhr.open("Get", 'https://api.btstu.cn/yan/api.php?charset=utf-8&encode=json', true)
+        xhr.responseType = 'json';
+        xhr.onload = function (e) {
+            if (this.status === 200 || this.status === 304) {
+                new Typed(document.querySelector('.typing'), {
+                    strings: [this.response.text],
+                    loop: true,
+                    startDelay: 300,
+                    typeSpeed: 150,
+                    backSpeed: 50
+                })
+            }
+        };
+        xhr.send()
+
+    </script>
+    {{template "layout/foot.html" .}}
 </body>
+
 </html>

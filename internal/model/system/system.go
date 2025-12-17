@@ -68,20 +68,22 @@ func (LoginLog) TableName() string {
 
 // WebSite 网站配置
 type WebSite struct {
-	Id          int    `json:"id" gorm:"autoIncrement:id;primaryKey;comment:''"`
-	Icp         string `json:"icp"`         //icp备案号
-	Notice      string `json:"notice"`      //公告
-	Title       string `json:"title"`       //页面标题
-	Description string `json:"description"` //页面简述
-	URL         string `json:"url"`         //页面地址
-	Keywords    string `json:"keywords"`    //关键词
-	Copyright   string `json:"copyright"`   //版权
-	BaiduStat   string `json:"stat"`        //百度统计
-	BaiduSite   string `json:"site"`        //百度收录
-	Github      string `json:"github"`      //GitHub
-	Gitee       string `json:"gitee"`       //码云
-	CreatedAt   int    `json:"createTime" gorm:"column:create_at;autoCreateTime"`
-	UpdatedAt   int    `json:"updatedAt" gorm:"column:updated_at;autoUpdateTime"`
+	Id            int    `json:"id" gorm:"autoIncrement:id;primaryKey;comment:''"`
+	Icp           string `json:"icp"`           //icp备案号
+	Notice        string `json:"notice"`        //公告
+	Title         string `json:"title"`         //页面标题
+	Description   string `json:"description"`   //页面简述
+	URL           string `json:"url"`           //页面地址
+	Keywords      string `json:"keywords"`      //关键词
+	Copyright     string `json:"copyright"`     //版权
+	BaiduStat     string `json:"stat"`          //百度统计
+	BaiduSite     string `json:"site"`          //百度收录
+	Github        string `json:"github"`        //GitHub
+	Gitee         string `json:"gitee"`         //码云
+	Email         string `json:"email"`         //联系邮箱
+	SiteStartDate string `json:"siteStartDate"` //网站创建日期 格式:2023-05-20
+	CreatedAt     int    `json:"createTime" gorm:"column:create_at;autoCreateTime"`
+	UpdatedAt     int    `json:"updatedAt" gorm:"column:updated_at;autoUpdateTime"`
 }
 
 func (WebSite) TableName() string {
