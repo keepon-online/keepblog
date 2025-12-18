@@ -56,7 +56,7 @@ func GinLogger() gin.HandlerFunc {
 
 		// 记录日志
 		logEntry := RequestLog{
-			Timestamp:    start.Format(time.RFC3339),
+			Timestamp:    start.Format(time.DateTime),
 			Method:       c.Request.Method,
 			Path:         path,
 			Query:        raw,
@@ -111,7 +111,7 @@ func GinRecovery(stack bool) gin.HandlerFunc {
 
 				// 结构化故障日志
 				panicLog := map[string]interface{}{
-					"timestamp":  time.Now().Format(time.RFC3339),
+					"timestamp":  time.Now().Format(time.DateTime),
 					"error":      fmt.Sprintf("%v", err),
 					"path":       c.Request.URL.Path,
 					"method":     c.Request.Method,

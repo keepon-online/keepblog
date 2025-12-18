@@ -29,7 +29,7 @@ func PrintMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		//请求日期
-		requestData := start.Format(time.RFC3339)
+		requestData := start.Format(time.DateTime)
 		//请求接口路由
 		path := c.Request.URL
 		//请求方式

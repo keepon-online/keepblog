@@ -1,14 +1,15 @@
 package middleware
 
 import (
+	"strings"
+	"time"
+
 	"gitee.com/jieepre/go-site/global"
 	"gitee.com/jieepre/go-site/internal/model/system"
 	"gitee.com/jieepre/go-site/pkg"
 	"gitee.com/jieepre/go-site/pkg/area"
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/slog"
-	"strings"
-	"time"
 )
 
 var ignoreURIS = []string{
@@ -33,7 +34,7 @@ func Statistics() gin.HandlerFunc {
 		ipL := pkg.Ip2long(ip)
 		slog.Infof("ip:[%s],地区:[ %s ]", ip, area.Area(ipL))
 		var accessLog system.AccessLog
-		now := time.Now().Format("2006-01-02")
+		now := time.Now().Format(time.DateOnly)
 		global.GORM.
 			Where("ip = ? and url = ? and strftime('%Y-%m-%d', create_at, 'unixepoch') = ?", pkg.Ip2long(ip), url, now).
 			First(&accessLog)

@@ -3,6 +3,7 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"gitee.com/jieepre/go-site/internal/errors"
 	"github.com/gin-gonic/gin"
@@ -60,7 +61,7 @@ func ErrorHandler() gin.HandlerFunc {
 				Message:   appErr.Message,
 				Details:   appErr.Details,
 				RequestID: appErr.RequestID,
-				Timestamp: appErr.Timestamp.Format("2006-01-02T15:04:05Z07:00"),
+				Timestamp: appErr.Timestamp.Format(time.DateTime),
 				Path:      c.Request.URL.Path,
 				Metadata:  appErr.Metadata,
 			}
@@ -77,7 +78,7 @@ func ErrorHandler() gin.HandlerFunc {
 				Code:      int(errors.ErrInternal),
 				Message:   "服务器内部错误",
 				RequestID: requestID,
-				Timestamp: appErr.Timestamp.Format("2006-01-02T15:04:05Z07:00"),
+				Timestamp: appErr.Timestamp.Format(time.DateTime),
 				Path:      c.Request.URL.Path,
 			}
 
