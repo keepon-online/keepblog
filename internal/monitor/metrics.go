@@ -90,8 +90,21 @@ func (m *Metrics) UpdateSystemMetrics() {
 	m.GCCount = memStats.NumGC
 }
 
+// MetricsResponse 指标响应（用于 JSON 序列化，不含 mutex）
+type MetricsResponse struct {
+	RequestsTotal     int64            `json:"requests_total"`
+	RequestDuration   time.Duration    `json:"avg_request_duration"`
+	StatusCodes       map[string]int64 `json:"status_codes"`
+	CPUUsage          float64          `json:"cpu_usage_percent"`
+	MemoryUsage       int64            `json:"memory_usage_bytes"`
+	GoroutineCount    int              `json:"goroutine_count"`
+	GCCount           uint32           `json:"gc_count"`
+	ActiveConnections int              `json:"active_connections"`
+	CacheHitRate      float64          `json:"cache_hit_rate"`
+}
+
 // GetMetrics 获取当前指标
-func (m *Metrics) GetMetrics() Metrics {
+func (m *Metrics) GetMetrics() MetricsResponse {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 
@@ -105,7 +118,7 @@ func (m *Metrics) GetMetrics() Metrics {
 		statusCodes[k] = v
 	}
 
-	return Metrics{
+	return MetricsResponse{
 		RequestsTotal:     m.RequestsTotal,
 		RequestDuration:   m.RequestDuration,
 		StatusCodes:       statusCodes,

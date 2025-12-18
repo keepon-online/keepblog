@@ -12,40 +12,40 @@ type ErrorCode int
 
 const (
 	// 系统错误 (1000-1999)
-	ErrInternal ErrorCode = 1000 + iota
-	ErrDatabase
-	ErrRedis
-	ErrConfig
-	ErrFileSystem
-	ErrNetwork
+	ErrInternal   ErrorCode = 1000
+	ErrDatabase   ErrorCode = 1001
+	ErrRedis      ErrorCode = 1002
+	ErrConfig     ErrorCode = 1003
+	ErrFileSystem ErrorCode = 1004
+	ErrNetwork    ErrorCode = 1005
 
 	// 认证授权错误 (2000-2999)
-	ErrUnauthorized ErrorCode = 2000 + iota
-	ErrForbidden
-	ErrTokenExpired
-	ErrTokenInvalid
-	ErrLoginFailed
-	ErrPermissionDenied
+	ErrUnauthorized     ErrorCode = 2000
+	ErrForbidden        ErrorCode = 2001
+	ErrTokenExpired     ErrorCode = 2002
+	ErrTokenInvalid     ErrorCode = 2003
+	ErrLoginFailed      ErrorCode = 2004
+	ErrPermissionDenied ErrorCode = 2005
 
 	// 参数验证错误 (3000-3999)
-	ErrInvalidParam ErrorCode = 3000 + iota
-	ErrMissingParam
-	ErrInvalidFormat
-	ErrInvalidRange
-	ErrDuplicateValue
+	ErrInvalidParam   ErrorCode = 3000
+	ErrMissingParam   ErrorCode = 3001
+	ErrInvalidFormat  ErrorCode = 3002
+	ErrInvalidRange   ErrorCode = 3003
+	ErrDuplicateValue ErrorCode = 3004
 
 	// 业务逻辑错误 (4000-4999)
-	ErrResourceNotFound ErrorCode = 4000 + iota
-	ErrResourceExists
-	ErrResourceLocked
-	ErrOperationNotAllowed
-	ErrQuotaExceeded
+	ErrResourceNotFound    ErrorCode = 4000
+	ErrResourceExists      ErrorCode = 4001
+	ErrResourceLocked      ErrorCode = 4002
+	ErrOperationNotAllowed ErrorCode = 4003
+	ErrQuotaExceeded       ErrorCode = 4004
 
 	// 外部服务错误 (5000-5999)
-	ErrThirdPartyService ErrorCode = 5000 + iota
-	ErrPaymentService
-	ErrEmailService
-	ErrSMSService
+	ErrThirdPartyService ErrorCode = 5000
+	ErrPaymentService    ErrorCode = 5001
+	ErrEmailService      ErrorCode = 5002
+	ErrSMSService        ErrorCode = 5003
 )
 
 // AppError 应用错误结构

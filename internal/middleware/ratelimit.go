@@ -34,7 +34,13 @@ func RateLimit(config RateLimitConfig) gin.HandlerFunc {
 		// 获取当前请求计数
 		currentCount, err := cache.Incr(rateLimitKey)
 		if err != nil {
-			// Redis 不可用时，放行请求
+			// Redis 不可用时，使用内存限流器降级
+			memLimiter := GetMemoryLimiter()
+			if !memLimiter.Allow(key) {
+				result.With(c, http.StatusTooManyRequests, "请求过于频繁，请稍后再试", nil)
+				c.Abort()
+				return
+			}
 			c.Next()
 			return
 		}

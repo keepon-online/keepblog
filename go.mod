@@ -19,7 +19,6 @@ require (
 	github.com/minio/minio-go/v7 v7.0.63
 	github.com/mssola/user_agent v0.6.0
 	github.com/pkg/errors v0.9.1
-	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.23.10
 	github.com/speps/go-hashids/v2 v2.0.1
 	github.com/spf13/viper v1.17.0
@@ -28,6 +27,7 @@ require (
 	go.abhg.dev/goldmark/toc v0.12.0
 	golang.org/x/crypto v0.45.0
 	golang.org/x/sync v0.18.0
+	golang.org/x/time v0.14.0
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1
 )

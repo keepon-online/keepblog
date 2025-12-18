@@ -26,9 +26,15 @@ func InitRedis() error {
 	}
 
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-		Password: cfg.Password,
-		DB:       cfg.Database,
+		Addr:         fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		Password:     cfg.Password,
+		DB:           cfg.Database,
+		PoolSize:     100,             // 连接池大小
+		MinIdleConns: 10,              // 最小空闲连接
+		MaxRetries:   3,               // 最大重试次数
+		DialTimeout:  5 * time.Second, // 连接超时
+		ReadTimeout:  3 * time.Second, // 读超时
+		WriteTimeout: 3 * time.Second, // 写超时
 	})
 
 	// 测试连接
@@ -93,19 +99,38 @@ func Delete(key string) error {
 	return rdb.Del(ctx, key).Err()
 }
 
-// DeletePattern 根据模式删除键
+// DeletePattern 根据模式删除键（使用 SCAN 避免阻塞）
 func DeletePattern(pattern string) error {
 	if !Enable {
 		return nil
 	}
 
-	keys, err := rdb.Keys(ctx, pattern).Result()
-	if err != nil {
-		return err
+	var cursor uint64
+	var deletedCount int64
+
+	for {
+		var keys []string
+		var err error
+		keys, cursor, err = rdb.Scan(ctx, cursor, pattern, 100).Result()
+		if err != nil {
+			return err
+		}
+
+		if len(keys) > 0 {
+			deleted, err := rdb.Del(ctx, keys...).Result()
+			if err != nil {
+				return err
+			}
+			deletedCount += deleted
+		}
+
+		if cursor == 0 {
+			break
+		}
 	}
 
-	if len(keys) > 0 {
-		return rdb.Del(ctx, keys...).Err()
+	if deletedCount > 0 {
+		slog.Debugf("Deleted %d keys matching pattern: %s", deletedCount, pattern)
 	}
 
 	return nil
@@ -127,6 +152,14 @@ func Expire(key string, expiration time.Duration) error {
 	}
 
 	return rdb.Expire(ctx, key, expiration).Err()
+}
+
+// Ping 健康检查
+func Ping() error {
+	if !Enable || rdb == nil {
+		return nil
+	}
+	return rdb.Ping(ctx).Err()
 }
 
 // Close 关闭Redis连接

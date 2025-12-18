@@ -161,37 +161,14 @@ func (hc *HealthChecker) checkRedis() Health {
 		}
 	}
 
-	// 简单的Redis健康检查 - 尝试设置和获取一个测试键
-	testKey := "health_check"
-	testValue := "ok"
-
-	if err := cache.Set(testKey, testValue, time.Minute); err != nil {
+	// 使用 PING 命令进行健康检查（更轻量）
+	if err := cache.Ping(); err != nil {
 		return Health{
 			Status:  "DOWN",
-			Message: fmt.Sprintf("Redis set failed: %v", err),
+			Message: fmt.Sprintf("Redis ping failed: %v", err),
 			Latency: time.Since(start),
 		}
 	}
-
-	var result string
-	if err := cache.Get(testKey, &result); err != nil {
-		return Health{
-			Status:  "DOWN",
-			Message: fmt.Sprintf("Redis get failed: %v", err),
-			Latency: time.Since(start),
-		}
-	}
-
-	if result != testValue {
-		return Health{
-			Status:  "DOWN",
-			Message: "Redis data integrity check failed",
-			Latency: time.Since(start),
-		}
-	}
-
-	// 清理测试键
-	_ = cache.Delete(testKey)
 
 	return Health{
 		Status:  "UP",

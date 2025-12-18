@@ -121,8 +121,12 @@ func (app *Application) setupGracefulShutdown() {
 
 		for i, server := range app.servers {
 			serverNames := []string{"admin", "console", "web"}
-			if err := app.shutdownServer(server, shutdownCtx, serverNames[i]); err != nil {
-				slog.Printf("Error shutting down %s server: %v", serverNames[i], err)
+			name := fmt.Sprintf("server-%d", i) // 默认名称
+			if i < len(serverNames) {
+				name = serverNames[i]
+			}
+			if err := app.shutdownServer(server, shutdownCtx, name); err != nil {
+				slog.Printf("Error shutting down %s server: %v", name, err)
 			}
 		}
 
