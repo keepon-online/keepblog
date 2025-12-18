@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"path"
 	"strings"
 	"time"
 
@@ -10,24 +11,57 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// JWT 白名单路径（精确匹配和前缀匹配）
+var (
+	// 精确匹配的路径
+	jwtExactWhitelist = map[string]bool{
+		"/api/login":        true,
+		"/api/refreshToken": true,
+		"/health":           true,
+		"/health/ready":     true,
+		"/health/live":      true,
+		"/metrics":          true,
+	}
+	// 前缀匹配的路径
+	jwtPrefixWhitelist = []string{
+		"/api/v1/upload/images",
+		"/console",
+		"/static",
+	}
+)
+
+// isPathWhitelisted 检查路径是否在白名单中（规范化后匹配）
+func isPathWhitelisted(reqPath string) bool {
+	// 规范化路径，防止 /api/login/../admin 类型的绕过
+	cleanPath := path.Clean(reqPath)
+
+	// 移除查询参数
+	if idx := strings.Index(cleanPath, "?"); idx != -1 {
+		cleanPath = cleanPath[:idx]
+	}
+
+	// 精确匹配
+	if jwtExactWhitelist[cleanPath] {
+		return true
+	}
+
+	// 前缀匹配
+	for _, prefix := range jwtPrefixWhitelist {
+		if strings.HasPrefix(cleanPath, prefix) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // JwtVerify JWT验证中间件（增强版）
 func JwtVerify() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 白名单路径，不需要验证
-		whitelist := []string{
-			"/api/login",
-			"/api/refreshToken",
-			"/api/v1/upload/images",
-			"/console",
-			"/health", // 健康检查
-		}
-
-		reqURI := c.Request.RequestURI
-		for _, whitelistPath := range whitelist {
-			if reqURI == whitelistPath || strings.HasPrefix(reqURI, whitelistPath) {
-				c.Next()
-				return
-			}
+		// 规范化路径检查白名单
+		if isPathWhitelisted(c.Request.URL.Path) {
+			c.Next()
+			return
 		}
 
 		// 获取Authorization头
@@ -68,6 +102,13 @@ func JwtVerify() gin.HandlerFunc {
 			}
 
 			result.With(c, http.StatusUnauthorized, message, nil)
+			c.Abort()
+			return
+		}
+
+		// 检查 Token 是否在黑名单中（已注销）
+		if jwttoken.IsTokenBlacklisted(tokenStr) {
+			result.With(c, http.StatusUnauthorized, "Token已失效，请重新登录", nil)
 			c.Abort()
 			return
 		}

@@ -1,17 +1,36 @@
 package jwttoken
 
 import (
-	"github.com/golang-jwt/jwt/v4"
-	"github.com/pkg/errors"
+	"os"
+
 	"time"
+
+	"github.com/golang-jwt/jwt/v4"
+	"github.com/gookit/slog"
+	"github.com/pkg/errors"
 )
 
+// MySecret JWT 签名密钥（从环境变量读取，必须至少32字节）
+var MySecret []byte
+
+func init() {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		// 开发环境默认值，生产环境必须设置环境变量
+		secret = "sq44jvTJfbBlsZSvNm440So77O9J9TA"
+		slog.Warn("JWT_SECRET not set, using default value. Set JWT_SECRET environment variable in production!")
+	}
+	if len(secret) < 32 {
+		slog.Warn("JWT_SECRET should be at least 32 characters for security")
+	}
+	MySecret = []byte(secret)
+}
+
+// MyClaims JWT 自定义声明
 type MyClaims struct {
 	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
-
-var MySecret = []byte("sq44jvTJfbBlsZSvNm440So77O9J9TA") // 定义secret
 
 // CreateToken username
 func CreateToken(username string) (tokenString string, err error) {

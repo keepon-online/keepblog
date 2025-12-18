@@ -1,13 +1,14 @@
 package login
 
 import (
+	"strings"
+
 	"gitee.com/jieepre/go-site/internal/model/request"
 	"gitee.com/jieepre/go-site/internal/model/response"
 	"gitee.com/jieepre/go-site/internal/pkg/core"
 	"gitee.com/jieepre/go-site/pkg/jwttoken"
 	"gitee.com/jieepre/go-site/pkg/result"
 	"github.com/gin-gonic/gin"
-	"strings"
 )
 
 type Handler struct {
@@ -45,6 +46,14 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 	result.Ok(c, token)
 }
 func (h *Handler) Logout(c *gin.Context) {
+	// 获取当前 Token 并加入黑名单
+	authorization := c.GetHeader("Authorization")
+	if authorization != "" {
+		tokenStr := strings.ReplaceAll(authorization, "Bearer ", "")
+		if tokenStr != "" {
+			_ = jwttoken.InvalidateToken(tokenStr)
+		}
+	}
 
 	result.Ok(c, nil)
 }
