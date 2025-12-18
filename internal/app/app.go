@@ -120,7 +120,7 @@ func (app *Application) setupGracefulShutdown() {
 		defer shutdownCancel()
 
 		for i, server := range app.servers {
-			serverNames := []string{"admin", "console", "web"}
+			serverNames := []string{"admin"}
 			name := fmt.Sprintf("server-%d", i) // 默认名称
 			if i < len(serverNames) {
 				name = serverNames[i]
