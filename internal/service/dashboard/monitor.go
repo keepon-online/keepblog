@@ -2,6 +2,11 @@ package dashboard
 
 import (
 	"encoding/json"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+
 	"gitee.com/jieepre/go-site/internal/model/response"
 	"gitee.com/jieepre/go-site/pkg/cmd"
 	"gitee.com/jieepre/go-site/pkg/copier"
@@ -13,10 +18,6 @@ import (
 	"github.com/shirou/gopsutil/v3/load"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
-	"sort"
-	"strings"
-	"sync"
-	"time"
 )
 
 func (s Service) LoadOsInfo() (*response.OsInfo, error) {
@@ -162,13 +163,44 @@ func loadDiskInfo() []response.DiskInfo {
 	lines := strings.Split(stdout, "\n")
 
 	var mounts []diskInfo
-	var excludes = []string{"/mnt/cdrom", "/boot", "/boot/efi", "/dev", "/dev/shm", "/run/lock", "/run", "/run/shm", "/run/user"}
+	// Docker 容器内常见的虚拟挂载点，应排除
+	var excludes = []string{
+		"/mnt/cdrom", "/boot", "/boot/efi", "/dev", "/dev/shm",
+		"/run/lock", "/run", "/run/shm", "/run/user",
+		"/etc/hostname", "/etc/hosts", "/etc/resolv.conf", // Docker 虚拟挂载
+		"/proc", "/sys",
+	}
+	// Docker 容器内应排除的挂载点前缀
+	var excludePrefixes = []string{
+		"/proc/", "/sys/", "/dev/",
+	}
+
+	// 用于按设备去重：device -> 最佳挂载点信息
+	deviceMap := make(map[string]diskInfo)
+	// 挂载点优先级（越小越优先）
+	mountPriority := func(mount string) int {
+		switch {
+		case mount == "/":
+			return 0
+		case mount == "/app" || mount == "/data" || mount == "/home":
+			return 1
+		case strings.HasPrefix(mount, "/app/") || strings.HasPrefix(mount, "/data/") || strings.HasPrefix(mount, "/home/"):
+			return 2
+		case strings.HasPrefix(mount, "/var/"):
+			return 3
+		case strings.HasPrefix(mount, "/etc/"):
+			return 100 // Docker 虚拟挂载，最低优先级
+		default:
+			return 10
+		}
+	}
+
 	for _, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 7 {
 			continue
 		}
-		if fields[1] == "tmpfs" {
+		if fields[1] == "tmpfs" || fields[1] == "overlay" {
 			continue
 		}
 		if strings.Contains(fields[2], "M") || strings.Contains(fields[2], "K") {
@@ -177,16 +209,49 @@ func loadDiskInfo() []response.DiskInfo {
 		if strings.Contains(fields[6], "docker") {
 			continue
 		}
+
+		mount := fields[6]
+
+		// 检查排除列表
 		isExclude := false
 		for _, exclude := range excludes {
-			if exclude == fields[6] {
+			if exclude == mount {
 				isExclude = true
+				break
 			}
 		}
 		if isExclude {
 			continue
 		}
-		mounts = append(mounts, diskInfo{Type: fields[1], Device: fields[0], Mount: fields[6]})
+
+		// 检查排除前缀
+		for _, prefix := range excludePrefixes {
+			if strings.HasPrefix(mount, prefix) {
+				isExclude = true
+				break
+			}
+		}
+		if isExclude {
+			continue
+		}
+
+		device := fields[0]
+		fsType := fields[1]
+		newMount := diskInfo{Type: fsType, Device: device, Mount: mount}
+
+		// 按设备去重：保留优先级更高的挂载点
+		if existing, ok := deviceMap[device]; ok {
+			if mountPriority(mount) < mountPriority(existing.Mount) {
+				deviceMap[device] = newMount
+			}
+		} else {
+			deviceMap[device] = newMount
+		}
+	}
+
+	// 将去重后的设备转为 slice
+	for _, info := range deviceMap {
+		mounts = append(mounts, info)
 	}
 
 	var (
