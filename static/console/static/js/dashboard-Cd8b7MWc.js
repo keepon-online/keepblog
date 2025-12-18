@@ -1,1 +1,0 @@
-import{h as e}from"./index-krGswbvC.js";const r=()=>e.request("get","/api/v1/site/dashboard/panel-group"),a=()=>e.request("get","/api/v1/site/dashboard/pie"),s=()=>e.request("get","/api/v1/site/dashboard/bar"),i=()=>e.request("get","/api/v1/site/dashboard/line");export{i as a,r as b,a as c,s as g};
