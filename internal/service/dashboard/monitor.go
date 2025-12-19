@@ -323,7 +323,10 @@ func loadDiskInfoFromPartitions(partitions []disk.PartitionStat) []response.Disk
 	// 排除的文件系统类型
 	excludeFsTypes := map[string]bool{
 		"tmpfs": true, "devtmpfs": true, "overlay": true, "shm": true,
-		"squashfs": true, "iso9660": true, "udf": true,
+		"squashfs": true, "iso9660": true, "udf": true, "nsfs": true,
+		"cgroup": true, "cgroup2": true, "sysfs": true, "proc": true,
+		"mqueue": true, "hugetlbfs": true, "debugfs": true, "tracefs": true,
+		"securityfs": true, "pstore": true, "bpf": true, "autofs": true,
 	}
 
 	// 排除的挂载点
@@ -333,10 +336,13 @@ func loadDiskInfoFromPartitions(partitions []disk.PartitionStat) []response.Disk
 		"/etc/hostname": true, "/etc/hosts": true, "/etc/resolv.conf": true,
 	}
 
-	// 排除的挂载点前缀
-	excludePrefixes := []string{"/proc/", "/sys/", "/dev/", "/run/", "/snap/"}
+	// 排除的挂载点前缀（Docker bind mounts）
+	excludePrefixes := []string{
+		"/proc/", "/sys/", "/dev/", "/run/", "/snap/",
+		"/etc/", "/app/data", "/app/logs", "/app/config",
+	}
 
-	// 挂载点优先级
+	// 挂载点优先级（越小越优先）
 	mountPriority := func(mount string) int {
 		switch {
 		case mount == "/":
@@ -373,7 +379,7 @@ func loadDiskInfoFromPartitions(partitions []disk.PartitionStat) []response.Disk
 			continue
 		}
 
-		// 按设备去重
+		// 按设备去重：保留优先级最高的挂载点
 		if existing, ok := deviceMap[p.Device]; ok {
 			if mountPriority(p.Mountpoint) < mountPriority(existing.Mountpoint) {
 				deviceMap[p.Device] = p
@@ -383,21 +389,17 @@ func loadDiskInfoFromPartitions(partitions []disk.PartitionStat) []response.Disk
 		}
 	}
 
-	// 获取磁盘使用情况
+	// 获取磁盘使用情况并进行二次去重（按磁盘总大小）
 	var (
-		wg sync.WaitGroup
-		mu sync.Mutex
+		wg          sync.WaitGroup
+		mu          sync.Mutex
+		tempResults []response.DiskInfo
 	)
 
 	for _, p := range deviceMap {
 		wg.Add(1)
 		go func(partition disk.PartitionStat) {
 			defer wg.Done()
-
-			var itemData response.DiskInfo
-			itemData.Path = partition.Mountpoint
-			itemData.Type = partition.Fstype
-			itemData.Device = partition.Device
 
 			state, err := disk.Usage(partition.Mountpoint)
 			if err != nil {
@@ -410,6 +412,10 @@ func loadDiskInfoFromPartitions(partitions []disk.PartitionStat) []response.Disk
 				return
 			}
 
+			var itemData response.DiskInfo
+			itemData.Path = partition.Mountpoint
+			itemData.Type = partition.Fstype
+			itemData.Device = partition.Device
 			itemData.Total = state.Total
 			itemData.Free = state.Free
 			itemData.Used = state.Used
@@ -420,11 +426,29 @@ func loadDiskInfoFromPartitions(partitions []disk.PartitionStat) []response.Disk
 			itemData.InodesUsedPercent = state.InodesUsedPercent
 
 			mu.Lock()
-			datas = append(datas, itemData)
+			tempResults = append(tempResults, itemData)
 			mu.Unlock()
 		}(p)
 	}
 	wg.Wait()
+
+	// 二次去重：按磁盘大小去重（Docker 中多个挂载点可能指向同一个磁盘）
+	totalMap := make(map[uint64]response.DiskInfo)
+	for _, item := range tempResults {
+		if existing, ok := totalMap[item.Total]; ok {
+			// 相同大小的磁盘，保留优先级更高的挂载点
+			if mountPriority(item.Path) < mountPriority(existing.Path) {
+				totalMap[item.Total] = item
+			}
+		} else {
+			totalMap[item.Total] = item
+		}
+	}
+
+	// 转换为结果列表
+	for _, item := range totalMap {
+		datas = append(datas, item)
+	}
 
 	sort.Slice(datas, func(i, j int) bool {
 		return datas[i].Path < datas[j].Path
