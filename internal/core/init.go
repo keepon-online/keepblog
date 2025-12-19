@@ -93,6 +93,7 @@ func initTable() {
 		&system.AccessLog{},
 		&system.WebSite{},
 		&system.LoginLog{},
+		&system.Notice{},
 	)
 	if err != nil {
 		slog.Errorf("初始化Table失败:%s", err.Error())

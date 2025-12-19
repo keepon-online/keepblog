@@ -12,11 +12,13 @@ import (
 	"gitee.com/jieepre/go-site/api/admin/login"
 	"gitee.com/jieepre/go-site/api/admin/monitor"
 	"gitee.com/jieepre/go-site/api/admin/music"
+	"gitee.com/jieepre/go-site/api/admin/notice"
 	"gitee.com/jieepre/go-site/api/admin/post"
 	"gitee.com/jieepre/go-site/api/admin/system"
 	"gitee.com/jieepre/go-site/api/admin/tags"
 	"gitee.com/jieepre/go-site/api/admin/website"
 	"gitee.com/jieepre/go-site/internal/pkg/core"
+	ws "gitee.com/jieepre/go-site/internal/websocket"
 	"github.com/gin-gonic/gin"
 )
 
@@ -34,6 +36,8 @@ func RegisterAdminRouter(ctx *core.Context) {
 	dashboardRouter(ctx)
 	musicRouter(ctx)
 	logViewerRouter(ctx)
+	noticeRouter(ctx)
+	websocketRouter(ctx)
 }
 
 func userRouter(ctx *core.Context) {
@@ -535,4 +539,56 @@ func logViewerRouter(ctx *core.Context) {
 		},
 	}
 	RegisterRouter(group, routes)
+}
+
+func noticeRouter(ctx *core.Context) {
+	handler := notice.Handler{Context: ctx}
+	routeGroup := RouteGroup{
+		Name:   "通知管理",
+		Prefix: "/api/v1/notice",
+	}
+	group := ctx.Engine.Group(routeGroup.Prefix)
+	routes := []Route{
+		{
+			Method:     http.MethodGet,
+			Path:       "/list",
+			Handler:    handler.GetNotices,
+			Middleware: []gin.HandlerFunc{},
+		},
+		{
+			Method:     http.MethodPut,
+			Path:       "/read/:id",
+			Handler:    handler.MarkAsRead,
+			Middleware: []gin.HandlerFunc{},
+		},
+		{
+			Method:     http.MethodPut,
+			Path:       "/read-all",
+			Handler:    handler.MarkAllAsRead,
+			Middleware: []gin.HandlerFunc{},
+		},
+		{
+			Method:     http.MethodDelete,
+			Path:       "/delete/:id",
+			Handler:    handler.DeleteNotice,
+			Middleware: []gin.HandlerFunc{},
+		},
+		{
+			Method:     http.MethodDelete,
+			Path:       "/clear",
+			Handler:    handler.ClearNotices,
+			Middleware: []gin.HandlerFunc{},
+		},
+		{
+			Method:     http.MethodPost,
+			Path:       "/send",
+			Handler:    handler.SendNotice,
+			Middleware: []gin.HandlerFunc{},
+		},
+	}
+	RegisterRouter(group, routes)
+}
+
+func websocketRouter(ctx *core.Context) {
+	ctx.Engine.GET("/ws", ws.HandleWebSocket)
 }
