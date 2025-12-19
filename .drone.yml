@@ -17,7 +17,7 @@ volumes:
 
 steps:
   - name: 开始构建
-    image: golang:1.21.4-bookworm
+    image: golang:1.24.11-bookworm
     volumes:
       - name: gocache
         path: /go/cache
