@@ -320,9 +320,9 @@ func loadDiskInfoFromPartitions(partitions []disk.PartitionStat) []response.Disk
 	// 按设备去重
 	deviceMap := make(map[string]disk.PartitionStat)
 
-	// 排除的文件系统类型
+	// 排除的文件系统类型（overlay 根目录保留，让去重逻辑处理）
 	excludeFsTypes := map[string]bool{
-		"tmpfs": true, "devtmpfs": true, "overlay": true, "shm": true,
+		"tmpfs": true, "devtmpfs": true, "shm": true,
 		"squashfs": true, "iso9660": true, "udf": true, "nsfs": true,
 		"cgroup": true, "cgroup2": true, "sysfs": true, "proc": true,
 		"mqueue": true, "hugetlbfs": true, "debugfs": true, "tracefs": true,
@@ -336,13 +336,12 @@ func loadDiskInfoFromPartitions(partitions []disk.PartitionStat) []response.Disk
 		"/etc/hostname": true, "/etc/hosts": true, "/etc/resolv.conf": true,
 	}
 
-	// 排除的挂载点前缀（Docker bind mounts）
+	// 排除的挂载点前缀（Docker 虚拟文件系统，不排除实际数据目录）
 	excludePrefixes := []string{
-		"/proc/", "/sys/", "/dev/", "/run/", "/snap/",
-		"/etc/", "/app/data", "/app/logs", "/app/config",
+		"/proc/", "/sys/", "/dev/", "/run/", "/snap/", "/etc/",
 	}
 
-	// 挂载点优先级（越小越优先）
+	// 挂载点优先级（越小越优先，/ 最高）
 	mountPriority := func(mount string) int {
 		switch {
 		case mount == "/":
@@ -351,13 +350,15 @@ func loadDiskInfoFromPartitions(partitions []disk.PartitionStat) []response.Disk
 			return 1
 		case strings.HasPrefix(mount, "/var/"):
 			return 3
+		case strings.HasPrefix(mount, "/app/"):
+			return 5 // Docker 绑定挂载的子目录
 		default:
 			return 10
 		}
 	}
 
 	for _, p := range partitions {
-		// 排除特定文件系统
+		// 排除特定文件系统（但 overlay 根目录保留）
 		if excludeFsTypes[p.Fstype] {
 			continue
 		}
