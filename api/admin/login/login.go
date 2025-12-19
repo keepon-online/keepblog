@@ -65,7 +65,43 @@ func (h *Handler) GetAsyncRoutes(c *gin.Context) {
 	})
 }
 func (h *Handler) GetInfo(c *gin.Context) {
+	// 从 Token 获取用户名
+	authorization := c.GetHeader("Authorization")
+	tokenStr := strings.ReplaceAll(authorization, "Bearer ", "")
+	token, err := jwttoken.ParseToken(tokenStr)
+	if err != nil {
+		result.Error(c, "请重新登录")
+		return
+	}
 
+	userInfo, err := h.Service.SystemService.GetUserInfo(token.Username)
+	if err != nil {
+		result.Error(c, err.Error())
+		return
+	}
+	result.Ok(c, userInfo)
+}
+
+func (h *Handler) UpdateProfile(c *gin.Context) {
+	// 从 Token 获取用户名
+	authorization := c.GetHeader("Authorization")
+	tokenStr := strings.ReplaceAll(authorization, "Bearer ", "")
+	token, err := jwttoken.ParseToken(tokenStr)
+	if err != nil {
+		result.Error(c, "请重新登录")
+		return
+	}
+
+	var req request.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		result.Error(c, "请求参数错误")
+		return
+	}
+
+	if err := h.Service.SystemService.UpdateProfile(token.Username, req); err != nil {
+		result.Error(c, err.Error())
+		return
+	}
 	result.Ok(c, nil)
 }
 func (h *Handler) ChangePassword(c *gin.Context) {

@@ -11,6 +11,22 @@ type LoginResponse struct {
 	Expires      string   `json:"expires"`
 }
 
+// UserInfoResponse 用户个人信息响应
+type UserInfoResponse struct {
+	UserId       int64  `json:"userId"`
+	Username     string `json:"username"`
+	NickName     string `json:"nickName"`
+	Email        string `json:"email"`
+	Phonenumber  string `json:"phonenumber"`
+	Sex          uint8  `json:"sex"` // 0-未知 1-男 2-女
+	Avatar       string `json:"avatar"`
+	Role         string `json:"role"`
+	LoginIP      string `json:"loginIp"`
+	LoginTime    string `json:"loginTime"`
+	LoginCount   int    `json:"loginCount"`
+	RegisterTime string `json:"registerTime"`
+}
+
 type RefreshToken struct {
 	AccessToken  string `json:"accessToken"`
 	RefreshToken string `json:"refreshToken"`

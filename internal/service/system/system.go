@@ -2,6 +2,8 @@ package system
 
 import (
 	"fmt"
+	"time"
+
 	"gitee.com/jieepre/go-site/global"
 	"gitee.com/jieepre/go-site/internal/model"
 	"gitee.com/jieepre/go-site/internal/model/request"
@@ -15,7 +17,6 @@ import (
 	"github.com/gookit/slog"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
-	"time"
 )
 
 type Service struct {
@@ -120,6 +121,89 @@ func (service *Service) ChangePassword(req request.ChangePasswordRequest) error 
 	}
 	return nil
 }
+
+// GetUserInfo 获取用户个人信息
+func (service *Service) GetUserInfo(username string) (*response.UserInfoResponse, error) {
+	user := model.User{}
+	if err := global.GORM.Where("username", username).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("用户不存在")
+		}
+		slog.Errorf("获取用户信息失败: %v", err)
+		return nil, errors.New("获取用户信息失败")
+	}
+
+	// 获取最近登录信息
+	var loginLog system.LoginLog
+	var loginCount int64
+	global.GORM.Model(&system.LoginLog{}).Where("success = ?", 1).Count(&loginCount)
+	global.GORM.Where("success = ?", 1).Order("create_at desc").First(&loginLog)
+
+	loginIP := ""
+	loginTime := ""
+	if loginLog.Ip != nil {
+		loginIP = pkg.Long2ip(*loginLog.Ip)
+	}
+	if loginLog.CreatedAt > 0 {
+		loginTime = time.Unix(int64(loginLog.CreatedAt), 0).Format("2006-01-02 15:04:05")
+	}
+
+	return &response.UserInfoResponse{
+		UserId:       user.UserId,
+		Username:     user.Username,
+		NickName:     user.NickName,
+		Email:        user.Email,
+		Phonenumber:  user.Phonenumber,
+		Sex:          user.Sex,
+		Avatar:       user.Avatar,
+		Role:         "超级管理员",
+		LoginIP:      loginIP,
+		LoginTime:    loginTime,
+		LoginCount:   int(loginCount),
+		RegisterTime: "2021-01-01 00:00:00", // TODO: 添加用户注册时间字段
+	}, nil
+}
+
+// UpdateProfile 更新用户资料
+func (service *Service) UpdateProfile(username string, req request.UpdateProfileRequest) error {
+	user := model.User{}
+	if err := global.GORM.Where("username", username).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("用户不存在")
+		}
+		return errors.New("更新用户资料失败")
+	}
+
+	// 构建更新字段
+	updates := make(map[string]interface{})
+	if req.NickName != "" {
+		updates["nick_name"] = req.NickName
+	}
+	if req.Email != "" {
+		updates["email"] = req.Email
+	}
+	if req.Phonenumber != "" {
+		updates["phonenumber"] = req.Phonenumber
+	}
+	if req.Sex != nil {
+		updates["sex"] = *req.Sex
+	}
+	if req.Avatar != "" {
+		updates["avatar"] = req.Avatar
+	}
+
+	if len(updates) == 0 {
+		return nil
+	}
+
+	if err := global.GORM.Model(&user).Updates(updates).Error; err != nil {
+		slog.Errorf("更新用户资料失败: %v", err)
+		return errors.New("更新用户资料失败")
+	}
+
+	return nil
+}
+
 func (service *Service) LoginLog(log system.LoginLog) {
 	global.GORM.Save(&log)
 }

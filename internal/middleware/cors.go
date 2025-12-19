@@ -20,6 +20,8 @@ func initAllowedOrigins() map[string]bool {
 		"http://127.0.0.1:8589":     true,
 		"https://www.keepon.online": true,
 		"https://keepon.online":     true,
+		"http://192.168.3.6:8589":   true,
+		"http://192.168.3.6:8848":   true,
 	}
 
 	// 从环境变量追加

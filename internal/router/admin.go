@@ -76,6 +76,11 @@ func userRouter(ctx *core.Context) {
 			Path:       "/api/getInfo",
 			Handler:    handler.GetInfo,
 			Middleware: []gin.HandlerFunc{},
+		}, {
+			Method:     http.MethodPut,
+			Path:       "/api/updateProfile",
+			Handler:    handler.UpdateProfile,
+			Middleware: []gin.HandlerFunc{},
 		},
 	}
 	RegisterRouter(group, routes)

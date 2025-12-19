@@ -39,3 +39,12 @@ type ChangePasswordRequest struct {
 	NewPassword string `form:"newPassword" json:"newPassword" binding:"required,min=6,max=128"`
 	Username    string `json:"-"`
 }
+
+// UpdateProfileRequest 更新用户资料请求
+type UpdateProfileRequest struct {
+	NickName    string `json:"nickName" binding:"max=50"`
+	Email       string `json:"email" binding:"omitempty,email,max=100"`
+	Phonenumber string `json:"phonenumber" binding:"max=20"`
+	Sex         *uint8 `json:"sex" binding:"omitempty,max=2"`
+	Avatar      string `json:"avatar" binding:"max=500"`
+}
