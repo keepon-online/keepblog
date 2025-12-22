@@ -1,29 +1,85 @@
-FROM golang:1.24.11 AS builder
+# ================================
+# 多阶段构建 - Go-Site
+# ================================
+
+# 构建参数
+ARG VERSION=dev
+ARG GIT_COMMIT=unknown
+ARG BUILD_DATE=unknown
+
+# ================================
+# 阶段1: 构建
+# ================================
+FROM golang:1.21-alpine AS builder
+
+# 构建参数
+ARG VERSION
+ARG GIT_COMMIT
+ARG BUILD_DATE
+
+# 安装 CGO 依赖（SQLite 需要）
+RUN apk add --no-cache gcc musl-dev sqlite-dev
+
+# 设置环境变量（启用 CGO）
 ENV GO111MODULE=on \
-    GOPROXY=https://goproxy.cn
+    GOPROXY=https://goproxy.cn,direct \
+    CGO_ENABLED=1
+
 WORKDIR /app
+
+# 先复制依赖文件，利用缓存
+COPY go.mod go.sum ./
+RUN go mod download
+
+# 复制源代码
 COPY . .
-COPY data/ip2region.xdb /app/data/ip2region.xdb
-COPY config-example.yaml /app/config.yaml
-RUN go mod tidy
-RUN go env && go build -ldflags="-s -w"  -o site .
-FROM ubuntu:22.04
-RUN groupadd -r appuser && \
-    useradd -r -g appuser appuser && \
-    mkdir -p /app/data && \
-    chown -R appuser:appuser /app/data
+
+# 版本注入编译
+RUN go build -trimpath \
+    -ldflags="-s -w \
+    -X 'gitee.com/jieepre/go-site/internal/version.Version=${VERSION}' \
+    -X 'gitee.com/jieepre/go-site/internal/version.GitCommit=${GIT_COMMIT}' \
+    -X 'gitee.com/jieepre/go-site/internal/version.BuildTime=${BUILD_DATE}' \
+    -X 'gitee.com/jieepre/go-site/internal/version.GoVersion=$(go version | cut -d\" \" -f3)'" \
+    -o go-site .
+
+# ================================
+# 阶段2: 运行
+# ================================
+FROM alpine:3.19
+
+# 安装运行时依赖（SQLite 需要）
+RUN apk --no-cache add ca-certificates tzdata sqlite-libs && \
+    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
+
+# 创建非root用户
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
-COPY --from=builder /app/site /app/site
-COPY --from=builder /app/config.yaml /app/default/config.yaml
-COPY --from=builder /app/data/ip2region.xdb /app/default/ip2region.xdb
+# 从构建阶段复制文件
+COPY --from=builder /app/go-site /app/go-site
+COPY --from=builder /app/data/ip2region.xdb /app/data/ip2region.xdb
+COPY --from=builder /app/config-example.yaml /app/default/config.yaml
 
-# 添加入口点脚本
-COPY entrypoint.sh /app/entrypoint.sh
+# 创建数据目录并设置权限
+RUN mkdir -p /app/data /app/logs && \
+    chown -R appuser:appgroup /app
+
+# 入口点脚本
+COPY --chown=appuser:appgroup entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-ENV TZ=Asia/Shanghai
-EXPOSE  8589
+# 切换到非root用户
+USER appuser
 
+# 暴露端口
+EXPOSE 8589
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8589/health/live || exit 1
+
+# 启动
 ENTRYPOINT ["/app/entrypoint.sh"]
