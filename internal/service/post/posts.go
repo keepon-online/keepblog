@@ -1,6 +1,10 @@
 package post
 
 import (
+	"regexp"
+	"sort"
+	"strings"
+
 	"gitee.com/jieepre/go-site/global"
 	"gitee.com/jieepre/go-site/internal/model"
 	"github.com/pkg/errors"
@@ -254,6 +258,169 @@ func (service Service) GetPostsArchive(num int64) ([]map[string]any, int64, erro
 }
 
 func (service Service) Search(keyword string) (posts []model.SearchPost, err error) {
-	err = global.GORM.Table(model.TPostsTable).Where("title like ? and is_published=1 and is_deleted=0 ", "%"+keyword+"%").Find(&posts).Error
-	return
+	return service.SearchPaged(keyword, 1, 20)
+}
+
+// SearchPaged 分页搜索
+func (service Service) SearchPaged(keyword string, pageNum, pageSize int) ([]model.SearchPost, error) {
+	if keyword == "" {
+		return []model.SearchPost{}, nil
+	}
+
+	// 查询匹配的文章
+	var rawPosts []struct {
+		PostId     uint32 `gorm:"column:post_id"`
+		Title      string `gorm:"column:title"`
+		PostSlug   string `gorm:"column:post_slug"`
+		Summary    string `gorm:"column:summary"`
+		Content    string `gorm:"column:post_content"`
+		CoverImage string `gorm:"column:cover_image"`
+		CreateTime int64  `gorm:"column:create_time"`
+	}
+
+	likeKeyword := "%" + keyword + "%"
+	err := global.GORM.Table(model.TPostsTable).
+		Select("post_id, title, post_slug, summary, post_content, cover_image, create_time").
+		Where("is_published = 1 AND is_deleted = 0").
+		Where("title LIKE ? OR summary LIKE ? OR post_content LIKE ?", likeKeyword, likeKeyword, likeKeyword).
+		Order("create_time DESC").
+		Offset((pageNum - 1) * pageSize).
+		Limit(pageSize).
+		Find(&rawPosts).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 处理结果：计算相关度和高亮
+	posts := make([]model.SearchPost, 0, len(rawPosts))
+	for _, raw := range rawPosts {
+		relevance := 0
+		highlight := ""
+
+		// 计算相关度分数
+		lowerKeyword := strings.ToLower(keyword)
+		if strings.Contains(strings.ToLower(raw.Title), lowerKeyword) {
+			relevance += 10 // 标题匹配权重最高
+		}
+		if strings.Contains(strings.ToLower(raw.Summary), lowerKeyword) {
+			relevance += 5 // 摘要匹配
+		}
+		if strings.Contains(strings.ToLower(raw.Content), lowerKeyword) {
+			relevance += 1 // 内容匹配
+		}
+
+		// 生成高亮片段
+		highlight = extractHighlight(raw.Content, keyword, 100)
+		if highlight == "" {
+			highlight = extractHighlight(raw.Summary, keyword, 100)
+		}
+		if highlight == "" && len(raw.Summary) > 0 {
+			if len(raw.Summary) > 100 {
+				highlight = raw.Summary[:100] + "..."
+			} else {
+				highlight = raw.Summary
+			}
+		}
+
+		posts = append(posts, model.SearchPost{
+			Id:         raw.PostId,
+			Title:      highlightKeyword(raw.Title, keyword),
+			PostSlug:   raw.PostSlug,
+			Summary:    raw.Summary,
+			Highlight:  highlight,
+			CoverImage: raw.CoverImage,
+			CreateAt:   raw.CreateTime,
+			Relevance:  relevance,
+		})
+	}
+
+	// 按相关度排序
+	sort.Slice(posts, func(i, j int) bool {
+		return posts[i].Relevance > posts[j].Relevance
+	})
+
+	return posts, nil
+}
+
+// SearchWithResult 带统计的搜索
+func (service Service) SearchWithResult(keyword string, pageNum, pageSize int) (*model.SearchResult, error) {
+	if pageNum <= 0 {
+		pageNum = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+
+	posts, err := service.SearchPaged(keyword, pageNum, pageSize)
+	if err != nil {
+		return nil, err
+	}
+
+	// 统计总数
+	var total int64
+	likeKeyword := "%" + keyword + "%"
+	global.GORM.Table(model.TPostsTable).
+		Where("is_published = 1 AND is_deleted = 0").
+		Where("title LIKE ? OR summary LIKE ? OR post_content LIKE ?", likeKeyword, likeKeyword, likeKeyword).
+		Count(&total)
+
+	return &model.SearchResult{
+		Posts:    posts,
+		Total:    total,
+		Keyword:  keyword,
+		PageNum:  pageNum,
+		PageSize: pageSize,
+	}, nil
+}
+
+// extractHighlight 提取包含关键词的高亮片段
+func extractHighlight(content, keyword string, maxLen int) string {
+	if content == "" || keyword == "" {
+		return ""
+	}
+
+	lowerContent := strings.ToLower(content)
+	lowerKeyword := strings.ToLower(keyword)
+	idx := strings.Index(lowerContent, lowerKeyword)
+
+	if idx == -1 {
+		return ""
+	}
+
+	// 计算片段起始位置
+	start := idx - maxLen/2
+	if start < 0 {
+		start = 0
+	}
+
+	// 计算片段结束位置
+	end := idx + len(keyword) + maxLen/2
+	if end > len(content) {
+		end = len(content)
+	}
+
+	// 提取片段
+	snippet := content[start:end]
+
+	// 添加省略号
+	if start > 0 {
+		snippet = "..." + snippet
+	}
+	if end < len(content) {
+		snippet = snippet + "..."
+	}
+
+	return highlightKeyword(snippet, keyword)
+}
+
+// highlightKeyword 高亮关键词
+func highlightKeyword(text, keyword string) string {
+	if text == "" || keyword == "" {
+		return text
+	}
+
+	// 使用正则进行大小写不敏感替换
+	re := regexp.MustCompile("(?i)" + regexp.QuoteMeta(keyword))
+	return re.ReplaceAllString(text, "<mark>$0</mark>")
 }

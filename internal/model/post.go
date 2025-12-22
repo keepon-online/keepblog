@@ -170,8 +170,23 @@ type LatestPosts struct {
 }
 
 type SearchPost struct {
-	Title    string `json:"title"`
-	PostSlug string `json:"postSlug"`
+	Id         uint32 `json:"id"`
+	Title      string `json:"title"`
+	PostSlug   string `json:"postSlug"`
+	Summary    string `json:"summary"`
+	Highlight  string `json:"highlight"` // 匹配片段高亮
+	CoverImage string `json:"coverImage"`
+	CreateAt   int64  `json:"createAt"`
+	Relevance  int    `json:"relevance"` // 相关度分数
+}
+
+// SearchResult 搜索结果包装
+type SearchResult struct {
+	Posts    []SearchPost `json:"posts"`
+	Total    int64        `json:"total"`
+	Keyword  string       `json:"keyword"`
+	PageNum  int          `json:"pageNum"`
+	PageSize int          `json:"pageSize"`
 }
 
 type ArchivesPosts struct {
