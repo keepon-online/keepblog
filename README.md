@@ -1,7 +1,8 @@
 # Go-Site 博客系统
 
-[![Go](https://img.shields.io/github/go-mod/go-version/username/go-site)](https://golang.org/)
+[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](Dockerfile)
 
 ## 项目简介
 
@@ -11,99 +12,129 @@ Go-Site 是一个基于 Go 语言和 Gin 框架开发的全功能博客系统，
 
 ### 前台功能
 - 文章展示（分类、标签、归档）
-- 文章搜索
+- 全文搜索（标题+内容+摘要）
 - 评论系统
 - 友情链接
 - 响应式设计
+- 音乐播放器
 
 ### 后台管理
 - 文章管理（发布、编辑、删除）
 - 分类/标签管理
 - 评论审核
-- 系统监控
+- 系统监控（CPU/内存/磁盘/网络）
+- 日志管理（动态级别、查看、清理）
 - 用户管理
 
 ## 技术栈
 
-- **后端框架**: Gin
-- **数据库**: SQLite (通过 GORM)
-- **身份验证**: JWT
-- **Markdown处理**: Goldmark + Lute
-- **对象存储**: Minio
-- **定时任务**: Gocron
-- **系统监控**: Gopsutil
+| 类别 | 技术 |
+|------|------|
+| 后端框架 | Gin |
+| 数据库 | SQLite (GORM) |
+| 缓存 | Redis (可选) |
+| 身份验证 | JWT |
+| 日志 | Slog (结构化日志) |
+| 监控 | Gopsutil |
+| 对象存储 | Minio |
 
-## 安装指南
+## 快速开始
 
 ### 前置要求
 - Go 1.21+
 - SQLite3
+- pnpm (前端构建)
 
-### 安装步骤
-1. 克隆仓库：
-   ```bash
-   git clone https://github.com/username/go-site.git
-   cd go-site
-   ```
+### 本地开发
 
-2. 安装依赖：
-   ```bash
-   go mod download
-   ```
+```bash
+# 克隆项目
+git clone https://github.com/username/go-site.git
+cd go-site
 
-3. 配置项目：
-   复制 `config.example.yaml` 为 `config.yaml` 并修改配置
+# 安装依赖
+go mod download
 
-4. 启动项目：
-   ```bash
-   go run main.go
-   ```
+# 配置
+cp config-example.yaml config.yaml
+
+# 运行
+make run
+```
+
+### 构建命令
+
+```bash
+make build         # 本地构建（带版本注入）
+make linux         # Linux AMD64 构建
+make linux-arm64   # Linux ARM64 构建
+make darwin        # macOS AMD64 构建
+make windows       # Windows AMD64 构建
+make docker        # 构建 Docker 镜像
+make console       # 构建前端并同步
+make version       # 显示版本信息
+make help          # 查看所有命令
+```
+
+### Docker 部署
+
+```bash
+# 构建镜像
+./build.sh
+
+# 或使用 make
+make docker
+
+# 运行容器
+docker run -d -p 8589:8589 -v ./data:/app/data jieepre/go-site:latest
+```
 
 ## 配置说明
 
 主要配置项 (`config.yaml`)：
 
 ```yaml
-server:
-  port: 8589  # 前端端口
-  admin_port: 8000  # 后台端口
-  console_port: 8890  # 控制台端口
+http:
+  port: "8589"
 
-database:
-  path: "data/site.db"  # SQLite数据库路径
+redis:
+  host: localhost
+  port: 6379
+  enable: false  # 可选缓存
 
-jwt:
-  secret: "your-secret-key"  # JWT密钥
-  expire: 720h  # 过期时间
+minio:
+  endpoint: "127.0.0.1:9000"
+  bucketName: "go-site"
 ```
 
-## 使用说明
+## API 端点
 
-### 启动服务
-项目启动后会运行三个服务：
-1. 前端网站: http://localhost:8589
-2. 管理后台: http://localhost:8000
-3. 控制台: http://localhost:8890
+| 端点 | 说明 |
+|------|------|
+| `/health` | 健康检查 |
+| `/health/live` | 存活检查 |
+| `/metrics` | 性能指标 |
+| `/api/log/level` | 日志级别管理 |
+| `/api/monitor/server` | 系统监控 |
 
-### 管理员账号
-默认管理员账号：
-- 用户名: admin
-- 密码: admin123
+## 项目结构
 
-首次登录后请立即修改密码。
-
-## API文档
-
-[查看API文档](docs/api.md)
-
-## 贡献指南
-
-欢迎贡献代码！请遵循以下步骤：
-1. Fork 本项目
-2. 创建分支 (`git checkout -b feature/your-feature`)
-3. 提交修改 (`git commit -am 'Add some feature'`)
-4. 推送分支 (`git push origin feature/your-feature`)
-5. 创建 Pull Request
+```
+go-site/
+├── api/              # API 处理器
+├── config/           # 配置
+├── internal/         # 内部包
+│   ├── app/          # 应用入口
+│   ├── cache/        # Redis 缓存
+│   ├── logger/       # 日志系统
+│   ├── middleware/   # 中间件
+│   ├── monitor/      # 健康检查
+│   └── version/      # 版本信息
+├── pkg/              # 公共包
+├── static/           # 静态资源
+│   └── console/      # 后台前端
+└── Makefile          # 构建脚本
+```
 
 ## 许可证
 
