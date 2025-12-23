@@ -60,7 +60,6 @@ WORKDIR /app
 
 # 从构建阶段复制文件
 COPY --from=builder /app/go-site /app/go-site
-COPY --from=builder /app/data/ip2region.xdb /app/data/ip2region.xdb
 COPY --from=builder /app/config-example.yaml /app/default/config.yaml
 
 # 创建数据目录并设置权限

@@ -30,19 +30,8 @@ fi
 
 echo "配置文件检查完成"
 
-echo "检查IP数据库..."
-if [ ! -f /app/data/ip2region.xdb ]; then
-    echo "初始化IP数据库..."
-    if [ -f /app/default/ip2region.xdb ]; then
-        cp /app/default/ip2region.xdb /app/data/
-    else
-        echo "错误：找不到默认IP数据库"
-        exit 1
-    fi
-fi
-
-echo "确保日志目录权限..."
-mkdir -p /app/logs
+echo "确保数据和日志目录..."
+mkdir -p /app/data /app/logs
 chmod -R 755 /app/logs 2>/dev/null || true
 
 echo "启动应用程序..."
