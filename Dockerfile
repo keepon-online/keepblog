@@ -49,7 +49,7 @@ RUN go build -trimpath \
 FROM alpine:3.19
 
 # 安装运行时依赖（SQLite 需要）
-RUN apk --no-cache add ca-certificates tzdata sqlite-libs && \
+RUN apk --no-cache add ca-certificates tzdata sqlite-libs bash && \
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
     echo "Asia/Shanghai" > /etc/timezone
 
