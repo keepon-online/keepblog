@@ -18,7 +18,7 @@ ARG GIT_COMMIT
 ARG BUILD_DATE
 
 # 安装 CGO 依赖（SQLite 需要）
-RUN apk add --no-cache gcc musl-dev sqlite-dev
+RUN apk add --no-cache --update gcc musl-dev sqlite-dev
 
 # 设置环境变量（启用 CGO）
 ENV GO111MODULE=on \
@@ -64,12 +64,12 @@ COPY --from=builder /app/data/ip2region.xdb /app/data/ip2region.xdb
 COPY --from=builder /app/config-example.yaml /app/default/config.yaml
 
 # 创建数据目录并设置权限
-RUN mkdir -p /app/data /app/logs && \
+RUN mkdir -p /app/data /app/logs /app/config && \
     chown -R appuser:appgroup /app
 
-# 入口点脚本
-COPY --chown=appuser:appgroup entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+# 入口点脚本（转换Windows换行符）
+COPY entrypoint.sh /app/entrypoint.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh && chown appuser:appgroup /app/entrypoint.sh
 
 # 切换到非root用户
 USER appuser
