@@ -12,9 +12,15 @@
 <div class="page" id="body-wrap">
     <main class="layout" id="content-inner">
         <div id="page">
+            <div class="tag-cloud-title">
+                <i class="fas fa-tags"></i>
+                <span>目前共计 <span class="tag-count">{{len .tags}}</span> 个标签</span>
+            </div>
             <div class="tag-cloud-list is-center">
                 {{range $i, $v := .tags}}
-                <a href="/tags/{{ $v.TagName }}" style="{{$v.TagStyle | css}}">{{ $v.TagName }}</a>
+                <a href="/tags/{{ $v.TagName }}" class="tag-cloud-item" style="{{$v.TagStyle | css}}">
+                    <span class="tag-name"># {{ $v.TagName }}</span>
+                </a>
                 {{end}}
             </div>
         </div>
@@ -26,6 +32,69 @@
     </main>
     {{template "layout/footer.html" .}}
 </div>
+<style>
+    .tag-cloud-title {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding: 1rem;
+        font-size: 1.1rem;
+        color: var(--font-color);
+    }
+    .tag-cloud-title i {
+        margin-right: 0.5rem;
+        color: var(--theme-color, #49b1f5);
+    }
+    .tag-cloud-title .tag-count {
+        font-weight: bold;
+        color: var(--theme-color, #49b1f5);
+    }
+    .tag-cloud-list {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 1.5rem;
+        min-height: 200px;
+    }
+    .tag-cloud-item {
+        display: inline-block;
+        padding: 0.4rem 0.9rem;
+        border-radius: 6px;
+        background: rgba(73, 177, 245, 0.08);
+        text-decoration: none;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid transparent;
+    }
+    .tag-cloud-item:hover {
+        transform: translateY(-3px) scale(1.05);
+        background: rgba(73, 177, 245, 0.15);
+        border-color: currentColor;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .tag-cloud-item .tag-name {
+        display: inline-block;
+    }
+    [data-theme="dark"] .tag-cloud-item {
+        background: rgba(255, 255, 255, 0.05);
+    }
+    [data-theme="dark"] .tag-cloud-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    @media screen and (max-width: 768px) {
+        .tag-cloud-list {
+            gap: 0.5rem;
+            padding: 1rem;
+        }
+        .tag-cloud-item {
+            padding: 0.3rem 0.6rem;
+        }
+    }
+</style>
 {{template "layout/foot.html" .}}
 </body>
 </html>
+

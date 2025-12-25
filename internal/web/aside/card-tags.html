@@ -1,11 +1,160 @@
 <div class="card-widget card-tags">
   <div class="item-headline">
-    <i class="fas fa-tags"></i><span>标签</span></div>
-  <div class="card-tag-cloud">
-    {{range $i, $v := .tags}}
-    <a href="/tags/{{$v.TagName}}" style="{{$v.CardTagStyle | css}}">
-     {{$v.TagName}}
-    </a>
-    {{end}}
+    <i class="fas fa-tags"></i><span>标签</span>
+  </div>
+  <div class="tag-sphere-container" id="tagSphereContainer">
+    <div class="tag-sphere" id="tagSphere">
+      {{range $i, $v := .tags}}
+      <a href="/tags/{{$v.TagName}}" class="tag-sphere-item" data-index="{{$i}}">
+        {{$v.TagName}}
+      </a>
+      {{end}}
+    </div>
   </div>
 </div>
+
+<style>
+.tag-sphere-container {
+  width: 100%;
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+}
+.tag-sphere {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.tag-sphere-item {
+  position: absolute;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  border-radius: 3px;
+  cursor: pointer;
+  will-change: transform, opacity, font-size;
+  pointer-events: auto;
+}
+.tag-sphere-item:hover {
+  text-decoration: underline;
+}
+[data-theme="dark"] .tag-sphere-item {
+  filter: brightness(1.2);
+}
+</style>
+
+<script>
+(function() {
+  const sphere = document.getElementById('tagSphere');
+  const container = document.getElementById('tagSphereContainer');
+  if (!sphere || !container) return;
+  
+  const items = Array.from(sphere.querySelectorAll('.tag-sphere-item'));
+  const count = items.length;
+  if (count === 0) return;
+  
+  // 配置
+  const radius = 80;
+  const width = container.offsetWidth || 200;
+  const height = container.offsetHeight || 200;
+  const centerX = width / 2;
+  const centerY = height / 2;
+  
+  // 配色方案
+  const colors = [
+    '#3498db', '#e74c3c', '#2ecc71', '#9b59b6', '#f39c12',
+    '#1abc9c', '#e67e22', '#34495e', '#16a085', '#c0392b'
+  ];
+  
+  // 初始化标签位置（球面坐标）
+  const tagData = items.map((item, i) => {
+    // 使用斐波那契螺旋分布
+    const phi = Math.acos(1 - (2 * (i + 0.5)) / count);
+    const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+    
+    return {
+      el: item,
+      phi: phi,
+      theta: theta,
+      color: colors[i % colors.length]
+    };
+  });
+  
+  // 旋转角度
+  let angleX = 0;
+  let angleY = 0;
+  let autoRotateSpeed = 0.002;
+  let isHovering = false;
+  
+  // 更新标签位置
+  function updatePositions() {
+    tagData.forEach(tag => {
+      // 计算旋转后的坐标
+      const sinPhi = Math.sin(tag.phi);
+      const cosPhi = Math.cos(tag.phi);
+      const sinTheta = Math.sin(tag.theta + angleY);
+      const cosTheta = Math.cos(tag.theta + angleY);
+      
+      // 3D 到 2D 投影
+      let x = radius * sinPhi * cosTheta;
+      let y = radius * cosPhi;
+      let z = radius * sinPhi * sinTheta;
+      
+      // 应用 X 轴旋转
+      const y1 = y * Math.cos(angleX) - z * Math.sin(angleX);
+      const z1 = y * Math.sin(angleX) + z * Math.cos(angleX);
+      y = y1;
+      z = z1;
+      
+      // 根据 z 值计算缩放和透明度
+      const scale = (z + radius) / (2 * radius);
+      const opacity = 0.4 + scale * 0.6;
+      const fontSize = 10 + scale * 5;
+      
+      // 设置样式
+      const left = centerX + x - (tag.el.offsetWidth / 2);
+      const top = centerY - y - (tag.el.offsetHeight / 2);
+      
+      tag.el.style.left = left + 'px';
+      tag.el.style.top = top + 'px';
+      tag.el.style.fontSize = fontSize + 'px';
+      tag.el.style.opacity = opacity;
+      tag.el.style.color = tag.color;
+      tag.el.style.zIndex = Math.floor(scale * 100);
+    });
+  }
+  
+  // 动画循环
+  function animate() {
+    if (!isHovering) {
+      angleY += autoRotateSpeed;
+    }
+    updatePositions();
+    requestAnimationFrame(animate);
+  }
+  
+  // 鼠标移动控制
+  container.addEventListener('mousemove', (e) => {
+    const rect = container.getBoundingClientRect();
+    const x = (e.clientX - rect.left - centerX) / centerX;
+    const y = (e.clientY - rect.top - centerY) / centerY;
+    angleX = y * 0.3;
+    angleY += x * 0.01;
+  });
+  
+  container.addEventListener('mouseenter', () => {
+    isHovering = true;
+  });
+  
+  container.addEventListener('mouseleave', () => {
+    isHovering = false;
+    angleX = 0;
+  });
+  
+  // 初始化位置并启动动画
+  updatePositions();
+  animate();
+})();
+</script>
