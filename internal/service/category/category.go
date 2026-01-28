@@ -7,66 +7,84 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Service 分类服务
 type Service struct {
 }
 
+// NewCategoryService 创建分类服务实例
 func NewCategoryService() *Service {
 	return &Service{}
 }
 
+// Save 保存分类
 func (service Service) Save(info model.Category) error {
 	if err := global.GORM.Table(model.TCategoryTable).Create(&info).Error; err != nil {
-		slog.Errorf("save category error %s", err.Error())
-		return errors.New("save category error " + err.Error())
+		slog.Errorf("保存分类失败: %s", err.Error())
+		return errors.New("保存分类失败: " + err.Error())
 	}
 	return nil
 }
 
+// Update 更新分类
 func (service Service) Update(info model.Category) error {
 	if err := global.GORM.Table(model.TCategoryTable).Save(&info).Error; err != nil {
-		slog.Errorf("update category error %s", err.Error())
-		return errors.New("update category error " + err.Error())
+		slog.Errorf("更新分类失败: %s", err.Error())
+		return errors.New("更新分类失败: " + err.Error())
 	}
 	return nil
 }
 
+// Delete 删除分类
 func (service Service) Delete(categoryId int) error {
 	if err := global.GORM.Table(model.TCategoryTable).Delete(&model.Category{}, categoryId).Error; err != nil {
-		slog.Errorf("delete category error %s", err.Error())
-		return errors.New("delete category error " + err.Error())
+		slog.Errorf("删除分类失败: %s", err.Error())
+		return errors.New("删除分类失败: " + err.Error())
 	}
 	return nil
 }
 
-func (service Service) GetCategory(tagId uint32) (*model.Category, error) {
+// GetCategory 获取单个分类
+func (service Service) GetCategory(categoryId uint32) (*model.Category, error) {
 	var categoryInfo model.Category
-	if err := global.GORM.Table(model.TCategoryTable).Where("category_id", tagId).First(&categoryInfo).Error; err != nil {
-		slog.Errorf("get category error %s", err.Error())
-		return nil, errors.New("get category error")
+
+	err := NewQueryBuilder().
+		ById(categoryId).
+		First(&categoryInfo)
+
+	if err != nil {
+		slog.Errorf("获取分类失败: %s", err.Error())
+		return nil, errors.New("获取分类失败")
 	}
+
 	return &categoryInfo, nil
 }
 
+// GetCategoryList 获取所有分类列表（后台管理）
 func (service Service) GetCategoryList() ([]model.Category, error) {
 	categories := make([]model.Category, 0)
-	if err := global.GORM.Table(model.TCategoryTable).Find(&categories).Error; err != nil {
-		slog.Errorf("get categories error %s", err.Error())
-		return nil, errors.New("get categories error")
+
+	err := NewQueryBuilder().Find(&categories)
+
+	if err != nil {
+		slog.Errorf("获取分类列表失败: %s", err.Error())
+		return nil, errors.New("获取分类列表失败")
 	}
+
 	return categories, nil
 }
 
+// GetCategories 获取分类及文章数量（前台展示）
 func (service Service) GetCategories() ([]model.CategoryCount, error) {
 	categories := make([]model.CategoryCount, 0)
-	tx := global.GORM.Table(model.TPostsTable).
-		Select("category.category_name,COUNT(category.category_id) total").
-		Joins("LEFT JOIN category ON post.category_id = category.category_id").
-		Where("post.is_published", 1).
-		Where("post.is_deleted", 0).
-		Group("category.category_name").
+
+	err := NewQueryBuilder().
+		WithPostCount().
 		Find(&categories)
-	if tx.Error != nil {
-		return nil, tx.Error
+
+	if err != nil {
+		slog.Errorf("获取分类统计失败: %s", err.Error())
+		return nil, errors.New("获取分类统计失败")
 	}
+
 	return categories, nil
 }

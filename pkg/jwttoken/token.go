@@ -90,12 +90,12 @@ func ParseToken(tokensStr string) (*MyClaims, error) {
 				return nil, errors.New("token is expired")
 			} else if ve.Errors&jwt.ValidationErrorNotValidYet != 0 {
 				return nil, errors.New("token not active yet")
-			} else {
-				return nil, errors.New("couldn't handle this token")
 			}
-		} else {
+
 			return nil, errors.New("couldn't handle this token")
 		}
+
+		return nil, errors.New("couldn't handle this token")
 	}
 	if claims, ok := token.Claims.(*MyClaims); ok && token.Valid {
 		return claims, nil

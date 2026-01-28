@@ -9,12 +9,12 @@ import (
 	"gitee.com/jieepre/go-site/pkg/page"
 	"github.com/gookit/slog"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 )
 
+// SavePost 保存文章
 func (service Service) SavePost(content model.Post) (error, uint64) {
 	if err := global.GORM.Table(model.TPostsTable).Create(&content).Error; err != nil {
-		return errors.New("保存失败 " + err.Error()), content.PostId
+		return errors.New("保存失败: " + err.Error()), content.PostId
 	}
 	hid, _ := hash.New().HashidsEncode([]int{int(content.PostId)})
 	err := service.UpdatePostHashids(hid, content.PostId)
@@ -23,142 +23,118 @@ func (service Service) SavePost(content model.Post) (error, uint64) {
 	}
 	return nil, content.PostId
 }
-func (service Service) GetPostDetail(id int) (*model.Post, error) {
-	var postInfo model.Post
 
-	if err := global.GORM.Table(model.TPostsTable).
-		Select("post.*,category.category_name,t.tag_name").
-		Where("post.post_id", id).
-		Joins("LEFT JOIN category ON post.category_id=category.category_id").
-		Joins("LEFT JOIN post_tag pt on post.post_id = pt.post_id").
-		Joins("LEFT JOIN tag t on pt.tag_id = t.tag_id").
-		Scan(&postInfo).Error; err != nil {
-		return nil, errors.New("找不到记录")
-	}
-
-	m := make([]string, 0)
-	if err := global.GORM.Table(model.TPostsTable).
-		Select("t.tag_name").
-		Where("post.post_id", id).
-		Joins("LEFT JOIN post_tag pt on post.post_id = pt.post_id").
-		Joins("LEFT JOIN tag t on pt.tag_id = t.tag_id").
-		Scan(&m).Error; err != nil {
-		return nil, errors.New("找不到记录")
-	}
-	postInfo.Tags = m
-	_ = service.UpdatePostReadCount(postInfo.PostId, postInfo.ReadCount)
-
-	return &postInfo, nil
-}
-
+// UpdatePostHashids 更新文章 Hashids
 func (service Service) UpdatePostHashids(postSlug string, postId uint64) error {
 	if err := global.GORM.Table(model.TPostsTable).
 		Where("post_id", postId).
 		Update("post_slug", postSlug).Error; err != nil {
-		return errors.New("update post error " + err.Error())
+		return errors.New("更新失败: " + err.Error())
 	}
 	return nil
 }
+
+// UpdatePost 更新文章
 func (service Service) UpdatePost(obj model.Post) error {
 	if err := global.GORM.Table(model.TPostsTable).Save(&obj).Error; err != nil {
-		slog.Errorf("update post error %s", err.Error())
-		return errors.New("update post error " + err.Error())
+		slog.Errorf("更新文章失败: %s", err.Error())
+		return errors.New("更新失败: " + err.Error())
 	}
 	return nil
 }
 
+// PublishArticle 发布/取消发布文章
 func (service Service) PublishArticle(obj model.Post) error {
-	if err := global.GORM.Table(model.TPostsTable).Where("post_id", obj.PostId).Update("is_published", obj.IsPublished).Error; err != nil {
-		slog.Errorf("update post error:%s", err.Error())
-		return errors.New("update post error " + err.Error())
+	if err := global.GORM.Table(model.TPostsTable).
+		Where("post_id", obj.PostId).
+		Update("is_published", obj.IsPublished).Error; err != nil {
+		slog.Errorf("更新发布状态失败: %s", err.Error())
+		return errors.New("更新失败: " + err.Error())
 	}
 	return nil
 }
 
+// TopPost 置顶/取消置顶文章
 func (service Service) TopPost(postId int64, top uint8) error {
-	if err := global.GORM.Table(model.TPostsTable).Where("post_id", postId).Update("top", top).Error; err != nil {
-		slog.Errorf("update post error %s", err.Error())
-		return errors.New("update post error " + err.Error())
+	if err := global.GORM.Table(model.TPostsTable).
+		Where("post_id", postId).
+		Update("top", top).Error; err != nil {
+		slog.Errorf("更新置顶状态失败: %s", err.Error())
+		return errors.New("更新失败: " + err.Error())
 	}
 	return nil
 }
 
+// DeletePost 删除文章（软删除）
 func (service Service) DeletePost(postId int) error {
-	if err := global.GORM.Table(model.TPostsTable).Where("post_id", postId).Update("is_deleted", 1).Error; err != nil {
-		return errors.New("delete post error " + err.Error())
+	if err := global.GORM.Table(model.TPostsTable).
+		Where("post_id", postId).
+		Update("is_deleted", 1).Error; err != nil {
+		return errors.New("删除失败: " + err.Error())
 	}
 	return nil
 }
 
+// UpdatePostCoverImag 更新文章封面
 func (service Service) UpdatePostCoverImag(postId int) error {
-	if err := global.GORM.Table(model.TPostsTable).Where("post_id", postId).Update("cover_image", pkg.GetPixabayImage()).Error; err != nil {
-		slog.Errorf("update post error:%s", err.Error())
-		return errors.New("update cover error " + err.Error())
+	if err := global.GORM.Table(model.TPostsTable).
+		Where("post_id", postId).
+		Update("cover_image", pkg.GetPixabayImage()).Error; err != nil {
+		slog.Errorf("更新封面失败: %s", err.Error())
+		return errors.New("更新封面失败: " + err.Error())
 	}
 	return nil
 }
 
+// UpdatePostAllCoverImag 批量更新所有文章封面
 func (service Service) UpdatePostAllCoverImag() error {
 	var content []model.Post
-	global.GORM.Table(model.TPostsTable).Where("is_published=1 and is_deleted=0").Find(&content)
+
+	err := NewQueryBuilder().
+		WithPublished().
+		WithNotDeleted().
+		Find(&content)
+
+	if err != nil {
+		return errors.New("查询文章失败: " + err.Error())
+	}
+
 	for _, post := range content {
-		global.GORM.Table(model.TPostsTable).Where("post_id", post.PostId).Update("cover_image", pkg.GetPixabayImage())
+		global.GORM.Table(model.TPostsTable).
+			Where("post_id", post.PostId).
+			Update("cover_image", pkg.GetPixabayImage())
 	}
 
 	return nil
 }
 
+// GetList 获取文章列表（后台管理）
 func (service Service) GetList(req request.PostRequest) *page.Info {
 	var content []model.Post
 	var total int64
 	pageNum := req.PageNum
 	pageSize := req.PageSize
-	global.GORM.Table(model.TPostsTable).
-		Select("post.*,pc.category_name").
-		Scopes(IsDeleted, postTitle(req.Title), postPublished(req.Published), postCategory(req.CategoryId)).
-		Offset((pageNum - 1) * pageSize).
-		Limit(pageSize).
-		Order("post_id desc").
-		Joins("join category pc on post.category_id = pc.category_id ").
+
+	// 使用查询构建器
+	qb := NewQueryBuilder().
+		Select("post.*, pc.category_name").
+		WithNotDeleted().
+		WithTitle(req.Title).
+		WithPublishedStatus(req.Published).
+		WithCategoryId(req.CategoryId)
+
+	// 关联分类表（使用 join 而不是 left join，因为后台需要显示分类）
+	qb.db = qb.db.Joins("JOIN category pc ON post.category_id = pc.category_id")
+
+	// 统计总数
+	qb.Count(&total)
+
+	// 查询列表
+	qb.
+		Order("post_id DESC").
+		WithPagination(pageNum, pageSize).
 		Find(&content)
 
-	global.GORM.Table(model.TPostsTable).
-		Scopes(IsDeleted, postTitle(req.Title), postPublished(req.Published), postCategory(req.CategoryId)).
-		Joins("join category pc on post.category_id = pc.category_id ").
-		Count(&total)
 	bInfo := page.PaginationInfo(content, pageNum, pageSize, int(total))
 	return bInfo
-}
-func IsDeleted(db *gorm.DB) *gorm.DB {
-	return db.Where("post.is_deleted", 0)
-}
-func postTitle(title string) func(db *gorm.DB) *gorm.DB {
-	if title == "" {
-		return func(db *gorm.DB) *gorm.DB {
-			return db
-		}
-	}
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("post.title like ?", "%"+title+"%")
-	}
-}
-func postCategory(categoryId *uint32) func(db *gorm.DB) *gorm.DB {
-	if categoryId == nil {
-		return func(db *gorm.DB) *gorm.DB {
-			return db
-		}
-	}
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("post.category_id", categoryId)
-	}
-}
-func postPublished(published *uint8) func(db *gorm.DB) *gorm.DB {
-	if published == nil {
-		return func(db *gorm.DB) *gorm.DB {
-			return db
-		}
-	}
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("post.is_published", published)
-	}
 }
