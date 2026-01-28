@@ -36,7 +36,7 @@ func (service *Service) Login(request request.LoginRequest, c *gin.Context) (*re
 		Ip:      &ipL,
 		Area:    area.Area(ipL),
 	}
-	if err := global.GORM.Where("username", request.Username).First(&user).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := global.GORM.Where("username=?", request.Username).First(&user).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Note = "用户名不存在"
 		errSuccess := 2
 		log.Success = &errSuccess
@@ -89,13 +89,28 @@ func (service *Service) RefreshToken(refreshToken string) (*response.RefreshToke
 	if err != nil {
 		return nil, errors.New("请重新登录")
 	}
+
+	// 检查令牌是否已被撤销（密码修改后的令牌失效检查）
+	if parseToken.IssuedAt != nil {
+		if !global.IsTokenValid(parseToken.Username, parseToken.IssuedAt.Unix()) {
+			return nil, errors.New("令牌已失效，请重新登录")
+		}
+	}
+
 	accessToken, err := jwttoken.AccessToken(parseToken.Username)
 	if err != nil {
 		return nil, errors.New("系统错误，请联系管理员")
 	}
+
+	// 令牌轮换：生成新的refreshToken替换旧的
+	newRefreshToken, err := jwttoken.RefreshToken(parseToken.Username)
+	if err != nil {
+		return nil, errors.New("系统错误，请联系管理员")
+	}
+
 	return &response.RefreshToken{
 		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
+		RefreshToken: newRefreshToken,
 		Expires:      time.Now().Add(30 * time.Minute).Format("2006/01/02 15:04:05"),
 	}, nil
 }
@@ -103,7 +118,7 @@ func (service *Service) RefreshToken(refreshToken string) (*response.RefreshToke
 // ChangePassword 修改密码
 func (service *Service) ChangePassword(req request.ChangePasswordRequest) error {
 	user := model.User{}
-	if err := global.GORM.Where("username", req.Username).First(&user).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := global.GORM.Where("username=?", req.Username).First(&user).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		slog.Errorf("用户名%s不存在", err.Error())
 		return fmt.Errorf("用户名%s不存在", req.Username)
 	}
@@ -115,10 +130,15 @@ func (service *Service) ChangePassword(req request.ChangePasswordRequest) error 
 
 	newPassword, _ := pkg.HashPassword(req.NewPassword)
 
-	if err := global.GORM.Where("username", req.Username).Updates(model.User{Password: newPassword}).Error; err != nil {
+	if err := global.GORM.Where("username=?", req.Username).Updates(model.User{Password: newPassword}).Error; err != nil {
 		slog.Errorf("修改密码失败", err.Error())
 		return fmt.Errorf("密码修改失败")
 	}
+
+	// 使该用户所有旧令牌失效（密码修改后的安全措施）
+	global.InvalidateUserTokens(req.Username, time.Now().Unix())
+	slog.Infof("用户 %s 密码已修改，旧令牌已失效", req.Username)
+
 	return nil
 }
 
