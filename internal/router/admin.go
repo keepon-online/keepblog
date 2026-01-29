@@ -17,6 +17,7 @@ import (
 	"gitee.com/jieepre/go-site/api/admin/system"
 	"gitee.com/jieepre/go-site/api/admin/tags"
 	"gitee.com/jieepre/go-site/api/admin/website"
+	"gitee.com/jieepre/go-site/internal/middleware"
 	"gitee.com/jieepre/go-site/internal/pkg/core"
 	ws "gitee.com/jieepre/go-site/internal/websocket"
 	"github.com/gin-gonic/gin"
@@ -57,13 +58,13 @@ func userRouter(ctx *core.Context) {
 			Method:     http.MethodPost,
 			Path:       "/api/logout",
 			Handler:    handler.Logout,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPost,
 			Path:       "/api/change-password",
 			Handler:    handler.ChangePassword,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPost,
@@ -74,17 +75,17 @@ func userRouter(ctx *core.Context) {
 			Method:     http.MethodGet,
 			Path:       "/api/getAsyncRoutes",
 			Handler:    handler.GetAsyncRoutes,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		}, {
 			Method:     http.MethodGet,
 			Path:       "/api/getInfo",
 			Handler:    handler.GetInfo,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		}, {
 			Method:     http.MethodPut,
 			Path:       "/api/updateProfile",
 			Handler:    handler.UpdateProfile,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 	}
 	RegisterRouter(group, routes)
@@ -102,67 +103,67 @@ func monitorRouter(ctx *core.Context) {
 			Method:     http.MethodGet,
 			Path:       "/server",
 			Handler:    handler.Monitor,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/realtime",
 			Handler:    handler.GetRealtime,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/general",
 			Handler:    handler.General,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		}, {
 			Method:     http.MethodGet,
 			Path:       "/loadavg",
 			Handler:    handler.Loadavg,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		}, {
 			Method:     http.MethodGet,
 			Path:       "/ram",
 			Handler:    handler.RAM,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		}, {
 			Method:     http.MethodGet,
 			Path:       "/cpu",
 			Handler:    handler.CPU,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		}, {
 			Method:     http.MethodGet,
 			Path:       "/net",
 			Handler:    handler.Net,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		}, {
 			Method:     http.MethodGet,
 			Path:       "/diskUsage",
 			Handler:    handler.DiskUsage,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		}, {
 			Method:     http.MethodGet,
 			Path:       "/diskIOStat",
 			Handler:    handler.DiskIOStat,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/base/os",
 			Handler:    handler.LoadDashboardOsInfo,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/base/:ioOption/:netOption",
 			Handler:    handler.LoadDashboardBaseInfo,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/current/:ioOption/:netOption",
 			Handler:    handler.LoadDashboardCurrentInfo,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 	}
 	RegisterRouter(group, routes)
@@ -180,37 +181,37 @@ func categoryRouter(ctx *core.Context) {
 			Method:     http.MethodPost,
 			Path:       "/save",
 			Handler:    handler.SaveCategory,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPut,
 			Path:       "/update",
 			Handler:    handler.UpdateCategory,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPut,
 			Path:       "/update-state",
 			Handler:    handler.UpdateCategoryState,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodDelete,
 			Path:       "/delete/:categoryId",
 			Handler:    handler.DeleteCategory,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/detail/:categoryId",
 			Handler:    handler.DetailCategory,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/list",
 			Handler:    handler.GetCategoryList,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 	}
 	RegisterRouter(group, routes)
@@ -228,54 +229,54 @@ func postRouter(ctx *core.Context) {
 			Method:     http.MethodPost,
 			Path:       "/save",
 			Handler:    handler.SavePost,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPut,
 			Path:       "/update",
 			Handler:    handler.UpdatePost,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPut,
 			Path:       "/update-publish",
 			Handler:    handler.PublishPost,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPut,
 			Path:       "/update-top",
 			Handler:    handler.TopPost,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPut,
 			Path:       "/update-cover/:postId",
 			Handler:    handler.UpdatePostCoverImag,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		}, {
 			Method:     http.MethodPut,
 			Path:       "/update-cover",
 			Handler:    handler.UpdatePostAllCoverImag,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodDelete,
 			Path:       "/delete/:postId",
 			Handler:    handler.DeletePost,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/detail/:postId",
 			Handler:    handler.DetailPost,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/list",
 			Handler:    handler.GetList,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 	}
 	RegisterRouter(group, routes)
@@ -352,37 +353,37 @@ func linkBackendRouter(ctx *core.Context) {
 			Method:     http.MethodPost,
 			Path:       "/save",
 			Handler:    handler.SaveLink,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPut,
 			Path:       "/update",
 			Handler:    handler.UpdateLink,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPut,
 			Path:       "/update-state",
 			Handler:    handler.UpdateLinkState,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodDelete,
 			Path:       "/delete/:id",
 			Handler:    handler.DeleteLink,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/detail/:id",
 			Handler:    handler.DetailLink,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/list",
 			Handler:    handler.GetLinkList,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 	}
 	RegisterRouter(group, routes)
@@ -423,12 +424,12 @@ func logsRouter(ctx *core.Context) {
 			Method:     http.MethodGet,
 			Path:       "/logon",
 			Handler:    handler.LoginLog,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		}, {
 			Method:     http.MethodGet,
 			Path:       "/access",
 			Handler:    handler.AccessLog,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 	}
 	RegisterRouter(group, routes)
@@ -445,7 +446,7 @@ func dashboardRouter(ctx *core.Context) {
 			Method:     http.MethodGet,
 			Path:       "/data",
 			Handler:    handler.DashboardData,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 	}
 	RegisterRouter(group, routes)
@@ -463,37 +464,37 @@ func musicRouter(ctx *core.Context) {
 			Method:     http.MethodPost,
 			Path:       "/save",
 			Handler:    handler.SaveMusic,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPut,
 			Path:       "/update",
 			Handler:    handler.UpdateMusic,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPut,
 			Path:       "/update-state",
 			Handler:    handler.UpdateMusicState,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodDelete,
 			Path:       "/delete/:id",
 			Handler:    handler.DeleteMusic,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/detail/:id",
 			Handler:    handler.DetailMusic,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/list",
 			Handler:    handler.GetMusicList,
-			Middleware: nil,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 	}
 	RegisterRouter(group, routes)
@@ -511,31 +512,31 @@ func logViewerRouter(ctx *core.Context) {
 			Method:     http.MethodGet,
 			Path:       "/level",
 			Handler:    handler.GetLogLevel,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPut,
 			Path:       "/level",
 			Handler:    handler.SetLogLevel,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/stats",
 			Handler:    handler.GetLogStats,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/list",
 			Handler:    handler.GetLogList,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodGet,
 			Path:       "/read",
 			Handler:    handler.ReadLog,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 	}
 	RegisterRouter(group, routes)
@@ -553,37 +554,37 @@ func noticeRouter(ctx *core.Context) {
 			Method:     http.MethodGet,
 			Path:       "/list",
 			Handler:    handler.GetNotices,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPut,
 			Path:       "/read/:id",
 			Handler:    handler.MarkAsRead,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPut,
 			Path:       "/read-all",
 			Handler:    handler.MarkAllAsRead,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodDelete,
 			Path:       "/delete/:id",
 			Handler:    handler.DeleteNotice,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodDelete,
 			Path:       "/clear",
 			Handler:    handler.ClearNotices,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 		{
 			Method:     http.MethodPost,
 			Path:       "/send",
 			Handler:    handler.SendNotice,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 	}
 	RegisterRouter(group, routes)

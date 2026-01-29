@@ -55,6 +55,17 @@ func (h *Handler) Home(c *gin.Context) {
 
 func (h *Handler) Search(c *gin.Context) {
 	keyword := c.Param("keyword")
+
+	// 输入验证：限制搜索关键词长度，防止潜在的安全问题
+	if len(keyword) > 100 {
+		result.Error(c, "搜索关键词过长")
+		return
+	}
+	if len(keyword) < 1 {
+		result.Error(c, "请输入搜索关键词")
+		return
+	}
+
 	res, err := h.Service.PostService.Search(keyword)
 	if err != nil {
 		result.Error(c, "暂无记录")

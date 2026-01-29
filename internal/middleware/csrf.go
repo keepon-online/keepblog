@@ -28,7 +28,7 @@ var DefaultCSRFConfig = CSRFConfig{
 	CookieName:    "csrf_token",
 	HeaderName:    "X-CSRF-Token",
 	CookieMaxAge:  24 * time.Hour,
-	Secure:        false, // 生产环境应设为 true
+	Secure:        true, // 生产环境必须为 true，强制 HTTPS
 	SameSite:      http.SameSiteStrictMode,
 	IgnoreMethods: []string{"GET", "HEAD", "OPTIONS"},
 }

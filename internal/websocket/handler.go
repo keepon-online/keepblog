@@ -2,6 +2,8 @@ package websocket
 
 import (
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"gitee.com/jieepre/go-site/pkg/jwttoken"
@@ -14,7 +16,24 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		return true // 允许所有来源，生产环境应该限制
+		// 从环境变量获取允许的来源，生产环境应配置具体域名
+		allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
+		if allowedOrigin == "" {
+			// 开发环境允许所有来源
+			if os.Getenv("GO_ENV") != "production" && os.Getenv("GIN_MODE") != "release" {
+				return true
+			}
+			// 生产环境默认只允许同源
+			return r.Header.Get("Origin") == ""
+		}
+		origin := r.Header.Get("Origin")
+		// 支持多个来源，用逗号分隔
+		for _, allowed := range strings.Split(allowedOrigin, ",") {
+			if strings.TrimSpace(allowed) == origin {
+				return true
+			}
+		}
+		return false
 	},
 }
 
