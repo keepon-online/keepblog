@@ -330,7 +330,7 @@ func aboutBackendRouter(ctx *core.Context) {
 			Method:     http.MethodPut,
 			Path:       "/update",
 			Handler:    handler.Save,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		}, {
 			Method:     http.MethodGet,
 			Path:       "/detail",
@@ -401,7 +401,7 @@ func websiteBackendRouter(ctx *core.Context) {
 			Method:     http.MethodPut,
 			Path:       "/update",
 			Handler:    handler.SaveWebSite,
-			Middleware: []gin.HandlerFunc{},
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		}, {
 			Method:     http.MethodGet,
 			Path:       "/detail",
