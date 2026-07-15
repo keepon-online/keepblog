@@ -8,7 +8,21 @@ ARG GIT_COMMIT=unknown
 ARG BUILD_DATE=unknown
 
 # ================================
-# 阶段1: 构建
+# 阶段0: 构建前端（管理后台 console）
+# 产物拷贝到 Go builder 的 static/console 供 embed
+# ================================
+FROM node:20-alpine AS frontend
+RUN corepack prepare pnpm@9.15.9 --activate
+WORKDIR /fe
+# 先复制依赖描述，利用 Docker 层缓存
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+# 复制前端源码并构建
+COPY frontend/ .
+RUN pnpm build
+
+# ================================
+# 阶段1: 构建 Go
 # ================================
 FROM golang:1.24.11-alpine AS builder
 
@@ -33,6 +47,9 @@ RUN go mod download
 
 # 复制源代码
 COPY . .
+
+# 用前端阶段产物覆盖 static/console（保留 static.go，供 embed）
+COPY --from=frontend /fe/dist/. static/console/
 
 # 版本注入编译
 RUN go build -trimpath \

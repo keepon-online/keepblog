@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+/* Element Plus 主题变量集成 */
+@theme {
+  --color-bg_color: var(--el-bg-color);
+  --color-primary: var(--el-color-primary);
+  --color-text_color_primary: var(--el-text-color-primary);
+  --color-text_color_regular: var(--el-text-color-regular);
+}
+
+/* 暗黑模式变体 */
+@custom-variant dark (&:is(.dark *));
+
+/* 自定义工具类 */
+@utility flex-c {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@utility flex-ac {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+@utility flex-bc {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@utility navbar-bg-hover {
+  @media (prefers-color-scheme: dark) {
+    color: white;
+  }
+  &:hover {
+    @media (prefers-color-scheme: dark) {
+      background-color: #242424 !important;
+    }
+  }
+}

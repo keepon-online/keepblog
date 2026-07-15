@@ -16,6 +16,17 @@ volumes:
     temp: { }
 
 steps:
+  - name: 构建前端
+    image: node:20-bookworm
+    commands:
+      - corepack prepare pnpm@9.15.9 --activate
+      - cd frontend
+      - pnpm install --frozen-lockfile
+      - pnpm build
+      - cd ..
+      # 同步产物到 static/console（保留 static.go），供后续 Go 编译 embed
+      - find static/console -mindepth 1 -not -name "static.go" -delete 2>/dev/null || true
+      - cp -r frontend/dist/. static/console/
   - name: 开始构建
     image: golang:1.24.11-bookworm
     volumes:
@@ -24,7 +35,8 @@ steps:
     commands:
       - ls -la
       - go env -w GOPROXY=https://goproxy.cn,direct
-      - make linux
+      # 构建前端已在上一步骤完成，此处跳过前端构建
+      - make linux SKIP_FRONTEND=1
   - name: 传输到服务器
     image: appleboy/drone-scp
     settings:
