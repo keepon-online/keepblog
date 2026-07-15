@@ -49,7 +49,7 @@
 <script lang="ts" setup>
 import { onMounted, reactive, ref } from "vue";
 import type { FormInstance, FormRules } from "element-plus";
-import { MdEditor } from "md-editor-v3";
+import { MdEditor, type ToolbarNames } from "md-editor-v3";
 import "md-editor-v3/lib/style.css";
 import { getAbout, updateAbout } from "@/api/about";
 import { message } from "@/utils/message";
@@ -65,7 +65,7 @@ const ruleForm = ref({
 });
 
 // Markdown编辑器工具栏配置
-const toolbars = [
+const toolbars: ToolbarNames[] = [
   'bold', 'underline', 'italic', '-',
   'title', 'strikeThrough', 'sub', 'sup', '-',
   'quote', 'unorderedList', 'orderedList', '-',
@@ -140,7 +140,7 @@ const onUploadImg = async (files: File[], callback: (urls: string[]) => void) =>
   );
   
   // 处理上传结果
-  const urls = res.map(item => {
+  const urls = res.map((item: string | { url?: string }) => {
     if (typeof item === 'string') {
       return item;
     } else if (item && typeof item === 'object' && item.url) {

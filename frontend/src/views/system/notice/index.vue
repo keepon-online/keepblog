@@ -167,8 +167,8 @@ const getTypeName = (type: number) => {
   return map[type] || "未知";
 };
 
-const getTypeTag = (type: number) => {
-  const map: Record<number, string> = { 1: "danger", 2: "primary", 3: "warning" };
+const getTypeTag = (type: number): "primary" | "success" | "warning" | "danger" | "info" => {
+  const map: Record<number, "primary" | "success" | "warning" | "danger" | "info"> = { 1: "danger", 2: "primary", 3: "warning" };
   return map[type] || "info";
 };
 
@@ -218,7 +218,7 @@ const handleSubmit = async () => {
 
   submitting.value = true;
   try {
-    const res = await http.request("post", "/api/v1/notice/send", { data: formData });
+    const res = await http.request<{ code: number; message: string }>("post", "/api/v1/notice/send", { data: formData });
     if (res.code === 200) {
       message("发送成功", { type: "success" });
       dialogVisible.value = false;

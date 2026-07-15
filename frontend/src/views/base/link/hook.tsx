@@ -18,7 +18,8 @@ export function useLink() {
     title: "",
     linkUrl: "",
     linkIcon: "",
-    linkDesc: ""
+    linkDesc: "",
+    type: 0
   });
   const rules = reactive<FormRules>({
     title: [
@@ -46,6 +47,7 @@ export function useLink() {
     form.value.linkUrl = "";
     form.value.linkIcon = "";
     form.value.linkDesc = "";
+    form.value.type = 0;
   };
   const columns: TableColumnList = [
     {

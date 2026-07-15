@@ -9,6 +9,7 @@ import LaySidebarTopCollapse from "../lay-sidebar/components/SidebarTopCollapse.
 
 import LogoutCircleRLine from "~icons/ri/logout-circle-r-line";
 import Setting from "~icons/ri/settings-3-line";
+import AccountCircleFill from "~icons/ri/account-circle-fill";
 
 const {
   layout,
@@ -56,7 +57,7 @@ const {
           <el-dropdown-menu class="logout">
             <el-dropdown-item
               @click="
-                $router.push({ path: '/profile/center', name: '个人中心' })
+                $router.push({ path: '/profile/center' })
               "
             >
               <IconifyIconOffline

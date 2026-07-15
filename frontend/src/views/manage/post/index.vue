@@ -104,7 +104,7 @@ const {
         <el-button
           type="primary"
           :icon="useRenderIcon(Plus)"
-          @click="$router.push({ path: '/manage/editor', name: '内容新增' })"
+          @click="$router.push({ path: '/manage/editor' })"
         >
           新增
         </el-button>
