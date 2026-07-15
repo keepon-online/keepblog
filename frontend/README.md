@@ -1,43 +1,49 @@
-<h1>vue-pure-admin精简版（非国际化版本）</h1>
+# go-site 管理后台
 
-[![license](https://img.shields.io/github/license/pure-admin/vue-pure-admin.svg)](LICENSE)
+go-site 博客系统的管理后台前端，基于 [Vue 3](https://vuejs.org/) + [Vite](https://vitejs.dev/) + [Element Plus](https://element-plus.org/) + [TypeScript](https://www.typescriptlang.org/) 构建，脚手架源自 [pure-admin-thin](https://github.com/pure-admin/pure-admin-thin)。
 
-**中文** | [English](./README.en-US.md)
+构建产物通过 Go 的 `embed` 嵌入后端二进制，经 `/console` 路径提供服务。
 
-## 介绍
+## 目录说明
 
-精简版是基于 [vue-pure-admin](https://github.com/pure-admin/vue-pure-admin) 提炼出的架子，包含主体功能，更适合实际项目开发，打包后的大小在全局引入 [element-plus](https://element-plus.org) 的情况下仍然低于 `2.3MB`，并且会永久同步完整版的代码。开启 `brotli` 压缩和 `cdn` 替换本地库模式后，打包大小低于 `350kb`
+本目录是主仓库 `go-site` 的前端子项目，与后端共同构成 monorepo：
 
-## 版本选择
+```
+go-site/
+├── frontend/          ← 本目录：管理后台前端源码
+│   ├── src/           应用源码
+│   ├── build/         vite 构建辅助
+│   ├── public/        静态资源
+│   └── types/         全局类型声明
+└── static/console/    ← 构建产物落地处（供 Go embed）
+```
 
-当前是非国际化版本，如果您需要国际化版本 [请点击](https://github.com/pure-admin/pure-admin-thin/tree/i18n)
+## 开发
 
-## 配套视频
+```bash
+# 安装依赖（要求 pnpm >=9、Node ^20.19 || >=22.13）
+pnpm install
 
-[点我查看 UI 设计](https://www.bilibili.com/video/BV17g411T7rq)  
-[点我查看快速开发教程](https://www.bilibili.com/video/BV1kg411v7QT)
+# 启动开发服务器（默认端口 8848）
+# /api 请求会自动代理到本地后端 http://localhost:8589
+pnpm dev
+```
 
-## 配套保姆级文档
+开发时需同时启动后端（在仓库根目录执行 `make dev-backend`），浏览器访问 `http://localhost:8848`。
 
-[点我查看 vue-pure-admin 文档](https://pure-admin.cn/)  
-[点我查看 @pureadmin/utils 文档](https://pure-admin-utils.netlify.app)
+## 构建
 
-## 高级服务
+```bash
+# 构建到 dist/
+pnpm build
+```
 
-[点我查看详情](https://pure-admin.cn/pages/service/)
+在 monorepo 语境下，推荐在仓库根目录使用 `make build-frontend`（构建后自动同步产物到 `static/console/`）或 `make build`（前端 + Go 一键构建并 embed）。
 
-## 预览
+## 致谢
 
-[查看预览](https://pure-admin-thin.netlify.app/#/login)
-
-## 维护者
-
-[xiaoxian521](https://github.com/xiaoxian521)
-
-## ⚠️ 注意
-
-精简版不接受任何 `issues` 和 `pr`，如果有问题请到完整版 [issues](https://github.com/pure-admin/vue-pure-admin/issues/new/choose) 去提，谢谢！
+本项目基于 [pure-admin](https://github.com/pure-admin) 系列脚手架，感谢其开源贡献。
 
 ## 许可证
 
-[MIT © 2020-present, pure-admin](./LICENSE)
+[MIT](./LICENSE)

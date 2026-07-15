@@ -53,10 +53,3 @@ export const markAllNoticeRead = (type?: number) => {
 export const deleteNotice = (id: number) => {
   return http.request<Result>("delete", `/api/v1/notice/delete/${id}`);
 };
-
-/** 清空通知 */
-export const clearNotices = (type?: number) => {
-  return http.request<Result>("delete", "/api/v1/notice/clear", {
-    data: type !== undefined ? { type } : {}
-  });
-};

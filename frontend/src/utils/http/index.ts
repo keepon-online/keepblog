@@ -17,11 +17,7 @@ let Base_Url = "";
 
 async function DynamicBaseUrl() {
   if (import.meta.env.PROD) {
-    // 从后端请求获取动态地址
-    // const response = await Axios.post(
-    //   window.location.protocol + "//" + window.location.host
-    // );
-    // 设置动态地址作为baseURL
+    // 生产环境前后端同源（产物嵌入 Go 二进制），直接用当前页面地址
     Base_Url = window.location.protocol + "//" + window.location.host;
   }
   if (import.meta.env.DEV) {

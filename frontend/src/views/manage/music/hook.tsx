@@ -191,8 +191,6 @@ export function useMusic() {
             onSearch();
           });
         }
-      } else {
-        console.log("error submit!", fields);
       }
     });
   };

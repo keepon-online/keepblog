@@ -40,7 +40,6 @@ class WebSocketClient {
     this.socket = new WebSocket(`${this.url}?token=${token}`);
 
     this.socket.onopen = () => {
-      console.log("WebSocket connected");
       this.reconnectAttempts = 0;
     };
 
@@ -54,7 +53,6 @@ class WebSocketClient {
     };
 
     this.socket.onclose = () => {
-      console.log("WebSocket disconnected");
       if (!this.isManualClose) {
         this.attemptReconnect();
       }
@@ -76,9 +74,6 @@ class WebSocketClient {
   private attemptReconnect(): void {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      console.log(
-        `WebSocket: Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`
-      );
       setTimeout(() => this.connect(), this.reconnectDelay);
     }
   }

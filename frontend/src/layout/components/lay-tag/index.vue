@@ -336,7 +336,6 @@ function onClickDrop(key, item, selectRoute?: RouteConfigs) {
         length: multiTags.value.length
       });
       router.push(topPath);
-      // router.push(fixedTags[fixedTags.length - 1]?.path);
       handleAliveRoute(route as ToRouteType);
       break;
     case 6:

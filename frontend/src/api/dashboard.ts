@@ -1,11 +1,5 @@
 import { http } from "@/utils/http";
 
-type Result = {
-  code: number;
-  message: string;
-  payload?: any;
-};
-
 type DashboardData = {
   panel: {
     postTotal: number;
@@ -43,22 +37,4 @@ export const getDashboardData = () => {
     message: string;
     payload: DashboardData;
   }>("get", "/api/v1/site/dashboard/data");
-};
-
-export const loadOsInfo = () => {
-  return http.request<Result>("get", `/api/monitor/base/os`);
-};
-
-export const loadBaseInfo = (ioOption: string, netOption: string) => {
-  return http.request<Result>(
-    "get",
-    `/api/monitor/base/${ioOption}/${netOption}`
-  );
-};
-
-export const loadCurrentInfo = (ioOption: string, netOption: string) => {
-  return http.request<Result>(
-    "get",
-    `/api/monitor/current/${ioOption}/${netOption}`
-  );
 };

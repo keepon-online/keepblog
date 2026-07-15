@@ -12,7 +12,6 @@ export function useLogs() {
     success: undefined
   });
   const formRef = ref();
-  // const success = ref(undefined);
   const pagination = reactive<PaginationProps>({
     total: 0,
     pageSize: 10,

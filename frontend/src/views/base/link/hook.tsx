@@ -216,8 +216,6 @@ export function useLink() {
           dialogFormVisible.value = false;
           onSearch();
         }
-      } else {
-        console.log("error submit!", fields);
       }
     });
   };
