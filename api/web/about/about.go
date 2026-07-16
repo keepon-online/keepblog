@@ -23,7 +23,7 @@ func (h Handler) About(c *gin.Context) {
 
 	c.HTML(http.StatusOK, "about.html", gin.H{
 		"about":           about,
-		"note":            string(md.Goldmark2html([]byte(about.Note))),
+		"note":            md.ToHTML([]byte(about.Note)),
 		"site":            site,
 		"tags":            sidebarInfo.Tag,
 		"categories":      sidebarInfo.Category,

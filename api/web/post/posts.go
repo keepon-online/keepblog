@@ -32,11 +32,12 @@ func (h *Handler) Post(c *gin.Context) {
 		return
 	}
 	sidebarInfo := h.Service.SidebarService.Sidebar()
+	rendered := md.Render([]byte(posts.PostContent))
 	c.HTML(http.StatusOK, "post.html", gin.H{
 		"posts":           posts,
-		"content":         string(md.Goldmark2html([]byte(posts.PostContent))),
-		"toc":             md.Goldmark2htmlToc([]byte(posts.PostContent)),
-		"stats":           md.Goldmarkstats([]byte(posts.PostContent)),
+		"content":         rendered.HTML,
+		"toc":             rendered.TOC,
+		"stats":           rendered.Stats,
 		"gitalk":          config.Get().Gitalk,
 		"site":            site,
 		"tags":            sidebarInfo.Tag,

@@ -1,93 +1,58 @@
 package md
 
 import (
-	"bytes"
-	"fmt"
-	formathtml "github.com/alecthomas/chroma/formatters/html"
-	stats "github.com/mdigger/goldmark-stats"
-	"github.com/yuin/goldmark"
-	highlighting "github.com/yuin/goldmark-highlighting"
-	"github.com/yuin/goldmark/extension"
-	"github.com/yuin/goldmark/parser"
-	"github.com/yuin/goldmark/renderer/html"
-	"github.com/yuin/goldmark/text"
-	"github.com/yuin/goldmark/util"
-	"go.abhg.dev/goldmark/toc"
-	"os"
+	"strings"
 	"testing"
 )
 
-func TestGold(t *testing.T) {
+// 含标题、列表、代码块、中文，覆盖 GFM、高亮、TOC、stats 四条路径。
+const sampleMD = "# 标题一\n\n" +
+	"这是一段中文测试内容，用于验证字数统计。\n\n" +
+	"## 二级标题\n\n" +
+	"- 列表项一\n" +
+	"- 列表项二\n\n" +
+	"```go\n" +
+	"func main() { println(\"hi\") }\n" +
+	"```\n"
 
-	markdown := goldmark.New(
-		goldmark.WithParserOptions(
-			parser.WithAutoHeadingID(),
-		),
-		goldmark.WithRendererOptions(
-			html.WithHardWraps(),
-		),
-		// 支持 GFM
-		goldmark.WithExtensions(extension.GFM, extension.Table, extension.Linkify),
-		goldmark.WithExtensions(
-			highlighting.NewHighlighting(
-				highlighting.WithStyle("monokai"),
-				highlighting.WithFormatOptions(
-					formathtml.LinkableLineNumbers(true, ""),
-					formathtml.WithLineNumbers(true),
-				),
-			),
-		),
-	)
-	markdown.Parser().AddOptions(
-		parser.WithAutoHeadingID(),
-		parser.WithASTTransformers(
-			util.Prioritized(&toc.Transformer{
-				Title: "Contents",
-			}, 100),
-		),
-	)
-	f, _ := os.Create("guide4.html")
-	source, _ := os.ReadFile("README.md")
-
-	//convertFunc := toc.Markdown(markdown)
-	//
-	//headers, _ := convertFunc(source, f)
-	//
-	//for _, header := range headers {
-	//	fmt.Printf("%+v\n", header)
-	//}
-
-	// stats
-	doc := goldmark.DefaultParser().Parse(text.NewReader(source))
-	info := stats.New(doc, source)
-
-	fmt.Printf("words: %d, unique: %d, chars: %d, reading time: %v\n",
-		info.Words, info.Unique(), info.Chars, info.Duration(400))
-
-	// Request that IDs are automatically assigned to headers.
-	//markdown.Parser().AddOptions(parser.WithAutoHeadingID())
-	// Alternatively, we can provide our own implementation of parser.IDs
-	// and use,
-	//
-	//  pctx := parser.NewContext(parser.WithIDs(ids))
-	//doc := parser.Parse(text.NewReader(src), parser.WithContext(pctx))
-
-	// Inspect the parsed Markdown document to find headers and build a
-	// tree for the table of contents.
-	tree, err := toc.Inspect(doc, source)
-	if err != nil {
-		panic(err)
+func TestRender(t *testing.T) {
+	r := Render([]byte(sampleMD))
+	if r == nil {
+		t.Fatal("Render returned nil")
 	}
-
-	// Render the tree as-is into a Markdown list.
-	treeList := toc.RenderList(tree)
-
-	// Render the Markdown list into HTML.
-	markdown.Renderer().Render(os.Stdout, source, treeList)
-	var buf bytes.Buffer
-	if err := markdown.Convert(source, f); err != nil {
-		panic(err)
+	if r.HTML == "" {
+		t.Fatal("HTML empty")
 	}
-	fmt.Println(buf.String())
+	if !strings.Contains(r.HTML, "<h1") {
+		t.Errorf("HTML missing heading, got: %s", r.HTML)
+	}
+	if !strings.Contains(r.HTML, "<pre") {
+		// 代码块经 chroma 高亮后输出 <pre>
+		t.Errorf("HTML missing highlighted code block, got: %s", r.HTML)
+	}
+	if !strings.Contains(r.TOC, "<ol") {
+		t.Errorf("TOC missing <ol>, got: %s", r.TOC)
+	}
+	if r.Stats == nil {
+		t.Fatal("Stats nil")
+	}
+	if r.Stats.Words == 0 {
+		t.Errorf("Stats.Words == 0")
+	}
+}
 
+func TestRenderEmpty(t *testing.T) {
+	r := Render(nil)
+	if r.HTML != "" || r.TOC != "" || r.Stats != nil {
+		t.Errorf("empty input should yield zero Result, got %+v", r)
+	}
+}
+
+func TestToHTML(t *testing.T) {
+	if got := ToHTML([]byte(sampleMD)); !strings.Contains(got, "<h1") {
+		t.Errorf("ToHTML missing heading, got: %s", got)
+	}
+	if got := ToHTML(nil); got != "" {
+		t.Errorf("ToHTML(nil) should be empty, got: %s", got)
+	}
 }
