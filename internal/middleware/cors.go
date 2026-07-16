@@ -16,8 +16,10 @@ var allowedOrigins = initAllowedOrigins()
 func initAllowedOrigins() map[string]bool {
 	origins := map[string]bool{
 		"http://localhost:8589":     true,
+		"http://localhost:8848":     true,
 		"http://localhost:3000":     true,
 		"http://127.0.0.1:8589":     true,
+		"http://127.0.0.1:8848":     true,
 		"https://www.keepon.online": true,
 		"https://keepon.online":     true,
 		"http://192.168.3.6:8589":   true,
