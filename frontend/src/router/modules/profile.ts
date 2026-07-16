@@ -9,7 +9,7 @@ export default {
   },
   children: [
     {
-      path: "/center",
+      path: "/profile/center",
       name: "个人中心",
       component: () => import("@/views/base/profile/index.vue"),
       meta: {

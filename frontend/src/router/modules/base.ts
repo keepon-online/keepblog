@@ -8,7 +8,7 @@ export default {
   },
   children: [
     {
-      path: "/site",
+      path: "/base/site",
       name: "站点设置",
       component: () => import("@/views/base/setting/index.vue"),
       meta: {
@@ -17,7 +17,7 @@ export default {
       }
     },
     {
-      path: "/link",
+      path: "/base/link",
       name: "友情链接",
       component: () => import("@/views/base/link/index.vue"),
       meta: {
@@ -26,7 +26,7 @@ export default {
       }
     },
     {
-      path: "/about",
+      path: "/base/about",
       name: "关于",
       component: () => import("@/views/base/about/index.vue"),
       meta: {

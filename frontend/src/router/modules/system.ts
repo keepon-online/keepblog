@@ -8,7 +8,7 @@ export default {
   },
   children: [
     {
-      path: "/log",
+      path: "/system/log",
       name: "登录日志",
       component: () => import("@/views/system/loginlog/index.vue"),
       meta: {
@@ -17,7 +17,7 @@ export default {
       }
     },
     {
-      path: "/access",
+      path: "/system/access",
       name: "访问日志",
       component: () => import("@/views/system/accesslog/index.vue"),
       meta: {
@@ -26,7 +26,7 @@ export default {
       }
     },
     {
-      path: "/monitor",
+      path: "/system/monitor",
       name: "系统监控",
       component: () => import("@/views/system/monitor/index.vue"),
       meta: {
@@ -35,7 +35,7 @@ export default {
       }
     },
     {
-      path: "/notice",
+      path: "/system/notice",
       name: "通知管理",
       component: () => import("@/views/system/notice/index.vue"),
       meta: {
