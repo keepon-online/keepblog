@@ -1,0 +1,8 @@
+packages: []
+onlyBuiltDependencies:
+  - "@parcel/watcher"
+  - core-js
+  - esbuild
+  - vue-demi
+ignoredBuiltDependencies:
+  - "@tailwindcss/oxide"
