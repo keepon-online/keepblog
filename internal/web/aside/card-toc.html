@@ -9,5 +9,17 @@
     </div>
 </div>
 <script>
-    let $ol = document.querySelectorAll("ol");for (let i = 0; i < $ol.length; i++) {if (i === 0) {$ol.item(i).classList.add("toc")} else {$ol.item(i).classList.add("toc-child")}}let $li = document.querySelectorAll("li");for (let i = 0; i < $li.length; i++) {$li.item(i).classList.add("toc-item")}let $a = document.querySelectorAll("a");for (let i = 0; i < $a.length; i++) {$a.item(i).classList.add("toc-link")}
+    // 用 IIFE 包裹避免 let/const 成为全局声明：此脚本带 data-pjax 区域，
+    // PJAX 切换页面时会重新执行，裸 let/const 会因重复声明抛 SyntaxError。
+    ;(function () {
+        var $ol = document.querySelectorAll("ol");
+        for (var i = 0; i < $ol.length; i++) {
+            if (i === 0) { $ol.item(i).classList.add("toc") }
+            else { $ol.item(i).classList.add("toc-child") }
+        }
+        var $li = document.querySelectorAll("li");
+        for (var i = 0; i < $li.length; i++) { $li.item(i).classList.add("toc-item") }
+        var $a = document.querySelectorAll("a");
+        for (var i = 0; i < $a.length; i++) { $a.item(i).classList.add("toc-link") }
+    })();
 </script>

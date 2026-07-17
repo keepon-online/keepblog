@@ -173,6 +173,11 @@ window.addEventListener('load', () => {
 
         $resultContent.innerHTML = html;
 
+        // 让动态生成的结果链接被 PJAX 接管，避免整页刷新中断音乐
+        if (window.PjaxMusic?.PjaxManager?.refreshLinks) {
+            window.PjaxMusic.PjaxManager.refreshLinks($resultContent);
+        }
+
         // 更新统计
         $statsWrap.style.display = 'block';
         $statsWrap.querySelector('.search-result-stats').textContent = `共找到 ${dataObj.length} 篇文章`;
@@ -195,7 +200,13 @@ window.addEventListener('load', () => {
             e.preventDefault();
             const link = items[currentIndex].querySelector('a');
             if (link) {
-                window.location.href = link.href;
+                // 优先走 PJAX，与鼠标点击行为一致，避免整页刷新中断音乐
+                const pjax = window.PjaxMusic?.PjaxManager?.instance;
+                if (pjax && typeof pjax.loadUrl === 'function') {
+                    pjax.loadUrl(link.href);
+                } else {
+                    window.location.href = link.href;
+                }
             }
         }
     };

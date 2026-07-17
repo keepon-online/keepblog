@@ -129,6 +129,22 @@
         instance: null,
 
         /**
+         * 让动态生成的链接（如搜索结果）被 PJAX 接管。
+         * PJAX 的 attachLink 是逐元素绑定，初始化后新生成的 a[href] 不会被拦截，
+         * 点击会整页刷新中断音乐。这里对指定容器内未绑定的链接重新调用 parseDOM。
+         * parseDOM 内部用 attrState 标记防重复绑定，安全。
+         */
+        refreshLinks(el) {
+            if (this.instance && typeof this.instance.parseDOM === 'function' && el) {
+                try {
+                    this.instance.parseDOM(el);
+                } catch (e) {
+                    console.warn('[PjaxManager] refreshLinks 失败:', e);
+                }
+            }
+        },
+
+        /**
          * 初始化 PJAX
          */
         init() {
