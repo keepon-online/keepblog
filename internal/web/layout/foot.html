@@ -41,13 +41,16 @@
     <div class="js-pjax"></div>
     <div class="aplayer no-destroy" id="player"></div>
     <canvas class="fireworks" mobile="false"></canvas>
-    <script src="/plugins/butterfly-extsrc/dist/fireworks.min.js"></script>
-    <script src="/plugins/butterfly-extsrc/dist/activate-power-mode.min.js"></script>
+    <script defer src="/plugins/butterfly-extsrc/dist/fireworks.min.js"></script>
+    <script defer src="/plugins/butterfly-extsrc/dist/activate-power-mode.min.js"></script>
     <script>
-        POWERMODE.colorful = true;
-        POWERMODE.shake = true;
-        POWERMODE.mobile = false;
-        document.body.addEventListener('input', POWERMODE);
+        // defer 脚本在 DOMContentLoaded 前按序执行，故在回调内 POWERMODE 必然已定义。
+        document.addEventListener('DOMContentLoaded', function () {
+            POWERMODE.colorful = true;
+            POWERMODE.shake = true;
+            POWERMODE.mobile = false;
+            document.body.addEventListener('input', POWERMODE);
+        });
     </script>
     <!-- NProgress 进度条 -->
     <link href="/plugins/nprogress/nprogress.min.css" rel="stylesheet">

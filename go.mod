@@ -14,6 +14,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/uuid v1.4.0
 	github.com/gookit/slog v0.6.0
+	github.com/gorilla/websocket v1.5.1
 	github.com/lionsoul2014/ip2region/binding/golang v0.0.0-20231013030745-3066d243cd04
 	github.com/mdigger/goldmark-stats v0.0.0-20191227115725-9826a267d573
 	github.com/minio/minio-go/v7 v7.0.63
@@ -56,7 +57,6 @@ require (
 	github.com/gookit/color v1.6.0 // indirect
 	github.com/gookit/goutil v0.7.2 // indirect
 	github.com/gookit/gsr v0.1.1 // indirect
-	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/grokify/html-strip-tags-go v0.0.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect

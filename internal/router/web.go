@@ -12,6 +12,7 @@ import (
 	"gitee.com/jieepre/go-site/api/web/music"
 	"gitee.com/jieepre/go-site/api/web/post"
 	"gitee.com/jieepre/go-site/api/web/tags"
+	"gitee.com/jieepre/go-site/internal/middleware"
 	"gitee.com/jieepre/go-site/internal/pkg/core"
 	"gitee.com/jieepre/go-site/static"
 	"github.com/gin-gonic/gin"
@@ -30,17 +31,20 @@ func RegisterWebRouter(ctx *core.Context) {
 }
 
 func staticRouter(ctx *core.Context) {
-	web := ctx.Engine
+	// 静态资源统一走缓存中间件：embed 内容随发版才变，配 1 年 immutable 强缓存。
+	// 注意：StaticFS/StaticFileFS 必须注册在带中间件的 group 上，中间件才生效。
+	staticGroup := ctx.Engine.Group("/", middleware.StaticCacheMiddleware())
+
 	cssEmbed, _ := fs.Sub(static.Static, "css")
 	jsEmbed, _ := fs.Sub(static.Static, "js")
 	imagesEmbed, _ := fs.Sub(static.Static, "images")
 	pluginsEmbed, _ := fs.Sub(static.Static, "plugins")
-	web.StaticFS("/css", http.FS(cssEmbed))
-	web.StaticFS("/js", http.FS(jsEmbed))
-	web.StaticFS("/images", http.FS(imagesEmbed))
-	web.StaticFS("/plugins", http.FS(pluginsEmbed))
-	web.StaticFileFS("/robots.txt", "robots.txt", http.FS(static.Robots))
-	web.StaticFileFS("/favicon.ico", "favicon.ico", http.FS(static.Favicon))
+	staticGroup.StaticFS("/css", http.FS(cssEmbed))
+	staticGroup.StaticFS("/js", http.FS(jsEmbed))
+	staticGroup.StaticFS("/images", http.FS(imagesEmbed))
+	staticGroup.StaticFS("/plugins", http.FS(pluginsEmbed))
+	staticGroup.StaticFileFS("/robots.txt", "robots.txt", http.FS(static.Robots))
+	staticGroup.StaticFileFS("/favicon.ico", "favicon.ico", http.FS(static.Favicon))
 }
 
 func homeRouter(ctx *core.Context) {
