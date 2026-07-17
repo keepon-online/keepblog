@@ -398,19 +398,36 @@
                 return;
             }
 
-            // 默认音乐列表
+            // 兜底音乐：仅当 /api/music/list 彻底失败（网络错误）时使用。
+            // CC0 协议（免版权），jsDelivr CDN 直链，与后端种子数据一致。
+            const COVER = 'https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png';
             const defaultAudio = [{
-                name: '平凡之路',
-                artist: '朴树',
-                url: 'http://music.163.com/song/media/outer/url?id=1497917991.mp3',
-                cover: 'http://p2.music.126.net/IwEI0tFPh4w9OjY6RM2IJQ==/109951163009071893.jpg?param=90y90',
-                type: 'auto'
+                name: 'Bubbles', artist: 'Royalty Free',
+                url: 'https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Bubbles.mp3',
+                cover: COVER, type: 'auto'
+            }, {
+                name: 'Happy Life', artist: 'Royalty Free',
+                url: 'https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Happy%20Life.mp3',
+                cover: COVER, type: 'auto'
+            }, {
+                name: 'Newness', artist: 'Royalty Free',
+                url: 'https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Newness.mp3',
+                cover: COVER, type: 'auto'
+            }, {
+                name: 'Planning', artist: 'Royalty Free',
+                url: 'https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Planning.mp3',
+                cover: COVER, type: 'auto'
+            }, {
+                name: 'Mysterious', artist: 'Royalty Free',
+                url: 'https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Mysterious.mp3',
+                cover: COVER, type: 'auto'
             }];
 
             // 合并配置
             const config = Object.assign({
                 container: container,
                 fixed: true,
+                // 自动播放由 enableAutoplay 在设置静音后手动触发，避免浏览器拦截
                 autoplay: false,
                 theme: '#b7daff',
                 loop: 'all',
@@ -432,6 +449,11 @@
 
                 // 恢复之前的播放状态
                 MusicState.restore();
+
+                // 自动播放：浏览器禁止带声音的页面加载自动播放。
+                // 仅对首次访问（无保存状态）的访客静音自动播放，避免打扰已主动暂停的老用户。
+                // 用户首次交互（点击/滚动/按键）时取消静音恢复音量。
+                this.enableAutoplay();
 
                 console.log('[MusicPlayer] 播放器初始化完成');
             } catch (e) {
@@ -470,6 +492,58 @@
             window.addEventListener('beforeunload', () => {
                 MusicState.save();
             });
+        },
+
+        /**
+         * 浏览器已明确禁止“无交互自动播放”，因此这里不再依赖页面加载时 autoplay。
+         * 统一改为：首次明确用户交互（点击/触摸/按键/滚轮）时，在同步调用栈里直接播放。
+         * 这条路径比异步 canplay/retry 更稳定，也更符合浏览器策略。
+         */
+        enableAutoplay() {
+            if (!window.ap || !window.ap.audio) return;
+
+            const audio = window.ap.audio;
+            const targetVolume = 0.5;
+
+            const removeListeners = () => {
+                events.forEach(ev => document.removeEventListener(ev, activate, true));
+            };
+
+            const activate = () => {
+                if (!window.ap || !window.ap.audio) {
+                    removeListeners();
+                    return;
+                }
+
+                // 在用户手势同步栈里直接恢复音量并播放
+                audio.defaultMuted = false;
+                audio.muted = false;
+                audio.volume = targetVolume;
+
+                try {
+                    // 先确保资源进入可播放状态
+                    audio.load();
+                } catch (_) {}
+
+                try {
+                    if (typeof window.ap.play === 'function') {
+                        window.ap.play();
+                    }
+                } catch (_) {}
+
+                const p = audio.play();
+                if (p && typeof p.catch === 'function') {
+                    p.catch(() => {
+                        // 若连真实用户手势里都失败，就不再重试，避免无意义报错循环
+                    });
+                }
+
+                removeListeners();
+            };
+
+            // pointerdown / click / touchstart / keydown / wheel 比 scroll 更容易被浏览器认定为手势。
+            const events = ['pointerdown', 'click', 'touchstart', 'keydown', 'wheel', 'scroll'];
+            events.forEach(ev => document.addEventListener(ev, activate, { capture: true, once: true }));
         }
     };
 

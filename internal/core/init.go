@@ -51,6 +51,9 @@ func InitResource() {
 		initAdmin()
 		initData()
 	}
+	// 默认音乐独立判断：仅当 music 表为空时写入，不依赖 user 表是否已有数据，
+	// 这样已初始化的旧库升级后也能补上默认音乐。
+	initDefaultMusic()
 	// 初始化数据库索引
 	InitIndexes()
 }
@@ -233,6 +236,32 @@ MySQL 提供丰富的聚合函数来满足统计需求：
 	}
 
 	tx.Commit()
+}
+
+// initDefaultMusic 在 music 表为空时写入默认轻音乐。
+// CC0 协议（免版权、免署名），托管于 jsDelivr CDN 直链，支持 CORS 与 Range。
+// 仓库：effacestudios/Royalty-Free-Music-Pack。管理员可在后台随意增删改。
+func initDefaultMusic() {
+	var count int64
+	global.GORM.Table(model.TMusicTable).Count(&count)
+	if count > 0 {
+		return
+	}
+
+	defaultMusics := []model.Music{
+		{Name: "Bubbles", Artist: "Royalty Free", Url: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Bubbles.mp3", Cover: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", Sort: 1, State: 1},
+		{Name: "Happy Life", Artist: "Royalty Free", Url: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Happy%20Life.mp3", Cover: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", Sort: 2, State: 1},
+		{Name: "Newness", Artist: "Royalty Free", Url: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Newness.mp3", Cover: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", Sort: 3, State: 1},
+		{Name: "Planning", Artist: "Royalty Free", Url: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Planning.mp3", Cover: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", Sort: 4, State: 1},
+		{Name: "Mysterious", Artist: "Royalty Free", Url: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Mysterious.mp3", Cover: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", Sort: 5, State: 1},
+	}
+	for i := range defaultMusics {
+		if err := global.GORM.Table(model.TMusicTable).Save(&defaultMusics[i]).Error; err != nil {
+			slog.Errorf("初始化默认音乐失败:%s", err.Error())
+			return
+		}
+	}
+	slog.Info("初始化默认轻音乐完成")
 }
 
 func Timer() {

@@ -63,71 +63,50 @@
     <!-- PJAX + 音乐播放器管理模块 -->
     <script src="/js/pjax-music.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // 默认音乐配置（作为后备）
-            const defaultAudio = [{
-                name: '平凡之路',
-                artist: '朴树',
-                url: 'http://music.163.com/song/media/outer/url?id=1497917991.mp3',
-                cover: 'http://p2.music.126.net/IwEI0tFPh4w9OjY6RM2IJQ==/109951163009071893.jpg?param=90y90',
-                type: 'auto'
-            }];
+        // IIFE 包裹：避免 PJAX 重新执行时 let/const 重复声明崩溃。
+        ;(function () {
+            // 播放器基础配置（fetch 成功/失败共用）
+            var playerConfig = {
+                container: document.getElementById('player'),
+                fixed: true,
+                autoplay: false,
+                theme: '#b7daff',
+                loop: 'all',
+                order: 'random',
+                preload: 'auto',
+                lrcType: 0,
+                volume: 0.5,
+                mutex: true,
+                listFolded: true,
+                storageName: 'aplayer-setting'
+            };
 
-            // 从后台获取音乐列表
+            // 从后台获取音乐列表；默认音乐已在后端种子数据中，不再前端硬编码。
             fetch('/api/music/list')
-                .then(res => res.json())
-                .then(data => {
-                    let audioList = defaultAudio;
-
-                    // 如果后台有配置音乐，使用后台数据
+                .then(function (res) { return res.json() })
+                .then(function (data) {
+                    var opts = Object.assign({}, playerConfig);
                     if (data.code === 200 && data.data && data.data.length > 0) {
-                        audioList = data.data.map(item => ({
-                            name: item.name || '未知歌曲',
-                            artist: item.artist || '未知艺术家',
-                            url: item.url,
-                            cover: item.cover || '',
-                            lrc: item.lrc || '',
-                            type: 'auto'
-                        }));
+                        opts.audio = data.data.map(function (item) {
+                            return {
+                                name: item.name || '未知歌曲',
+                                artist: item.artist || '未知艺术家',
+                                url: item.url,
+                                cover: item.cover || '',
+                                lrc: item.lrc || '',
+                                type: 'auto'
+                            };
+                        });
                     }
-
-                    // 初始化 PJAX + 音乐播放器
-                    window.initPjaxMusic({
-                        container: document.getElementById('player'),
-                        fixed: true,
-                        autoplay: false,
-                        theme: '#b7daff',
-                        loop: 'all',
-                        order: 'random',
-                        preload: 'auto',
-                        lrcType: 0,
-                        volume: 0.5,
-                        mutex: true,
-                        listFolded: true,
-                        storageName: 'aplayer-setting',
-                        audio: audioList
-                    });
+                    // 后台无数据时 opts.audio 为 undefined，MusicPlayer.init 会用内置兜底。
+                    window.initPjaxMusic(opts);
                 })
-                .catch(err => {
-                    console.warn('[Music] 获取音乐列表失败，使用默认音乐:', err);
-                    // API 失败时使用默认配置
-                    window.initPjaxMusic({
-                        container: document.getElementById('player'),
-                        fixed: true,
-                        autoplay: false,
-                        theme: '#b7daff',
-                        loop: 'all',
-                        order: 'random',
-                        preload: 'auto',
-                        lrcType: 0,
-                        volume: 0.5,
-                        mutex: true,
-                        listFolded: true,
-                        storageName: 'aplayer-setting',
-                        audio: defaultAudio
-                    });
+                .catch(function (err) {
+                    console.warn('[Music] 获取音乐列表失败，使用内置兜底:', err);
+                    // API 彻底失败时不传 audio，由 pjax-music.js 的内置兜底接管。
+                    window.initPjaxMusic(playerConfig);
                 });
-        });
+        })();
     </script>
     {{if BaiduStat .site.BaiduStat}}
     <script>
