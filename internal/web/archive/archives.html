@@ -15,7 +15,7 @@
             <div class="article-sort-title">文章总览 - {{ .cardInfo.Post}}</div>
             <div class="article-sort">
                 {{range $i, $v := .archives.Archives}}
-                <div class="article-sort-item year"> {{$i}}</div>
+                <div class="article-sort-item year"> {{$i | archiveTime}}</div>
                 {{range $pi, $posts := $v}}
                 <div class="article-sort-item">
                     <a class="article-sort-item-img" href="/post/{{$posts.PostSlug}}" title="{{$posts.Title}}">

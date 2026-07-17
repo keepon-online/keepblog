@@ -11,13 +11,15 @@
 {{template "sidebar/sidebar.html"}}
 <div class="page" id="body-wrap">
     <main class="layout" id="content-inner">
-        <div>
+        <div id="page">
             <div class="category-lists">
-                <ul class="category-list">
+                <ul class="card-category-list" id="cat-list">
                     {{range $i, $v := .categories}}
-                    <li class="category-list-item">
-                        <a class="category-list-link" href="/categories/{{$v.CategoryName}}">{{$v.CategoryName}}</a>
-                        <span class="category-list-count">{{$v.Total}}</span>
+                    <li class="card-category-list-item">
+                        <a class="card-category-list-link" href="/categories/{{$v.CategoryName}}">
+                            <span class="card-category-list-name">{{$v.CategoryName}}</span>
+                            <span class="card-category-list-count">{{$v.Total}}</span>
+                        </a>
                     </li>
                     {{end}}
                 </ul>

@@ -2,6 +2,7 @@ package core
 
 import (
 	"html/template"
+	"strings"
 	"time"
 )
 
@@ -26,7 +27,11 @@ func TemplateFunc() template.FuncMap {
 			return time.Unix(int64(t), 0).Format(time.DateOnly)
 		},
 		"archiveTime": func(t string) string {
-			parse, _ := time.ParseInLocation("2006/01", t, time.Local)
+			// 兼容 "2026-07"（归档列表页 map key）与 "2026/07"（侧边栏）两种分隔符。
+			parse, err := time.ParseInLocation("2006/01", strings.ReplaceAll(t, "-", "/"), time.Local)
+			if err != nil {
+				return t
+			}
 			return parse.Format("2006年01月")
 		},
 		"even": func(i int) bool {
