@@ -2,7 +2,8 @@
 // 同时减少每个 HTML 页面的体积。此处为纯数据常量，不含任何模板变量。
 // 注意：依赖此配置的引导脚本（暗色模式检测等）仍内联在 head.html，
 // 必须在本文件加载后再执行。本文件需在引导脚本之前引入。
-const GLOBAL_CONFIG = {
+// 用 var 而非 const：PJAX 若重新执行外部脚本，const 重复声明会抛 SyntaxError。
+var GLOBAL_CONFIG = {
     root: '/',
     algolia: undefined,
     localSearch: {

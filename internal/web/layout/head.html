@@ -25,7 +25,9 @@
 
     <script src="/js/global-config.js"></script>
     <script data-pjax id="config-diff">
-        const GLOBAL_CONFIG_SITE = {
+        // 用 var 而非 const：此脚本带 data-pjax 标记，PJAX 切换页面时会重新执行，
+        // const 会因重复声明抛 SyntaxError，var 允许重复声明（仅重新赋值）以更新本页配置。
+        var GLOBAL_CONFIG_SITE = {
             title: '小助理',
             isPost: false,
             isHome: true,
