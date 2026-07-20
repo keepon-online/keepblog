@@ -12,10 +12,10 @@ ARG BUILD_DATE=unknown
 # 产物拷贝到 Go builder 的 static/console 供 embed
 # ================================
 FROM node:20-alpine AS frontend
-RUN corepack prepare pnpm@9.15.9 --activate
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 WORKDIR /fe
-# 先复制依赖描述，利用 Docker 层缓存
-COPY frontend/package.json frontend/pnpm-lock.yaml ./
+# 先复制依赖描述与 pnpm 配置，利用 Docker 层缓存
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/.npmrc frontend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 # 复制前端源码并构建
 COPY frontend/ .
