@@ -45,10 +45,9 @@
           <blockquote class="summary-content">{{ ruleForm.summary }}</blockquote>
         </div>
         
-        <MdEditor 
+        <MdPreview 
           v-model="ruleForm.postContent" 
-          previewOnly 
-          editorId="postId" 
+          id="postId" 
           :preview-theme="theme"
           class="markdown-preview"
         />
@@ -74,7 +73,7 @@ defineOptions({
 });
 
 import { onMounted, ref, computed } from "vue";
-import { MdEditor } from "md-editor-v3";
+import { MdPreview } from "md-editor-v3";
 import "md-editor-v3/lib/style.css";
 import { getPost } from "@/api/post";
 import { useRoute, useRouter } from "vue-router";
@@ -85,6 +84,7 @@ const router = useRouter();
 
 const ruleForm = ref({
   postId: undefined,
+  postSlug: "",
   title: "",
   categoryName: "",
   tags: [],
@@ -124,10 +124,11 @@ const formattedCreateTime = computed(() => {
 });
 
 const handleEdit = () => {
-  if (ruleForm.value.postId) {
-    router.push({ 
-      name: "内容编辑", 
-      params: { id: String(ruleForm.value.postId) } 
+  // detail/:postId 接口对参数做 HashidsDecode，需要传 hashids 编码后的 postSlug，而非数字主键 postId
+  if (ruleForm.value.postSlug) {
+    router.push({
+      name: "内容编辑",
+      params: { id: String(ruleForm.value.postSlug) }
     });
   }
 };
