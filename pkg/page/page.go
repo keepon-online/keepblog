@@ -101,13 +101,6 @@ func HandleIndex(totalRecords, page int, temp string) (string, error) {
 		return "", errors.New("invalid page num")
 	}
 
-	// 计算当前页的起始记录和结束记录
-	startRecord := (page - 1) * pageSize
-	endRecord := startRecord + pageSize
-	if endRecord > totalRecords {
-		endRecord = totalRecords
-	}
-
 	// 构造分页数据
 	var pages []int
 	for i := 1; i <= totalPages; i++ {

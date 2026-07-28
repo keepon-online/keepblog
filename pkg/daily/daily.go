@@ -34,7 +34,7 @@ func GetDailyReport() string {
 	if err != nil {
 		return ""
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// 读取响应体
 	body, err := io.ReadAll(resp.Body)

@@ -26,7 +26,7 @@ LDFLAGS = -s -w \
 
 BUILD_FLAGS = -trimpath -ldflags "$(LDFLAGS)"
 
-.PHONY: all build build-frontend build-go linux linux-arm64 darwin darwin-arm64 windows clean clean-frontend run test docker console version help dev-frontend dev-backend
+.PHONY: all build build-frontend build-go linux linux-arm64 darwin darwin-arm64 windows clean clean-frontend run test lint lint-fix docker console version help dev-frontend dev-backend
 
 # 默认目标
 all: build
@@ -87,6 +87,28 @@ run:
 test:
 	go test -v ./...
 
+# ================================================
+# 代码静态检查（golangci-lint v2）
+# 要求：已安装 golangci-lint（go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest）
+# 配置见 .golangci.yml
+# ================================================
+lint:
+	@command -v golangci-lint > /dev/null 2>&1 || { \
+		echo "错误：未安装 golangci-lint，请执行："; \
+		echo "  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest"; \
+		exit 1; \
+	}
+	golangci-lint run ./...
+
+# 自动修复可修复的 lint 问题（如格式化、import 顺序），其余仍需手动处理
+lint-fix:
+	@command -v golangci-lint > /dev/null 2>&1 || { \
+		echo "错误：未安装 golangci-lint，请执行："; \
+		echo "  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest"; \
+		exit 1; \
+	}
+	golangci-lint run --fix ./...
+
 # 构建Docker镜像（Dockerfile 内已包含前端构建阶段）
 docker:
 	docker build -t jieepre/$(APP_NAME):$(VERSION) -t jieepre/$(APP_NAME):latest .
@@ -133,6 +155,8 @@ help:
 	@echo "  make clean-frontend  - 清理前端 dist 与 node_modules"
 	@echo "  make run             - 运行项目（后端）"
 	@echo "  make test            - 运行测试"
+	@echo "  make lint            - 代码静态检查（golangci-lint，需先安装）"
+	@echo "  make lint-fix        - 自动修复可修复的 lint 问题"
 	@echo "  make docker          - 构建Docker镜像"
 	@echo "  make docker-push     - 推送Docker镜像"
 	@echo "  make console         - 同步前端到后端（= build-frontend）"

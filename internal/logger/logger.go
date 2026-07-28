@@ -424,7 +424,7 @@ func ReadLogFile(filename string, lines int, search string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open log file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var result []string
 	scanner := bufio.NewScanner(file)

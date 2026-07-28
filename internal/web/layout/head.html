@@ -3,19 +3,32 @@
     <meta charset="UTF-8">
     <meta content="IE=edge" http-equiv="X-UA-Compatible">
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
-    <title>{{.site.Title}}</title>
     <meta content="{{.site.Title}}" name="author">
     <meta content="{{.site.Title}}" name="copyright">
     <meta content="telephone=no" name="format-detection">
     <meta content="#ffffff" name="theme-color">
+    {{if .posts}}
+    <title>{{.posts.Title}} | {{.site.Title}}</title>
+    <meta content="article" property="og:type">
+    <meta content="{{.posts.Title}}" property="og:title">
+    <meta content="{{.posts.Summary}}" property="og:description">
+    <meta content="{{.site.URL}}/post/{{.posts.PostSlug}}" property="og:url">
+    {{if .posts.CoverImage}}
+    <meta content="{{.posts.CoverImage}}" property="og:image">
+    {{end}}
+    <meta content="{{if .posts.CoverImage}}summary_large_image{{else}}summary{{end}}" name="twitter:card">
+    <meta content="{{.posts.Title}}" property="article:author">
+    {{else}}
+    <title>{{.site.Title}}</title>
     <meta content="website" property="og:type">
+    <meta content="{{.site.URL}}" property="og:url">
+    <meta content="{{.site.Title}}" property="og:title">
+    <meta content="summary" name="twitter:card">
+    {{end}}
     <meta content="{{.site.Keywords}}" name="keywords">
     <meta content="{{.site.Description}}" name="description">
-    <meta content="{{.site.URL}}" property="og:url">
     <meta content="{{.site.Title}}" property="og:site_name">
     <meta content="zh_CN" property="og:locale">
-    <meta content="{{.site.Title}}" property="article:author">
-    <meta content="summary" name="twitter:card">
     {{if  .site.BaiduSite}}
     <meta content="{{ .site.BaiduSite }}" name="baidu-site-verification" />
     {{end}}

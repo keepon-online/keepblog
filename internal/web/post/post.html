@@ -57,7 +57,48 @@
                 <div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/{{.posts.TagName}}">{{.posts.TagName}}</a>
                 </div>
             </div>
-            <nav class="pagination-post" id="pagination"></nav>
+            {{if .relatedPosts}}
+            <div class="relatedPosts">
+                <div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div>
+                <div class="relatedPosts-list">
+                    {{range .relatedPosts}}
+                    <div>
+                        <a href="/post/{{.PostSlug}}" title="{{.Title}}" data-pjax-content="true">
+                            {{if .CoverImage}}<img src="{{.CoverImage}}" alt="cover">{{end}}
+                            <span class="content">
+                                <span class="date">{{.PubTime|time}}</span>
+                                <span class="title">{{.Title}}</span>
+                            </span>
+                        </a>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+            <nav class="pagination-post" id="pagination">
+                {{if .prevPost}}
+                <div class="prev-post pull-left">
+                    <a href="/post/{{.prevPost.PostSlug}}" title="{{.prevPost.Title}}" data-pjax-content="true">
+                        {{if .prevPost.CoverImage}}<img src="{{.prevPost.CoverImage}}" alt="cover">{{end}}
+                        <span class="pagination-info">
+                            <span class="label">上一篇</span>
+                            <span class="prev_info">{{.prevPost.Title}}</span>
+                        </span>
+                    </a>
+                </div>
+                {{end}}
+                {{if .nextPost}}
+                <div class="next-post pull-right">
+                    <a href="/post/{{.nextPost.PostSlug}}" title="{{.nextPost.Title}}" data-pjax-content="true">
+                        {{if .nextPost.CoverImage}}<img src="{{.nextPost.CoverImage}}" alt="cover">{{end}}
+                        <span class="pagination-info">
+                            <span class="label">下一篇</span>
+                            <span class="next_info">{{.nextPost.Title}}</span>
+                        </span>
+                    </a>
+                </div>
+                {{end}}
+            </nav>
             <hr>
             {{if .gitalk.Enable}}
             <div id="post-comment">
@@ -94,7 +135,7 @@
         clientSecret: '{{.gitalk.ClientSecret}}',
         repo: '{{.gitalk.Repo}}',
         owner: '{{.gitalk.Owner}}',
-        admin: '{{.gitalk.Admin}}',
+        admin: JSON.parse('{{.gitalkAdmin}}'),
         language:"zh-CN",
         title:"{{.posts.Title}}",
         id: location.pathname,      // Ensure uniqueness and length less than 50

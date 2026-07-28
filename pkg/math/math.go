@@ -16,10 +16,11 @@ func RandFloat64(min, max float64) float64 {
 	}
 	minStr := strconv.FormatFloat(min, 'f', -1, 64)
 	// 不包含小数点
-	if strings.Index(minStr, ".") == -1 {
+	dotIdx := strings.Index(minStr, ".")
+	if dotIdx == -1 {
 		return max
 	}
-	multipleNum := len(minStr) - (strings.Index(minStr, ".") + 1)
+	multipleNum := len(minStr) - (dotIdx + 1)
 	multiple := math.Pow10(multipleNum)
 	minMult := min * multiple
 	maxMult := max * multiple

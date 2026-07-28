@@ -59,15 +59,19 @@ const updateChartFromProps = (data: any[]) => {
   xData.value = data.map(e => e.name);
   pv.value = data.map(e => e.pv);
   uv.value = data.map(e => e.uv);
-  
+
   setOptions(
     {
       tooltip: {
         trigger: "axis",
-        backgroundColor: isDark.value ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-        borderColor: isDark.value ? '#303133' : '#e4e7ed',
+        backgroundColor: isDark.value
+          ? "rgba(0, 0, 0, 0.8)"
+          : "rgba(255, 255, 255, 0.9)",
+        borderColor: isDark.value ? "#303133" : "#e4e7ed",
         textStyle: {
-          color: isDark.value ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)'
+          color: isDark.value
+            ? "rgba(255, 255, 255, 0.9)"
+            : "rgba(0, 0, 0, 0.9)"
         }
       },
       grid: {
@@ -81,7 +85,9 @@ const updateChartFromProps = (data: any[]) => {
         right: true,
         data: ["PV", "UV"],
         textStyle: {
-          color: isDark.value ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.65)'
+          color: isDark.value
+            ? "rgba(255, 255, 255, 0.7)"
+            : "rgba(0, 0, 0, 0.65)"
         }
       },
       calculable: true,
@@ -97,11 +103,13 @@ const updateChartFromProps = (data: any[]) => {
           },
           axisLine: {
             lineStyle: {
-              color: isDark.value ? '#303133' : '#e4e7ed'
+              color: isDark.value ? "#303133" : "#e4e7ed"
             }
           },
           axisLabel: {
-            color: isDark.value ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.65)'
+            color: isDark.value
+              ? "rgba(255, 255, 255, 0.7)"
+              : "rgba(0, 0, 0, 0.65)"
           },
           data: xData.value
         }
@@ -113,7 +121,7 @@ const updateChartFromProps = (data: any[]) => {
           splitLine: {
             show: true,
             lineStyle: {
-              type: 'dashed'
+              type: "dashed"
             }
           },
           axisLine: {
@@ -123,7 +131,9 @@ const updateChartFromProps = (data: any[]) => {
             show: false
           },
           axisLabel: {
-            color: isDark.value ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.65)'
+            color: isDark.value
+              ? "rgba(255, 255, 255, 0.7)"
+              : "rgba(0, 0, 0, 0.65)"
           }
         }
       ],
@@ -220,7 +230,7 @@ const updateChartFromProps = (data: any[]) => {
 // 监听数据变化
 watch(
   () => props.lineData,
-  (newData) => {
+  newData => {
     if (newData && newData.length > 0) {
       updateChartFromProps(newData);
     }

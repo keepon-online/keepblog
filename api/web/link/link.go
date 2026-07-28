@@ -12,7 +12,7 @@ type Handler struct {
 
 func (h *Handler) Links(c *gin.Context) {
 	sidebarInfo := h.Service.SidebarService.Sidebar()
-	links, err := h.Service.LinkService.GetLinks()
+	links, _ := h.Service.LinkService.GetLinks()
 	site, err := h.Service.WebSiteService.GetWebSite()
 	if err != nil {
 		c.HTML(http.StatusOK, "error.html", nil)

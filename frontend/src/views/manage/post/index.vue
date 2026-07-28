@@ -42,12 +42,7 @@ const {
 <template>
   <div class="post-container">
     <el-card class="search-card">
-      <el-form
-        ref="formRef"
-        :inline="true"
-        :model="form"
-        class="search-form"
-      >
+      <el-form ref="formRef" :inline="true" :model="form" class="search-form">
         <el-form-item label="标题:" prop="title">
           <el-input
             v-model="form.title"

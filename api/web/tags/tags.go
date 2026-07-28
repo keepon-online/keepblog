@@ -40,7 +40,7 @@ func (h *Handler) TagsPage(c *gin.Context) {
 
 	tagsPosts, total, _ := h.Service.PostService.GetPostsByTag(tagName, int(pageNum))
 	//传到模板中需要转换成template.HTML类型，否则html代码会被转义
-	index, err := page.HandleIndex(int(total), int(pageNum), "tags/"+tagName+"/page")
+	index, _ := page.HandleIndex(int(total), int(pageNum), "tags/"+tagName+"/page")
 	site, err := h.Service.WebSiteService.GetWebSite()
 	if err != nil {
 		c.HTML(http.StatusOK, "error.html", nil)

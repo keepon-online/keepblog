@@ -36,15 +36,17 @@ const updateChartFromProps = (data: any[]) => {
     {
       tooltip: {
         trigger: "item",
-        formatter: '{a} <br/>{b}: {c} ({d}%)'
+        formatter: "{a} <br/>{b}: {c} ({d}%)"
       },
       legend: {
         icon: "circle",
-        orient: 'vertical',
-        right: '20px',
-        top: 'middle',
+        orient: "vertical",
+        right: "20px",
+        top: "middle",
         textStyle: {
-          color: isDark.value ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.65)'
+          color: isDark.value
+            ? "rgba(255, 255, 255, 0.7)"
+            : "rgba(0, 0, 0, 0.65)"
         }
       },
       series: [
@@ -57,19 +59,19 @@ const updateChartFromProps = (data: any[]) => {
           avoidLabelOverlap: false,
           itemStyle: {
             borderRadius: 4,
-            borderColor: isDark.value ? '#141414' : '#fff',
+            borderColor: isDark.value ? "#141414" : "#fff",
             borderWidth: 2
           },
           label: {
             show: false,
-            position: 'center'
+            position: "center"
           },
           emphasis: {
             label: {
               show: true,
-              fontSize: '14',
-              fontWeight: 'bold',
-              formatter: '{b}\n\n{d}%'
+              fontSize: "14",
+              fontWeight: "bold",
+              formatter: "{b}\n\n{d}%"
             }
           },
           labelLine: {
@@ -99,7 +101,7 @@ const updateChartFromProps = (data: any[]) => {
 // 监听数据变化
 watch(
   () => props.pieData,
-  (newData) => {
+  newData => {
     if (newData && newData.length > 0) {
       updateChartFromProps(newData);
     }

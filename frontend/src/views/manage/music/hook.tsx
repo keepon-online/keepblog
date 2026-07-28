@@ -33,9 +33,7 @@ export function useMusic() {
       { required: true, message: "请输入艺术家", trigger: "blur" },
       { min: 1, max: 100, message: "长度在1-100", trigger: "blur" }
     ],
-    url: [
-      { required: true, message: "请输入音乐URL", trigger: "blur" }
-    ]
+    url: [{ required: true, message: "请输入音乐URL", trigger: "blur" }]
   });
 
   const dataList = ref([]);
@@ -116,8 +114,10 @@ export function useMusic() {
 
   function onChange({ row }) {
     ElMessageBox.confirm(
-      `确认要<strong>${row.state === 0 ? "禁用" : "启用"
-      }</strong><strong style='color:var(--el-color-primary)'>${row.name
+      `确认要<strong>${
+        row.state === 0 ? "禁用" : "启用"
+      }</strong><strong style='color:var(--el-color-primary)'>${
+        row.name
       }</strong>吗?`,
       "系统提示",
       {

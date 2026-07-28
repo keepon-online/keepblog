@@ -12,16 +12,16 @@ import (
 )
 
 // SavePost 保存文章
-func (service Service) SavePost(content model.Post) (error, uint64) {
+func (service Service) SavePost(content model.Post) (uint64, error) {
 	if err := global.GORM.Table(model.TPostsTable).Create(&content).Error; err != nil {
-		return errors.New("保存失败: " + err.Error()), content.PostId
+		return content.PostId, errors.New("保存失败: " + err.Error())
 	}
 	hid, _ := hash.New().HashidsEncode([]int{int(content.PostId)})
 	err := service.UpdatePostHashids(hid, content.PostId)
 	if err != nil {
-		return err, 0
+		return 0, err
 	}
-	return nil, content.PostId
+	return content.PostId, nil
 }
 
 // UpdatePostHashids 更新文章 Hashids
@@ -127,10 +127,10 @@ func (service Service) GetList(req request.PostRequest) *page.Info {
 	qb.db = qb.db.Joins("JOIN category pc ON post.category_id = pc.category_id")
 
 	// 统计总数
-	qb.Count(&total)
+	_ = qb.Count(&total)
 
 	// 查询列表
-	qb.
+	_ = qb.
 		Order("post_id DESC").
 		WithPagination(pageNum, pageSize).
 		Find(&content)

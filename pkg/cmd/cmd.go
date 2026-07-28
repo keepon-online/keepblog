@@ -71,7 +71,7 @@ func ExecCronjobWithTimeOut(cmdStr, workdir, outPath string, timeout time.Durati
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	cmd := exec.Command("bash", "-c", cmdStr)
 	cmd.Dir = workdir

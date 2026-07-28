@@ -6,15 +6,20 @@
           <span class="card-title">网站设置</span>
           <el-button
             type="primary"
-            @click="submitWebsiteForm()"
             :loading="saveLoading"
+            @click="submitWebsiteForm()"
           >
             保存设置
           </el-button>
         </div>
       </template>
 
-      <el-tabs v-model="activeName" type="card" @tab-click="handleClick" class="setting-tabs">
+      <el-tabs
+        v-model="activeName"
+        type="card"
+        class="setting-tabs"
+        @tab-click="handleClick"
+      >
         <el-tab-pane name="SEO">
           <template #label>
             <div class="tab-label">
@@ -24,11 +29,11 @@
           </template>
 
           <el-form
+            ref="seoFormRef"
             label-position="top"
             :model="WebsiteForm"
             class="setting-form"
             status-icon
-            ref="seoFormRef"
           >
             <el-row :gutter="20">
               <el-col :xs="24" :sm="24" :md="12" :lg="12">
@@ -47,7 +52,9 @@
                       </el-tooltip>
                     </template>
                   </el-input>
-                  <div class="form-tip">显示在浏览器标签页和搜索引擎结果中的标题</div>
+                  <div class="form-tip">
+                    显示在浏览器标签页和搜索引擎结果中的标题
+                  </div>
                 </el-form-item>
               </el-col>
 
@@ -87,7 +94,9 @@
                       </el-tooltip>
                     </template>
                   </el-input>
-                  <div class="form-tip">多个关键词请用英文逗号分隔，如：Java开发,后端实战,SpringBoot</div>
+                  <div class="form-tip">
+                    多个关键词请用英文逗号分隔，如：Java开发,后端实战,SpringBoot
+                  </div>
                 </el-form-item>
               </el-col>
 
@@ -279,10 +288,7 @@
                     clearable
                   >
                     <template #suffix>
-                      <el-tooltip
-                        content="项目的码云仓库地址"
-                        placement="top"
-                      >
+                      <el-tooltip content="项目的码云仓库地址" placement="top">
                         <el-icon class="help-icon"><InfoFilled /></el-icon>
                       </el-tooltip>
                     </template>
@@ -301,7 +307,9 @@
                     value-format="YYYY-MM-DD"
                     style="width: 100%"
                   />
-                  <div class="form-tip">用于计算网站运行天数，显示在侧边栏网站资讯中</div>
+                  <div class="form-tip">
+                    用于计算网站运行天数，显示在侧边栏网站资讯中
+                  </div>
                 </el-form-item>
               </el-col>
 
@@ -409,7 +417,9 @@ const submitWebsiteForm = async () => {
       message(`保存失败: ${res.message || "未知错误"}`, { type: "error" });
     }
   } catch (error: any) {
-    message(`保存过程中发生错误: ${error.message || "未知错误"}`, { type: "error" });
+    message(`保存过程中发生错误: ${error.message || "未知错误"}`, {
+      type: "error"
+    });
   } finally {
     saveLoading.value = false;
   }

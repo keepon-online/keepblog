@@ -89,7 +89,7 @@ func Pixabay() *PixabayResp {
 		slog.Errorf("请求失败：%s", err.Error())
 		return nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	//响应内容
 	statusCode := resp.StatusCode
 	if statusCode == 200 {

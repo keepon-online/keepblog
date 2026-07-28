@@ -12,7 +12,6 @@ type Post struct {
 	PostContentHtml  string `json:"postContentHtml" gorm:"default:''"`
 	Summary          string `json:"summary" gorm:"default:''"`
 	Type             uint8  `json:"type" gorm:"default:1"`
-	CommentEnabled   uint8  `json:"commentEnabled" gorm:"default:0"`
 	Top              uint8  `json:"top" gorm:"default:0"`
 	ReadCount        uint32 `json:"readCount" gorm:"default:0"`
 	WordCount        uint32 `json:"wordCount" gorm:"default:0"`
@@ -74,28 +73,6 @@ const TPostTagTable = "post_tag"
 type PostTag struct {
 	PostId uint64 `json:"postId"`
 	TagId  uint32 `json:"tagId"`
-}
-
-const TCommentTable = "comment"
-
-type Comment struct {
-	CommentId      uint64 `json:"commentId" gorm:"primaryKey;autoIncrement"`
-	Username       string `json:"username" gorm:"default:''"`
-	Email          string `json:"email" gorm:"default:''"`
-	IPAddress      string `json:"IPAddress"`
-	CreateTime     uint64 `json:"createTime" gorm:"autoCreateTime"`
-	CommentContent string `json:"commentContent" gorm:"default:''"`
-	PostId         uint64 `json:"postId"`
-	IsApproved     uint8  `json:"isApproved"`
-}
-
-const TCommentReply = "comment_reply"
-
-type CommentReply struct {
-	CommentReplyId uint64 `json:"commentReplyId" gorm:"primaryKey;autoIncrement"`
-	ReplyContent   string `json:"replyContent" gorm:"default:''"`
-	CreateTime     uint64 `json:"createTime" gorm:"autoCreateTime"`
-	CommentId      uint64 `json:"commentId"`
 }
 
 const TFriendLinkTable = "friend_link"

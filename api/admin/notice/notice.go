@@ -74,7 +74,10 @@ func (h *Handler) MarkAllAsRead(c *gin.Context) {
 	var req struct {
 		Type *uint8 `json:"type"`
 	}
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		result.Error(c, err.Error())
+		return
+	}
 
 	var noticeType *system.NoticeType
 	if req.Type != nil {
@@ -126,7 +129,10 @@ func (h *Handler) ClearNotices(c *gin.Context) {
 	var req struct {
 		Type *uint8 `json:"type"`
 	}
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		result.Error(c, err.Error())
+		return
+	}
 
 	var noticeType *system.NoticeType
 	if req.Type != nil {

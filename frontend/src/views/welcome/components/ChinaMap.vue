@@ -1,12 +1,12 @@
 <template>
   <div class="map-container">
-    <div ref="chartRef" class="map-chart"></div>
+    <div ref="chartRef" class="map-chart" />
     <div v-if="overseasData.length > 0" class="overseas-section">
       <div class="overseas-header">
         <span class="overseas-title">🌍 海外访客分布</span>
         <span class="overseas-total">共 {{ overseasTotal }} 人次</span>
       </div>
-      <div ref="overseasChartRef" class="overseas-chart"></div>
+      <div ref="overseasChartRef" class="overseas-chart" />
     </div>
   </div>
 </template>
@@ -79,10 +79,10 @@ const convertMapData = (data: Array<{ name: string; value: number }>) => {
 
 const initChart = () => {
   if (!chartRef.value) return;
-  
+
   chartInstance = echarts.init(chartRef.value);
   updateChart();
-  
+
   // 响应式
   window.addEventListener("resize", handleResize);
 };
@@ -93,10 +93,13 @@ const handleResize = () => {
 
 const updateChart = () => {
   if (!chartInstance) return;
-  
+
   const convertedData = convertMapData(props.mapData);
-  const maxValue = Math.max(...(convertedData?.map(item => item.value) || [100]), 100);
-  
+  const maxValue = Math.max(
+    ...(convertedData?.map(item => item.value) || [100]),
+    100
+  );
+
   const option = {
     title: {
       text: "访客地理分布",
@@ -152,7 +155,7 @@ const updateChart = () => {
       }
     ]
   };
-  
+
   chartInstance.setOption(option);
 };
 
@@ -229,7 +232,7 @@ let overseasChartInstance: echarts.ECharts | null = null;
 // 初始化海外访客图表
 const initOverseasChart = () => {
   if (!overseasChartRef.value || overseasData.value.length === 0) return;
-  
+
   overseasChartInstance = echarts.init(overseasChartRef.value);
   updateOverseasChart();
 };
@@ -237,11 +240,13 @@ const initOverseasChart = () => {
 // 更新海外访客图表
 const updateOverseasChart = () => {
   if (!overseasChartInstance) return;
-  
+
   const data = overseasData.value.slice(0, 10); // 最多显示10个
-  const countries = data.map(item => `${getCountryFlag(item.name)} ${item.name}`);
+  const countries = data.map(
+    item => `${getCountryFlag(item.name)} ${item.name}`
+  );
   const values = data.map(item => item.value);
-  
+
   const option = {
     grid: {
       left: "3%",
@@ -290,7 +295,7 @@ const updateOverseasChart = () => {
       }
     ]
   };
-  
+
   overseasChartInstance.setOption(option);
 };
 

@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { getNoticeList, markNoticeRead, markAllNoticeRead, type NoticeTab } from "@/api/notice";
+import {
+  getNoticeList,
+  markNoticeRead,
+  markAllNoticeRead,
+  type NoticeTab
+} from "@/api/notice";
 import { useWebSocket } from "@/utils/websocket";
 import NoticeList from "./components/NoticeList.vue";
 import BellIcon from "~icons/ep/bell";
@@ -104,11 +109,7 @@ onUnmounted(() => {
           class="dropdown-tabs"
           :style="{ width: notices.length === 0 ? '200px' : '330px' }"
         >
-          <el-empty
-            v-if="loading"
-            description="加载中..."
-            :image-size="60"
-          />
+          <el-empty v-if="loading" description="加载中..." :image-size="60" />
           <el-empty
             v-else-if="notices.length === 0"
             description="暂无消息"

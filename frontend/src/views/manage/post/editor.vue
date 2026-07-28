@@ -1,9 +1,13 @@
 <template>
-  <div class="editor-container" :class="{ 'focus-mode': focusMode }" @keydown.esc.exact="exitFocusMode">
+  <div
+    class="editor-container"
+    :class="{ 'focus-mode': focusMode }"
+    @keydown.esc.exact="exitFocusMode"
+  >
     <el-card class="editor-card">
       <template #header>
         <div class="card-header">
-          <span class="card-title">{{ isEdit ? '编辑文章' : '新增文章' }}</span>
+          <span class="card-title">{{ isEdit ? "编辑文章" : "新增文章" }}</span>
           <div class="header-actions">
             <el-button
               :type="focusMode ? 'primary' : 'default'"
@@ -11,11 +15,15 @@
               @click="toggleFocusMode"
             >
               <el-icon class="mr-2px"><Aim /></el-icon>
-              {{ focusMode ? '退出专注' : '专注模式' }}
+              {{ focusMode ? "退出专注" : "专注模式" }}
             </el-button>
             <el-button @click="router.go(-1)">取消</el-button>
-            <el-button type="primary" :loading="saveLoading" @click="submitForm(ruleFormRef)">
-              {{ isEdit ? '更新' : '发布' }}
+            <el-button
+              type="primary"
+              :loading="saveLoading"
+              @click="submitForm(ruleFormRef)"
+            >
+              {{ isEdit ? "更新" : "发布" }}
             </el-button>
           </div>
         </div>
@@ -32,8 +40,8 @@
         <el-row :gutter="20">
           <el-col v-bind="mainColProps">
             <el-form-item label="文章标题" prop="title">
-              <el-input 
-                v-model="ruleForm.title" 
+              <el-input
+                v-model="ruleForm.title"
                 placeholder="请输入文章标题"
                 clearable
                 maxlength="200"
@@ -44,15 +52,15 @@
             <el-form-item label="文章正文" prop="postContent">
               <MdEditor
                 v-model="ruleForm.postContent"
-                @onHtmlChanged="onHtmlChanged"
-                @onGetCatalog="onGetCatalog"
-                @onUploadImg="onUploadImg"
-                @onSave="handleSaveDraft"
                 :toolbars="toolbars"
                 language="zh-CN"
                 :preview="false"
                 :style="editorStyle"
                 class="markdown-editor"
+                @onHtmlChanged="onHtmlChanged"
+                @onGetCatalog="onGetCatalog"
+                @onUploadImg="onUploadImg"
+                @onSave="handleSaveDraft"
               />
               <div class="form-tip">
                 支持 Markdown 语法格式
@@ -128,11 +136,7 @@
                 <el-icon><Plus /></el-icon>
                 <template #file="{ file }">
                   <div class="image-preview">
-                    <el-image 
-                      :src="file.url" 
-                      fit="cover" 
-                      class="cover-image"
-                    />
+                    <el-image :src="file.url" fit="cover" class="cover-image" />
                     <span class="image-actions">
                       <span
                         class="image-action-item"
@@ -156,7 +160,10 @@
             <el-row :gutter="20">
               <el-col :xs="24" :span="24">
                 <el-form-item label="文章状态" prop="status">
-                  <el-radio-group v-model="ruleForm.status" class="radio-group-block">
+                  <el-radio-group
+                    v-model="ruleForm.status"
+                    class="radio-group-block"
+                  >
                     <el-radio :label="1" border>公开</el-radio>
                     <el-radio :label="0" border>草稿</el-radio>
                   </el-radio-group>
@@ -165,7 +172,10 @@
 
               <el-col :xs="24" :span="24">
                 <el-form-item label="文章类型" prop="type">
-                  <el-radio-group v-model="ruleForm.type" class="radio-group-block">
+                  <el-radio-group
+                    v-model="ruleForm.type"
+                    class="radio-group-block"
+                  >
                     <el-radio :label="1" border>原创</el-radio>
                     <el-radio :label="0" border>转载</el-radio>
                   </el-radio-group>
@@ -189,8 +199,12 @@
         <el-icon class="mr-2px"><Document /></el-icon>
         存草稿
       </el-button>
-      <el-button type="primary" :loading="saveLoading" @click="submitForm(ruleFormRef)">
-        {{ isEdit ? '更新' : '发布' }}
+      <el-button
+        type="primary"
+        :loading="saveLoading"
+        @click="submitForm(ruleFormRef)"
+      >
+        {{ isEdit ? "更新" : "发布" }}
       </el-button>
     </div>
 
@@ -212,7 +226,14 @@ defineOptions({
 
 import { getCategoryList } from "@/api/category";
 import { getTagList } from "@/api/tag";
-import { onMounted, onBeforeUnmount, reactive, ref, computed, watch } from "vue";
+import {
+  onMounted,
+  onBeforeUnmount,
+  reactive,
+  ref,
+  computed,
+  watch
+} from "vue";
 import type { FormInstance, FormRules, UploadFile } from "element-plus";
 import { ElMessageBox } from "element-plus";
 import {
@@ -298,12 +319,31 @@ const ruleForm = ref({
 
 // Markdown编辑器工具栏配置
 const toolbars: ToolbarNames[] = [
-  'bold', 'underline', 'italic', '-',
-  'title', 'strikeThrough', 'sub', 'sup', '-',
-  'quote', 'unorderedList', 'orderedList', '-',
-  'codeRow', 'code', 'link', 'image', 'table', '-',
-  'revoke', 'next', 'save', '-',
-  'preview', 'catalog'
+  "bold",
+  "underline",
+  "italic",
+  "-",
+  "title",
+  "strikeThrough",
+  "sub",
+  "sup",
+  "-",
+  "quote",
+  "unorderedList",
+  "orderedList",
+  "-",
+  "codeRow",
+  "code",
+  "link",
+  "image",
+  "table",
+  "-",
+  "revoke",
+  "next",
+  "save",
+  "-",
+  "preview",
+  "catalog"
 ];
 
 // 上传相关
@@ -315,10 +355,7 @@ const previewImageUrl = ref("");
 // ---------- 草稿：写入/读取/清除 ----------
 const persistDraftImmediately = async () => {
   // 标题与正文都基本为空时，不写入无意义空草稿
-  if (
-    !ruleForm.value.title &&
-    ruleForm.value.postContent.trim().length < 10
-  ) {
+  if (!ruleForm.value.title && ruleForm.value.postContent.trim().length < 10) {
     return false;
   }
   draftSaving.value = true;
@@ -366,10 +403,7 @@ const tryRestoreDraft = async (remoteUpdateTime?: number) => {
     draftRestored.value = true;
     return;
   }
-  const minutes = Math.max(
-    1,
-    Math.round((Date.now() - draft.savedAt) / 60000)
-  );
+  const minutes = Math.max(1, Math.round((Date.now() - draft.savedAt) / 60000));
   try {
     await ElMessageBox.confirm(
       `检测到 ${minutes} 分钟前的未保存草稿，是否恢复？选择「丢弃」将删除该草稿。`,
@@ -511,10 +545,15 @@ const submitForm = async (formEl: FormInstance | undefined) => {
           } catch (e) {
             console.warn("[post-draft] 清除草稿失败", e);
           }
-          message(`${isEdit.value ? '更新' : '发布'}文章成功`, { type: "success" });
+          message(`${isEdit.value ? "更新" : "发布"}文章成功`, {
+            type: "success"
+          });
           router.push({ name: "内容管理" });
         } else {
-          message(`${isEdit.value ? '更新' : '发布'}文章失败: ${res.message || "未知错误"}`, { type: "error" });
+          message(
+            `${isEdit.value ? "更新" : "发布"}文章失败: ${res.message || "未知错误"}`,
+            { type: "error" }
+          );
         }
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
@@ -528,7 +567,10 @@ const submitForm = async (formEl: FormInstance | undefined) => {
   });
 };
 
-const onUploadImg = async (files: File[], callback: (urls: string[]) => void) => {
+const onUploadImg = async (
+  files: File[],
+  callback: (urls: string[]) => void
+) => {
   const res = await Promise.all(
     files.map(file => {
       return new Promise((resolve, reject) => {
@@ -546,23 +588,23 @@ const onUploadImg = async (files: File[], callback: (urls: string[]) => void) =>
       });
     })
   );
-  
+
   // 处理上传结果
   const urls = res.map((item: string | { url?: string }) => {
-    if (typeof item === 'string') {
+    if (typeof item === "string") {
       return item;
-    } else if (item && typeof item === 'object' && item.url) {
+    } else if (item && typeof item === "object" && item.url) {
       return item.url;
     }
-    return '';
+    return "";
   });
-  
+
   callback(urls);
-  
+
   // 显示上传结果提示
   const successCount = urls.filter(url => url).length;
   const failCount = files.length - successCount;
-  
+
   if (failCount > 0) {
     message(`${failCount}个文件上传失败`, { type: "warning" });
   }
@@ -570,19 +612,19 @@ const onUploadImg = async (files: File[], callback: (urls: string[]) => void) =>
 
 // 上传前检查
 const beforeUpload = (file: File) => {
-  const isImage = file.type.startsWith('image/');
+  const isImage = file.type.startsWith("image/");
   const isLt2M = file.size / 1024 / 1024 < 2;
-  
+
   if (!isImage) {
-    message('只能上传图片文件!', { type: "error" });
+    message("只能上传图片文件!", { type: "error" });
     return false;
   }
-  
+
   if (!isLt2M) {
-    message('图片大小不能超过 2MB!', { type: "error" });
+    message("图片大小不能超过 2MB!", { type: "error" });
     return false;
   }
-  
+
   return true;
 };
 
@@ -613,7 +655,6 @@ const handlePictureCardPreview = (file: UploadFile) => {
   previewImageUrl.value = file.url!;
   previewVisible.value = true;
 };
-
 </script>
 
 <style scoped lang="scss">
@@ -621,27 +662,27 @@ const handlePictureCardPreview = (file: UploadFile) => {
   padding: 20px;
   background-color: var(--el-bg-color-page);
   min-height: calc(100vh - 150px);
-  
+
   .editor-card {
     border-radius: 8px;
     box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
     border: none;
-    
+
     :deep(.el-card__header) {
       border-bottom: 1px solid var(--el-border-color-light);
       padding: 18px 20px;
-      
+
       .card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        
+
         .card-title {
           font-size: 18px;
           font-weight: 600;
           color: var(--el-text-color-primary);
         }
-        
+
         .header-actions {
           display: flex;
           gap: 12px;
@@ -649,54 +690,54 @@ const handlePictureCardPreview = (file: UploadFile) => {
       }
     }
   }
-  
+
   .editor-form {
     :deep(.el-form-item) {
       margin-bottom: 24px;
-      
+
       .el-form-item__label {
         font-weight: 500;
         color: var(--el-text-color-primary);
         margin-bottom: 8px;
       }
     }
-    
+
     .markdown-editor {
       border: 1px solid var(--el-border-color);
       border-radius: 4px;
       transition: var(--el-transition-border);
-      
+
       &:hover {
         border-color: var(--el-border-color-hover);
       }
-      
+
       &:focus-within {
         border-color: var(--el-color-primary);
       }
     }
-    
+
     .radio-group-block {
       display: flex;
       flex-direction: column;
       gap: 10px;
-      
+
       .el-radio {
         margin-right: 0;
       }
     }
   }
-  
+
   .image-preview {
     position: relative;
     width: 100%;
     height: 100%;
-    
+
     .cover-image {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
-    
+
     .image-actions {
       position: absolute;
       top: 0;
@@ -710,21 +751,21 @@ const handlePictureCardPreview = (file: UploadFile) => {
       gap: 20px;
       opacity: 0;
       transition: opacity 0.3s;
-      
+
       .image-action-item {
         font-size: 20px;
         color: #fff;
         cursor: pointer;
       }
     }
-    
+
     &:hover {
       .image-actions {
         opacity: 1;
       }
     }
   }
-  
+
   .form-tip {
     font-size: 12px;
     color: var(--el-color-info);

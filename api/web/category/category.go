@@ -43,7 +43,7 @@ func (h *Handler) CategoriesPage(c *gin.Context) {
 	categoriesPosts, total, _ := h.Service.PostService.GetPostsByCategory(categoryName, int(pageNum))
 	sidebarInfo := h.Service.SidebarService.Sidebar()
 	//传到模板中需要转换成template.HTML类型，否则html代码会被转义
-	index, err := page.HandleIndex(int(total), int(pageNum), "categories/"+categoryName+"/page")
+	index, _ := page.HandleIndex(int(total), int(pageNum), "categories/"+categoryName+"/page")
 	site, err := h.Service.WebSiteService.GetWebSite()
 	if err != nil {
 		c.HTML(http.StatusOK, "error.html", nil)

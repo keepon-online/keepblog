@@ -45,21 +45,21 @@ export default {
       }
     },
     {
-      path: "/manage/comment",
-      name: "评论管理",
-      component: () => import("@/views/manage/comment/index.vue"),
-      meta: {
-        title: "评论管理",
-        showLink: false
-      }
-    },
-    {
       path: "/manage/category",
       name: "分类管理",
       component: () => import("@/views/manage/category/index.vue"),
       meta: {
         title: "分类管理",
         icon: "ant-design:ordered-list-outlined"
+      }
+    },
+    {
+      path: "/manage/tag",
+      name: "标签管理",
+      component: () => import("@/views/manage/tag/index.vue"),
+      meta: {
+        title: "标签管理",
+        icon: "ant-design:tags-outlined"
       }
     },
     {

@@ -82,19 +82,19 @@ func init() {
 	viper.SetEnvPrefix("GOSITE")
 	viper.AutomaticEnv()
 
-	// 环境变量映射
-	viper.BindEnv("http.port", "GOSITE_HTTP_PORT")
-	viper.BindEnv("mysql.host", "GOSITE_MYSQL_HOST")
-	viper.BindEnv("mysql.port", "GOSITE_MYSQL_PORT")
-	viper.BindEnv("mysql.username", "GOSITE_MYSQL_USERNAME")
-	viper.BindEnv("mysql.password", "GOSITE_MYSQL_PASSWORD")
-	viper.BindEnv("mysql.database", "GOSITE_MYSQL_DATABASE")
-	viper.BindEnv("redis.host", "GOSITE_REDIS_HOST")
-	viper.BindEnv("redis.port", "GOSITE_REDIS_PORT")
-	viper.BindEnv("redis.password", "GOSITE_REDIS_PASSWORD")
-	viper.BindEnv("redis.database", "GOSITE_REDIS_DATABASE")
-	viper.BindEnv("redis.enable", "GOSITE_REDIS_ENABLE")
-	viper.BindEnv("system.baseUrl", "GOSITE_BASE_URL")
+	// 环境变量映射（绑定失败属于配置期错误，启动时无法恢复，故忽略）
+	_ = viper.BindEnv("http.port", "GOSITE_HTTP_PORT")
+	_ = viper.BindEnv("mysql.host", "GOSITE_MYSQL_HOST")
+	_ = viper.BindEnv("mysql.port", "GOSITE_MYSQL_PORT")
+	_ = viper.BindEnv("mysql.username", "GOSITE_MYSQL_USERNAME")
+	_ = viper.BindEnv("mysql.password", "GOSITE_MYSQL_PASSWORD")
+	_ = viper.BindEnv("mysql.database", "GOSITE_MYSQL_DATABASE")
+	_ = viper.BindEnv("redis.host", "GOSITE_REDIS_HOST")
+	_ = viper.BindEnv("redis.port", "GOSITE_REDIS_PORT")
+	_ = viper.BindEnv("redis.password", "GOSITE_REDIS_PASSWORD")
+	_ = viper.BindEnv("redis.database", "GOSITE_REDIS_DATABASE")
+	_ = viper.BindEnv("redis.enable", "GOSITE_REDIS_ENABLE")
+	_ = viper.BindEnv("system.baseUrl", "GOSITE_BASE_URL")
 
 	// 设置默认值
 	setDefaults()

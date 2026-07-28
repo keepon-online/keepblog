@@ -17,17 +17,17 @@ func NewTagService() *Service {
 	return &Service{}
 }
 
-func (service Service) Save(tagInfo model.Tag) (error, uint32) {
+func (service Service) Save(tagInfo model.Tag) (uint32, error) {
 	var t model.Tag
 	err := global.GORM.Table(model.TTagTable).Where("tag_name", tagInfo.TagName).Last(&t).Error
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 
-		return nil, t.TagId
+		return t.TagId, nil
 	}
 	if err := global.GORM.Table(model.TTagTable).Create(&tagInfo).Error; err != nil {
-		return errors.New("save tag error " + err.Error()), 0
+		return 0, errors.New("save tag error " + err.Error())
 	}
-	return nil, tagInfo.TagId
+	return tagInfo.TagId, nil
 }
 
 func (service Service) GetTag(tagId uint32) (*model.Tag, error) {
@@ -39,6 +39,51 @@ func (service Service) GetTag(tagId uint32) (*model.Tag, error) {
 	return &tagInfo, nil
 }
 
+// Update 更新标签名（后台编辑）。仅改 tag_name，保留 tag_id。
+func (service Service) Update(tag model.Tag) error {
+	if err := global.GORM.Table(model.TTagTable).
+		Model(&model.Tag{}).
+		Where("tag_id = ?", tag.TagId).
+		Update("tag_name", tag.TagName).Error; err != nil {
+		slog.Errorf("更新标签失败: %s", err.Error())
+		return errors.New("更新标签失败: " + err.Error())
+	}
+	return nil
+}
+
+// Delete 删除标签，并清理 post_tag 关联表，避免脏数据。
+// 不校验是否被文章引用——标签被删后，文章的 Tags 查询会自动少一项（走 JOIN）。
+func (service Service) Delete(tagId uint32) error {
+	// 先清理关联表
+	if err := global.GORM.Table(model.TPostTagTable).
+		Where("tag_id = ?", tagId).
+		Delete(&model.PostTag{}).Error; err != nil {
+		slog.Errorf("清理 post_tag 关联失败: %s", err.Error())
+		return errors.New("清理标签关联失败: " + err.Error())
+	}
+	// 再删标签本身
+	if err := global.GORM.Table(model.TTagTable).
+		Delete(&model.Tag{}, tagId).Error; err != nil {
+		slog.Errorf("删除标签失败: %s", err.Error())
+		return errors.New("删除标签失败: " + err.Error())
+	}
+	return nil
+}
+
+// GetTagList 获取全部标签列表（后台管理用，不过滤已发布）。
+// 与 GetTags（前台 tag cloud，带样式去重）不同，这里返回原始数据供后台 CRUD。
+func (service Service) GetTagList() ([]model.Tag, error) {
+	tagList := make([]model.Tag, 0)
+	if err := global.GORM.Table(model.TTagTable).
+		Order("tag_id DESC").
+		Find(&tagList).Error; err != nil {
+		slog.Errorf("获取标签列表失败: %s", err.Error())
+		return nil, errors.New("获取标签列表失败")
+	}
+	return tagList, nil
+}
+
+// GetTags 前台 tag cloud 用：返回带样式、去重的标签列表。
 func (service Service) GetTags() ([]model.Tag, error) {
 	tagList := make([]model.Tag, 0)
 

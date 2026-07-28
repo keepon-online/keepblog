@@ -185,7 +185,7 @@
                     <div
                       class="progress-fill"
                       :style="{ width: getProgressWidth(item.value) }"
-                    ></div>
+                    />
                   </div>
                 </div>
                 <div v-if="top10Provinces.length === 0" class="no-data">
@@ -272,10 +272,40 @@ onMounted(() => {
 
 // 中国省份列表
 const chineseProvinces = [
-  "北京", "天津", "上海", "重庆", "河北", "山西", "辽宁", "吉林", "黑龙江",
-  "江苏", "浙江", "安徽", "福建", "江西", "山东", "河南", "湖北", "湖南",
-  "广东", "海南", "四川", "贵州", "云南", "陕西", "甘肃", "青海", "台湾",
-  "内蒙古", "广西", "西藏", "宁夏", "新疆", "香港", "澳门"
+  "北京",
+  "天津",
+  "上海",
+  "重庆",
+  "河北",
+  "山西",
+  "辽宁",
+  "吉林",
+  "黑龙江",
+  "江苏",
+  "浙江",
+  "安徽",
+  "福建",
+  "江西",
+  "山东",
+  "河南",
+  "湖北",
+  "湖南",
+  "广东",
+  "海南",
+  "四川",
+  "贵州",
+  "云南",
+  "陕西",
+  "甘肃",
+  "青海",
+  "台湾",
+  "内蒙古",
+  "广西",
+  "西藏",
+  "宁夏",
+  "新疆",
+  "香港",
+  "澳门"
 ];
 
 // Top10省份计算属性（只显示国内省份）
@@ -307,34 +337,34 @@ const getRankClass = (index: number) => {
   padding: 20px;
   background-color: var(--el-bg-color-page);
   min-height: calc(100vh - 150px);
-  
+
   .charts-container {
     margin-top: 20px;
-    
+
     .chart-col {
       margin-bottom: 20px;
-      
+
       .chart-card {
         border-radius: 8px;
         overflow: hidden;
         border: 1px solid var(--el-border-color-light);
         transition: all 0.3s ease;
-        
+
         &:hover {
           box-shadow: var(--el-box-shadow-light);
           transform: translateY(-2px);
         }
-        
+
         :deep(.el-card__header) {
           padding: 15px 20px;
           background-color: var(--el-fill-color-light);
           border-bottom: 1px solid var(--el-border-color-light);
         }
-        
+
         .chart-header {
           display: flex;
           align-items: center;
-          
+
           .chart-title {
             font-size: 16px;
             font-weight: 600;
@@ -356,7 +386,7 @@ const getRankClass = (index: number) => {
 // Top10卡片样式
 .top10-card {
   height: 100%;
-  
+
   :deep(.el-card__body) {
     padding: 16px;
     height: calc(100% - 56px);
@@ -375,12 +405,12 @@ const getRankClass = (index: number) => {
     animation: slideIn 0.5s ease forwards;
     opacity: 0;
     transition: all 0.3s ease;
-    
+
     &:hover {
       transform: translateX(5px);
       background: var(--el-fill-color);
     }
-    
+
     .rank {
       width: 28px;
       height: 28px;
@@ -394,66 +424,70 @@ const getRankClass = (index: number) => {
       color: var(--el-text-color-regular);
       margin-right: 12px;
       flex-shrink: 0;
-      
+
       &.rank-gold {
         background: linear-gradient(135deg, #ffd700, #ffb700);
         color: #fff;
         box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
       }
-      
+
       &.rank-silver {
         background: linear-gradient(135deg, #c0c0c0, #a8a8a8);
         color: #fff;
         box-shadow: 0 2px 8px rgba(192, 192, 192, 0.4);
       }
-      
+
       &.rank-bronze {
         background: linear-gradient(135deg, #cd7f32, #b8722e);
         color: #fff;
         box-shadow: 0 2px 8px rgba(205, 127, 50, 0.4);
       }
     }
-    
+
     .province-name {
       flex: 1;
       font-size: 14px;
       color: var(--el-text-color-primary);
       font-weight: 500;
     }
-    
+
     .visitor-count {
       margin-right: 12px;
       text-align: right;
-      
+
       .count {
         font-size: 16px;
         font-weight: 600;
         color: var(--el-color-primary);
       }
-      
+
       .unit {
         font-size: 12px;
         color: var(--el-text-color-secondary);
         margin-left: 2px;
       }
     }
-    
+
     .progress-bar {
       width: 60px;
       height: 6px;
       background: var(--el-fill-color-darker);
       border-radius: 3px;
       overflow: hidden;
-      
+
       .progress-fill {
         height: 100%;
-        background: linear-gradient(90deg, var(--el-color-primary-light-3), var(--el-color-primary));
+        background: linear-gradient(
+          90deg,
+          var(--el-color-primary-light-3),
+          var(--el-color-primary)
+        );
         border-radius: 3px;
         transition: width 0.8s ease;
       }
     }
   }
-  
+
   .no-data {
     text-align: center;
     padding: 40px 0;

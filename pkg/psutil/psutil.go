@@ -6,7 +6,6 @@ package psutil
 
 import (
 	"context"
-	"fmt"
 	"github.com/shirou/gopsutil/v3/common"
 	"log/slog"
 	"strings"
@@ -59,6 +58,10 @@ func GetCPUPercent() (float64, error) {
 	totalPercent, err := cpu.PercentWithContext(ctx, 3*time.Second, false)
 	if err != nil {
 		return 0.0, err
+	}
+	// 某些环境（如部分 WSL/容器）gopsutil 拿不到 CPU 数据，返回空切片，需防御越界
+	if len(totalPercent) == 0 {
+		return 0.0, nil
 	}
 	return totalPercent[0], nil
 }
@@ -162,21 +165,4 @@ func GetSystemInfo() (*SystemInfo, error) {
 		KernelArch:      info.KernelArch,
 	}
 	return systemInfo, nil
-}
-
-// 字节单位转换
-func fmtByte(size int64) string {
-	if size < 1024 {
-		return fmt.Sprintf("%.2fB", float64(size)/float64(1))
-	} else if size < 1024*1024 {
-		return fmt.Sprintf("%.2fKB", float64(size)/float64(1024))
-	} else if size < 1024*1024*1024 {
-		return fmt.Sprintf("%.2fMB", float64(size)/float64(1024*1024))
-	} else if size < 1024*1024*1024*1024 {
-		return fmt.Sprintf("%.2fGB", float64(size)/float64(1024*1024*1024))
-	} else if size < 1024*1024*1024*1024*1024 {
-		return fmt.Sprintf("%.2fTB", float64(size)/float64(1024*1024*1024*1024))
-	} else {
-		return fmt.Sprintf("%.2fEB", float64(size)/float64(1024*1024*1024*1024*2014))
-	}
 }

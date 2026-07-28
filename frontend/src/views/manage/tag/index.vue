@@ -1,9 +1,9 @@
 <script setup lang="ts">
 defineOptions({
-  name: "Music"
+  name: "Tag"
 });
 
-import { useMusic } from "./hook";
+import { useTag } from "./hook";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { Delete, Edit, Plus } from "@element-plus/icons-vue";
@@ -22,19 +22,19 @@ const {
   onSearch,
   handleUpdate,
   handleDelete
-} = useMusic();
+} = useTag();
 </script>
 
 <template>
   <div class="main">
-    <PureTableBar title="音乐列表" :columns="columns" @refresh="onSearch">
+    <PureTableBar title="标签列表" :columns="columns" @refresh="onSearch">
       <template #buttons>
         <el-button
           type="primary"
           :icon="useRenderIcon(Plus)"
           @click="handleAdd"
         >
-          添加音乐
+          新增标签
         </el-button>
       </template>
       <template v-slot="{ size, dynamicColumns }">
@@ -62,9 +62,9 @@ const {
               :icon="useRenderIcon(Edit)"
               @click="handleUpdate(row)"
             >
-              编辑
+              修改
             </el-button>
-            <el-popconfirm title="确认删除该音乐?" @confirm="handleDelete(row)">
+            <el-popconfirm title="是否确认删除?" @confirm="handleDelete(row)">
               <template #reference>
                 <el-button
                   class="reset-margin"
@@ -81,44 +81,10 @@ const {
         </pure-table>
       </template>
     </PureTableBar>
-
-    <el-dialog v-model="dialogFormVisible" :title="title" width="600px">
-      <el-form
-        ref="ruleFormRef"
-        :model="form"
-        :rules="rules"
-        label-width="100px"
-      >
-        <el-form-item label="歌曲名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入歌曲名称" />
-        </el-form-item>
-        <el-form-item label="艺术家" prop="artist">
-          <el-input v-model="form.artist" placeholder="请输入艺术家/歌手" />
-        </el-form-item>
-        <el-form-item label="音乐URL" prop="url">
-          <el-input v-model="form.url" placeholder="请输入音乐文件URL" />
-        </el-form-item>
-        <el-form-item label="封面URL" prop="cover">
-          <el-input
-            v-model="form.cover"
-            placeholder="请输入封面图片URL (可选)"
-          />
-        </el-form-item>
-        <el-form-item label="歌词URL" prop="lrc">
-          <el-input v-model="form.lrc" placeholder="请输入歌词URL (可选)" />
-        </el-form-item>
-        <el-form-item label="排序" prop="sort">
-          <el-input-number v-model="form.sort" :min="0" :max="9999" />
-          <span class="ml-2 text-gray-400 text-sm">值越小越靠前</span>
-        </el-form-item>
-        <el-form-item label="状态" prop="state">
-          <el-switch
-            v-model="form.state"
-            :active-value="1"
-            :inactive-value="0"
-            active-text="启用"
-            inactive-text="禁用"
-          />
+    <el-dialog v-model="dialogFormVisible" :title="title">
+      <el-form ref="ruleFormRef" :model="form" :rules="rules">
+        <el-form-item label="标签名称" label-width="140px" prop="tagName">
+          <el-input v-model="form.tagName" autocomplete="off" />
         </el-form-item>
       </el-form>
       <template #footer>

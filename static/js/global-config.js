@@ -6,14 +6,12 @@
 var GLOBAL_CONFIG = {
     root: '/',
     algolia: undefined,
+    // 搜索实际走后端接口 fetch('/search/:keyword')（见 search.js），不走静态索引。
+    // 这里只保留 search.js 实际读取的 languages.hits_empty 字段，移除 Hexo 时代
+    // 基于 search.xml 的 path/preload/top_n_per_article/unescape 等无用配置。
     localSearch: {
-        path: "/search.xml",
-        preload: !1,
-        top_n_per_article: 1,
-        unescape: !1,
         languages: {
-            hits_empty: "找不到您查詢的內容：${query}",
-            hits_stats: "共找到 ${hits} 篇文章"
+            hits_empty: "找不到您查詢的內容：${query}"
         }
     },
     translate: undefined,

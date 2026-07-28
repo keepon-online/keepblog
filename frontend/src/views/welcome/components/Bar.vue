@@ -34,7 +34,7 @@ watch(
 const updateChartFromProps = (data: any[]) => {
   const xData = data.map(e => e.name);
   const yData = data.map(e => e.value);
-  
+
   setOptions(
     {
       tooltip: {
@@ -81,7 +81,7 @@ const updateChartFromProps = (data: any[]) => {
           splitLine: {
             show: true,
             lineStyle: {
-              type: 'dashed'
+              type: "dashed"
             }
           }
         }
@@ -134,7 +134,7 @@ const updateChartFromProps = (data: any[]) => {
 // 监听数据变化
 watch(
   () => props.barData,
-  (newData) => {
+  newData => {
     if (newData && newData.length > 0) {
       updateChartFromProps(newData);
     }

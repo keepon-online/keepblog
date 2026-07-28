@@ -56,9 +56,7 @@ const {
         <template #dropdown>
           <el-dropdown-menu class="logout">
             <el-dropdown-item
-              @click="
-                $router.push({ path: '/profile/center' })
-              "
+              @click="$router.push({ path: '/profile/center' })"
             >
               <IconifyIconOffline
                 :icon="AccountCircleFill"

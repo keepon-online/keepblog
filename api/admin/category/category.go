@@ -58,12 +58,12 @@ func (h *Handler) DeleteCategory(c *gin.Context) {
 	param := c.Param("categoryId")
 	categoryId, _ := strconv.ParseInt(param, 0, 64)
 
-	posts, err := h.Service.PostService.GetPostsByCategoryId(categoryId)
+	posts, _ := h.Service.PostService.GetPostsByCategoryId(categoryId)
 	if len(posts) > 0 {
 		result.Error(c, "不能删除该栏目")
 		return
 	}
-	err = h.Service.CategoryService.Delete(int(categoryId))
+	err := h.Service.CategoryService.Delete(int(categoryId))
 	if err != nil {
 		result.Error(c, err.Error())
 		return

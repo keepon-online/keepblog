@@ -1,0 +1,57 @@
+# golangci-lint 配置
+#
+# 用法：
+#   make lint          # 跑全部 linter（CI 用）
+#   make lint-fix      # 自动修复可修复的问题（如格式化）
+#
+# 安装：go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+# 版本：v2（配置 schema 与 v1 不兼容，请勿混用）
+
+version: "2"
+
+run:
+  # 超时：项目含 CGO（sqlite）与较多生成代码，给足时间
+  timeout: 5m
+  # 不跳过测试文件（测试代码也要保持质量）
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - errcheck      # 检查未处理的 error（最重要）
+    - govet         # go vet 检查
+    - ineffassign   # 检测无效赋值（赋值后从未读取）
+    - staticcheck   # 综合静态检查（含 SA/ST/S 规则集，v2 已合并 gosimple）
+    - unused        # 检测未使用的代码
+    - misspell      # 拼写检查
+
+  # v2 把格式化工具归类为 formatter，单独配置
+  formatters:
+    enable:
+      - gofmt       # 格式化检查
+      - goimports   # import 顺序检查
+
+  settings:
+    staticcheck:
+      # 只启用 SA（真实 bug 检测）+ QF（快速修复建议），禁用 ST（风格偏好）。
+      # ST 规则（包注释 ST1000、错误返回顺序 ST1008 等）属个人风格，对本项目是噪声。
+      # 如需更严格可在后续逐步打开 ST 规则。
+      checks: ["SA", "QF"]
+
+    errcheck:
+      # 排除一些有意忽略 error 的常见模式（Close、Remove 等），减少噪音。
+      # 注意：这里只排除标准库的明确无害场景，业务代码仍需显式 _ = 忽略。
+      exclude-functions:
+        - (*os.File).Close
+
+issues:
+  # 每个检查器最多显示的问题数（0 = 不限）
+  max-issues-per-linter: 0
+  # 每类问题最多显示数（0 = 不限）
+  max-same-issues: 0
+  # 不排除默认的误报（保持严格）
+  exclude-use-default: false
+
+output:
+  # 彩色输出 + 按文件分组
+  sort-results: true

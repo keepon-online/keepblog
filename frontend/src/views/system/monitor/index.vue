@@ -435,7 +435,7 @@ onBeforeUnmount(() => {
             <el-icon class="gauge-icon cpu"><Cpu /></el-icon>
             <span>CPU 使用率</span>
           </div>
-          <div ref="cpuGaugeRef" class="gauge-chart"></div>
+          <div ref="cpuGaugeRef" class="gauge-chart" />
           <div class="gauge-info">
             <div class="info-row">
               <span>核心数</span>
@@ -443,7 +443,9 @@ onBeforeUnmount(() => {
             </div>
             <div class="info-row">
               <span>负载</span>
-              <span class="value">{{ server.load?.load1?.toFixed(2) || 0 }}</span>
+              <span class="value">{{
+                server.load?.load1?.toFixed(2) || 0
+              }}</span>
             </div>
           </div>
         </el-card>
@@ -456,7 +458,7 @@ onBeforeUnmount(() => {
             <el-icon class="gauge-icon memory"><Memo /></el-icon>
             <span>内存使用率</span>
           </div>
-          <div ref="memGaugeRef" class="gauge-chart"></div>
+          <div ref="memGaugeRef" class="gauge-chart" />
           <div class="gauge-info">
             <div class="info-row">
               <span>已用</span>
@@ -496,11 +498,15 @@ onBeforeUnmount(() => {
           <div class="gauge-info">
             <div class="info-row">
               <span>已用</span>
-              <span class="value orange">{{ server.memory?.swapUsedFormat || "0 B" }}</span>
+              <span class="value orange">{{
+                server.memory?.swapUsedFormat || "0 B"
+              }}</span>
             </div>
             <div class="info-row">
               <span>总计</span>
-              <span class="value">{{ server.memory?.swapTotalFormat || "0 B" }}</span>
+              <span class="value">{{
+                server.memory?.swapTotalFormat || "0 B"
+              }}</span>
             </div>
           </div>
         </el-card>
@@ -514,7 +520,9 @@ onBeforeUnmount(() => {
             <span>系统运行时间</span>
           </div>
           <div class="uptime-chart-area">
-            <div class="uptime-value">{{ server.general?.uptimeFormat || "-" }}</div>
+            <div class="uptime-value">
+              {{ server.general?.uptimeFormat || "-" }}
+            </div>
           </div>
           <div class="gauge-info">
             <div class="info-row">
@@ -523,7 +531,9 @@ onBeforeUnmount(() => {
             </div>
             <div class="info-row">
               <span>系统</span>
-              <span class="value">{{ server.general?.os?.split(" ").slice(0, 2).join(" ") || "-" }}</span>
+              <span class="value">{{
+                server.general?.os?.split(" ").slice(0, 2).join(" ") || "-"
+              }}</span>
             </div>
           </div>
         </el-card>
@@ -541,20 +551,26 @@ onBeforeUnmount(() => {
               <el-tag size="small" type="info">5秒刷新</el-tag>
             </div>
           </template>
-          <div ref="historyChartRef" class="history-chart"></div>
+          <div ref="historyChartRef" class="history-chart" />
         </el-card>
       </el-col>
     </el-row>
 
     <!-- CPU核心详情 -->
-    <el-row v-if="server.cpu?.coreDetails?.length" :gutter="16" class="cores-section">
+    <el-row
+      v-if="server.cpu?.coreDetails?.length"
+      :gutter="16"
+      class="cores-section"
+    >
       <el-col :span="24">
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
               <el-icon class="header-icon"><Cpu /></el-icon>
               <span>CPU 核心使用率</span>
-              <el-tag size="small" type="info" class="core-count">{{ server.cpu?.coreDetails?.length }} 核心</el-tag>
+              <el-tag size="small" type="info" class="core-count"
+                >{{ server.cpu?.coreDetails?.length }} 核心</el-tag
+              >
             </div>
           </template>
           <div class="cores-grid">
@@ -565,16 +581,20 @@ onBeforeUnmount(() => {
             >
               <div class="core-header">
                 <span class="core-name">核心 {{ index }}</span>
-                <span class="core-percent" :style="{ color: getUsageColor(usage) }">{{ usage?.toFixed(0) }}%</span>
+                <span
+                  class="core-percent"
+                  :style="{ color: getUsageColor(usage) }"
+                  >{{ usage?.toFixed(0) }}%</span
+                >
               </div>
               <div class="core-progress-bg">
-                <div 
-                  class="core-progress-fill" 
-                  :style="{ 
-                    width: `${usage}%`, 
+                <div
+                  class="core-progress-fill"
+                  :style="{
+                    width: `${usage}%`,
                     background: `linear-gradient(90deg, ${getUsageColor(usage)}88, ${getUsageColor(usage)})`
                   }"
-                ></div>
+                />
               </div>
             </div>
           </div>
@@ -633,7 +653,12 @@ onBeforeUnmount(() => {
             stripe
             :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
           >
-            <el-table-column prop="name" label="接口" width="150" align="center">
+            <el-table-column
+              prop="name"
+              label="接口"
+              width="150"
+              align="center"
+            >
               <template #default="{ row }">
                 <el-tag :type="row.isUp ? 'success' : 'danger'" size="small">
                   {{ row.name }}
@@ -654,7 +679,11 @@ onBeforeUnmount(() => {
             <el-table-column prop="packetsSent" label="发包数" align="center" />
             <el-table-column label="状态" width="100" align="center">
               <template #default="{ row }">
-                <el-tag :type="row.isUp ? 'success' : 'danger'" size="small" effect="light">
+                <el-tag
+                  :type="row.isUp ? 'success' : 'danger'"
+                  size="small"
+                  effect="light"
+                >
                   {{ row.isUp ? "● 活跃" : "○ 断开" }}
                 </el-tag>
               </template>
@@ -675,16 +704,33 @@ onBeforeUnmount(() => {
             </div>
           </template>
           <el-descriptions :column="4" border>
-            <el-descriptions-item label="主机名">{{ server.general?.hostname || "-" }}</el-descriptions-item>
-            <el-descriptions-item label="操作系统">{{ server.general?.os || "-" }}</el-descriptions-item>
-            <el-descriptions-item label="系统架构">{{ server.general?.arch || "-" }}</el-descriptions-item>
-            <el-descriptions-item label="内核版本">{{ server.general?.kernel || "-" }}</el-descriptions-item>
-            <el-descriptions-item label="Go版本">{{ server.general?.goVersion || "-" }}</el-descriptions-item>
-            <el-descriptions-item label="CPU型号">{{ server.cpu?.modelName || "-" }}</el-descriptions-item>
-            <el-descriptions-item label="CPU频率">{{ server.cpu?.frequency?.toFixed(0) || 0 }} MHz</el-descriptions-item>
+            <el-descriptions-item label="主机名">{{
+              server.general?.hostname || "-"
+            }}</el-descriptions-item>
+            <el-descriptions-item label="操作系统">{{
+              server.general?.os || "-"
+            }}</el-descriptions-item>
+            <el-descriptions-item label="系统架构">{{
+              server.general?.arch || "-"
+            }}</el-descriptions-item>
+            <el-descriptions-item label="内核版本">{{
+              server.general?.kernel || "-"
+            }}</el-descriptions-item>
+            <el-descriptions-item label="Go版本">{{
+              server.general?.goVersion || "-"
+            }}</el-descriptions-item>
+            <el-descriptions-item label="CPU型号">{{
+              server.cpu?.modelName || "-"
+            }}</el-descriptions-item>
+            <el-descriptions-item label="CPU频率"
+              >{{
+                server.cpu?.frequency?.toFixed(0) || 0
+              }}
+              MHz</el-descriptions-item
+            >
             <el-descriptions-item label="系统负载">
-              {{ server.load?.load1?.toFixed(2) || 0 }} / 
-              {{ server.load?.load5?.toFixed(2) || 0 }} / 
+              {{ server.load?.load1?.toFixed(2) || 0 }} /
+              {{ server.load?.load5?.toFixed(2) || 0 }} /
               {{ server.load?.load15?.toFixed(2) || 0 }}
             </el-descriptions-item>
           </el-descriptions>
@@ -746,8 +792,13 @@ onBeforeUnmount(() => {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* 仪表盘卡片 */
@@ -1130,20 +1181,20 @@ onBeforeUnmount(() => {
   .monitor-page {
     padding: 12px;
   }
-  
+
   .header-bar {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .swap-content {
     flex-direction: column;
   }
-  
+
   .cores-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .disk-grid {
     grid-template-columns: 1fr;
   }

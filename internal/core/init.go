@@ -83,8 +83,6 @@ func hasData() bool {
 func initTable() {
 
 	err := global.GORM.AutoMigrate(
-		&model.Comment{},
-		&model.CommentReply{},
 		&model.Post{},
 		&model.Category{},
 		&model.FriendLink{},
@@ -267,8 +265,8 @@ func initDefaultMusic() {
 func Timer() {
 	slog.Info("定时任务启动")
 	s := gocron.NewScheduler(time.Local)
-	s.Every(1).Day().At("21:00").Do(task)
-	s.Every(1).Day().At("23:30").Do(updateCoverTask)
+	_, _ = s.Every(1).Day().At("21:00").Do(task)
+	_, _ = s.Every(1).Day().At("23:30").Do(updateCoverTask)
 	s.StartAsync()
 }
 

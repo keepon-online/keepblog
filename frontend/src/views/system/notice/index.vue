@@ -17,14 +17,24 @@
       <div class="filter-area">
         <el-form :inline="true" :model="queryParams">
           <el-form-item label="通知类型">
-            <el-select v-model="queryParams.type" placeholder="全部" clearable style="width: 120px">
+            <el-select
+              v-model="queryParams.type"
+              placeholder="全部"
+              clearable
+              style="width: 120px"
+            >
               <el-option label="系统通知" :value="1" />
               <el-option label="消息" :value="2" />
               <el-option label="待办" :value="3" />
             </el-select>
           </el-form-item>
           <el-form-item label="状态">
-            <el-select v-model="queryParams.status" placeholder="全部" clearable style="width: 100px">
+            <el-select
+              v-model="queryParams.status"
+              placeholder="全部"
+              clearable
+              style="width: 100px"
+            >
               <el-option label="未读" :value="0" />
               <el-option label="已读" :value="1" />
             </el-select>
@@ -46,21 +56,42 @@
         <el-table-column type="index" label="#" width="60" />
         <el-table-column prop="title" label="标题" min-width="180">
           <template #default="{ row }">
-            <el-tag v-if="row.status === 0" type="danger" size="small" class="mr-2">未读</el-tag>
+            <el-tag
+              v-if="row.status === 0"
+              type="danger"
+              size="small"
+              class="mr-2"
+              >未读</el-tag
+            >
             {{ row.title }}
           </template>
         </el-table-column>
         <el-table-column prop="type" label="类型" width="100">
           <template #default="{ row }">
-            <el-tag :type="getTypeTag(row.type)">{{ getTypeName(row.type) }}</el-tag>
+            <el-tag :type="getTypeTag(row.type)">{{
+              getTypeName(row.type)
+            }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="description" label="内容" min-width="250" show-overflow-tooltip />
+        <el-table-column
+          prop="description"
+          label="内容"
+          min-width="250"
+          show-overflow-tooltip
+        />
         <el-table-column prop="createdAt" label="时间" width="170" />
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="handleView(row)">查看</el-button>
-            <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
+            <el-button type="primary" link size="small" @click="handleView(row)"
+              >查看</el-button
+            >
+            <el-button
+              type="danger"
+              link
+              size="small"
+              @click="handleDelete(row)"
+              >删除</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -100,7 +131,11 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="标题" prop="title">
-          <el-input v-model="formData.title" placeholder="请输入标题" maxlength="100" />
+          <el-input
+            v-model="formData.title"
+            placeholder="请输入标题"
+            maxlength="100"
+          />
         </el-form-item>
         <el-form-item label="内容" prop="description">
           <el-input
@@ -112,14 +147,21 @@
           />
         </el-form-item>
         <el-form-item label="接收用户" prop="userId">
-          <el-select v-model="formData.userId" placeholder="全部用户（广播）" clearable style="width: 100%">
+          <el-select
+            v-model="formData.userId"
+            placeholder="全部用户（广播）"
+            clearable
+            style="width: 100%"
+          >
             <el-option label="全部用户" :value="0" />
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">发送</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit"
+          >发送</el-button
+        >
       </template>
     </el-dialog>
   </div>
@@ -167,8 +209,13 @@ const getTypeName = (type: number) => {
   return map[type] || "未知";
 };
 
-const getTypeTag = (type: number): "primary" | "success" | "warning" | "danger" | "info" => {
-  const map: Record<number, "primary" | "success" | "warning" | "danger" | "info"> = { 1: "danger", 2: "primary", 3: "warning" };
+const getTypeTag = (
+  type: number
+): "primary" | "success" | "warning" | "danger" | "info" => {
+  const map: Record<
+    number,
+    "primary" | "success" | "warning" | "danger" | "info"
+  > = { 1: "danger", 2: "primary", 3: "warning" };
   return map[type] || "info";
 };
 
@@ -218,7 +265,11 @@ const handleSubmit = async () => {
 
   submitting.value = true;
   try {
-    const res = await http.request<{ code: number; message: string }>("post", "/api/v1/notice/send", { data: formData });
+    const res = await http.request<{ code: number; message: string }>(
+      "post",
+      "/api/v1/notice/send",
+      { data: formData }
+    );
     if (res.code === 200) {
       message("发送成功", { type: "success" });
       dialogVisible.value = false;

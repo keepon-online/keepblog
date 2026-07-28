@@ -150,7 +150,7 @@ func logError(err *errors.AppError, c *gin.Context) {
 
 // AbortWithError 中断请求并返回错误
 func AbortWithError(c *gin.Context, err *errors.AppError) {
-	c.Error(err)
+	_ = c.Error(err)
 	c.Abort()
 }
 

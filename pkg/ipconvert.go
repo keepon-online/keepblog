@@ -30,14 +30,6 @@ func isIpv4(ipStr string) bool {
 	return ip != nil && strings.Contains(ipStr, ".")
 }
 
-// 判断是否ipv6
-func isIpv6(ipStr string) bool {
-
-	ip := net.ParseIP(ipStr)
-
-	return ip != nil && strings.Contains(ipStr, ":")
-}
-
 func Long2ip(ipLong uint32) string {
 	ipByte := make([]byte, 4)
 	binary.BigEndian.PutUint32(ipByte, ipLong)

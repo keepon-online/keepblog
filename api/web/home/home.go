@@ -21,7 +21,7 @@ type Handler struct {
 func (h *Handler) Home(c *gin.Context) {
 	pageNum := c.Param("page")
 	num, _ := strconv.ParseInt(pageNum, 10, 64)
-	coverPosts, _, err := h.Service.PostService.GetCoverPosts(int(num))
+	coverPosts, _, _ := h.Service.PostService.GetCoverPosts(int(num))
 	total := h.Service.PostService.Total()
 	sidebarInfo := h.Service.SidebarService.Sidebar()
 	site, err := h.Service.WebSiteService.GetWebSite()

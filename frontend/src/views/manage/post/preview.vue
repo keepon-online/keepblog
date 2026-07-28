@@ -22,42 +22,42 @@
           </div>
           <div class="header-actions">
             <el-button @click="router.go(-1)">返回</el-button>
-            <el-button 
-              type="primary" 
-              @click="handleEdit"
-            >
-              编辑
-            </el-button>
+            <el-button type="primary" @click="handleEdit"> 编辑 </el-button>
           </div>
         </div>
       </template>
-      
+
       <div class="article-content">
-        <div class="article-cover" v-if="ruleForm.coverImage">
-          <el-image 
-            :src="ruleForm.coverImage" 
-            fit="cover" 
+        <div v-if="ruleForm.coverImage" class="article-cover">
+          <el-image
+            :src="ruleForm.coverImage"
+            fit="cover"
             class="cover-image"
           />
         </div>
-        
-        <div class="article-summary" v-if="ruleForm.summary">
-          <blockquote class="summary-content">{{ ruleForm.summary }}</blockquote>
+
+        <div v-if="ruleForm.summary" class="article-summary">
+          <blockquote class="summary-content">
+            {{ ruleForm.summary }}
+          </blockquote>
         </div>
-        
-        <MdPreview 
-          v-model="ruleForm.postContent" 
-          id="postId" 
+
+        <MdPreview
+          id="postId"
+          v-model="ruleForm.postContent"
           :preview-theme="theme"
           class="markdown-preview"
         />
       </div>
-      
-      <div class="article-tags" v-if="ruleForm.tags && ruleForm.tags.length > 0">
-        <el-tag 
-          v-for="(tag, index) in ruleForm.tags" 
-          :key="index" 
-          type="info" 
+
+      <div
+        v-if="ruleForm.tags && ruleForm.tags.length > 0"
+        class="article-tags"
+      >
+        <el-tag
+          v-for="(tag, index) in ruleForm.tags"
+          :key="index"
+          type="info"
           class="tag-item"
         >
           {{ tag }}
@@ -100,26 +100,26 @@ const theme = ref("default");
 // 修复时间格式化计算属性
 const formattedCreateTime = computed(() => {
   if (!ruleForm.value.createTime) return "";
-  
+
   // 尝试解析时间戳
   const date = new Date(ruleForm.value.createTime);
   if (isNaN(date.getTime())) {
     // 如果不是有效日期，尝试作为时间戳解析
     const timestampNum = Number(ruleForm.value.createTime);
     if (!isNaN(timestampNum)) {
-      return new Date(timestampNum).toLocaleDateString('zh-CN');
+      return new Date(timestampNum).toLocaleDateString("zh-CN");
     }
     return ruleForm.value.createTime;
   }
-  
+
   // 格式化为 YYYY-MM-DD HH:mm:ss
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 });
 
@@ -150,25 +150,25 @@ onMounted(() => {
   padding: 20px;
   background-color: var(--el-bg-color-page);
   min-height: calc(100vh - 150px);
-  
+
   .preview-card {
     border-radius: 8px;
     box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
     border: none;
-    
+
     :deep(.el-card__header) {
       border-bottom: 1px solid var(--el-border-color-light);
       padding: 20px;
-      
+
       .card-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
         gap: 20px;
-        
+
         .header-info {
           flex: 1;
-          
+
           .article-title {
             margin: 0 0 15px 0;
             font-size: 24px;
@@ -176,26 +176,26 @@ onMounted(() => {
             color: var(--el-text-color-primary);
             line-height: 1.4;
           }
-          
+
           .article-meta {
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
-            
+
             .meta-item {
               display: flex;
               align-items: center;
               gap: 5px;
               font-size: 14px;
               color: var(--el-text-color-secondary);
-              
+
               .el-icon {
                 font-size: 16px;
               }
             }
           }
         }
-        
+
         .header-actions {
           display: flex;
           gap: 12px;
@@ -203,17 +203,17 @@ onMounted(() => {
         }
       }
     }
-    
+
     :deep(.el-card__body) {
       padding: 30px 20px;
     }
   }
-  
+
   .article-content {
     .article-cover {
       margin-bottom: 30px;
       text-align: center;
-      
+
       .cover-image {
         max-width: 100%;
         max-height: 400px;
@@ -221,10 +221,10 @@ onMounted(() => {
         box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
       }
     }
-    
+
     .article-summary {
       margin-bottom: 30px;
-      
+
       .summary-content {
         margin: 0;
         padding: 15px 20px;
@@ -236,23 +236,23 @@ onMounted(() => {
         border-radius: 0 4px 4px 0;
       }
     }
-    
+
     .markdown-preview {
       :deep(.md-editor-preview) {
         padding: 0;
       }
-      
+
       :deep(.md-editor) {
         box-shadow: none;
       }
     }
   }
-  
+
   .article-tags {
     margin-top: 30px;
     padding-top: 20px;
     border-top: 1px solid var(--el-border-color-light);
-    
+
     .tag-item {
       margin-right: 10px;
       margin-bottom: 10px;
@@ -264,28 +264,28 @@ onMounted(() => {
 @media (max-width: 768px) {
   .preview-container {
     padding: 12px;
-    
+
     :deep(.el-card__header) {
       padding: 15px;
     }
-    
+
     .card-header {
       flex-direction: column;
       align-items: stretch;
       gap: 15px;
-      
+
       .header-actions {
         align-self: flex-end;
       }
     }
-    
+
     .article-title {
       font-size: 20px !important;
     }
-    
+
     .article-meta {
       gap: 12px !important;
-      
+
       .meta-item {
         font-size: 13px !important;
       }

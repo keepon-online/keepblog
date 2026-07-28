@@ -111,6 +111,87 @@ func (service Service) GetLatestPosts() ([]model.LatestPosts, error) {
 	return latestPosts, nil
 }
 
+// GetPublishedPostsForFeed 取已发布文章列表（用于 RSS/sitemap），按发布时间倒序。
+// 返回 model.Post 的部分字段（title/post_slug/summary/cover_image/pub_time/last_modified_time）。
+func (service Service) GetPublishedPostsForFeed(limit int) ([]model.Post, error) {
+	var posts []model.Post
+
+	err := NewQueryBuilder().
+		Select("post.title, post.post_slug, post.summary, post.cover_image, post.pub_time, post.last_modified_time").
+		WithPublished().
+		WithNotDeleted().
+		Order("post.pub_time DESC").
+		Limit(limit).
+		Find(&posts)
+
+	if err != nil {
+		return nil, errors.New("查询失败: " + err.Error())
+	}
+
+	return posts, nil
+}
+
+// GetAdjacentPosts 取上一篇/下一篇（按发布时间相邻，已发布未删除，排除当前文章）。
+// 上一篇：发布时间早于当前文章的最近一篇；下一篇：发布时间晚于当前文章的最早一篇。
+// 当前文章的 pub_time 作为基准传入，避免再查一次。
+func (service Service) GetAdjacentPosts(postId uint64, currentPubTime uint64) (prev, next *model.LatestPosts, err error) {
+	const baseWhere = "is_published = 1 AND is_deleted = 0 AND post_id <> ?"
+
+	// 上一篇：pub_time < 当前，按 pub_time DESC 取第一条
+	var prevPost model.LatestPosts
+	if err = global.GORM.Table(model.TPostsTable).
+		Select("title, post_slug, cover_image, pub_time").
+		Where(baseWhere+" AND pub_time < ?", postId, currentPubTime).
+		Order("pub_time DESC").
+		Limit(1).
+		Scan(&prevPost).Error; err == nil && prevPost.Title != "" {
+		prev = &prevPost
+	}
+
+	// 下一篇：pub_time > 当前，按 pub_time ASC 取第一条
+	var nextPost model.LatestPosts
+	if err = global.GORM.Table(model.TPostsTable).
+		Select("title, post_slug, cover_image, pub_time").
+		Where(baseWhere+" AND pub_time > ?", postId, currentPubTime).
+		Order("pub_time ASC").
+		Limit(1).
+		Scan(&nextPost).Error; err == nil && nextPost.Title != "" {
+		next = &nextPost
+	}
+
+	return prev, next, nil
+}
+
+// GetRelatedPosts 按当前文章的标签取相关文章（排除自身，去重，limit）。
+// tags 为当前文章的标签名列表，通过 post_tag/tag JOIN 反查命中这些标签的其他文章。
+func (service Service) GetRelatedPosts(postId uint64, tags []string, limit int) ([]model.LatestPosts, error) {
+	if len(tags) == 0 {
+		return []model.LatestPosts{}, nil
+	}
+	if limit <= 0 {
+		limit = 6
+	}
+
+	var posts []model.LatestPosts
+	err := global.GORM.Table(model.TPostsTable).
+		Select("post.title, post.post_slug, post.cover_image, post.pub_time").
+		Joins("JOIN post_tag pt ON post.post_id = pt.post_id").
+		Joins("JOIN tag t ON pt.tag_id = t.tag_id").
+		Where("t.tag_name IN ?", tags).
+		Where("post.is_published = 1 AND post.is_deleted = 0").
+		Where("post.post_id <> ?", postId).
+		Group("post.post_id").
+		Order("post.pub_time DESC").
+		Limit(limit).
+		Scan(&posts).Error
+
+	if err != nil {
+		return nil, errors.New("查询相关文章失败: " + err.Error())
+	}
+
+	return posts, nil
+}
+
 // GetCoverPosts 首页文章列表
 func (service Service) GetCoverPosts(pageNum int) ([]model.LatestPosts, int64, error) {
 	var coverPosts []model.LatestPosts
@@ -146,7 +227,7 @@ func (service Service) GetCoverPosts(pageNum int) ([]model.LatestPosts, int64, e
 
 // Total 统计文章总数
 func (service Service) Total() (total int64) {
-	NewQueryBuilder().
+	_ = NewQueryBuilder().
 		WithPublished().
 		WithNotDeleted().
 		Count(&total)
@@ -210,7 +291,7 @@ func (service Service) GetArchivePostsPaged(pageNum, pageSize int) (*model.Archi
 
 	// 获取总文章数
 	var totalPosts int64
-	NewQueryBuilder().
+	_ = NewQueryBuilder().
 		WithPublished().
 		WithNotDeleted().
 		Count(&totalPosts)
@@ -470,7 +551,7 @@ func (service Service) SearchWithResult(keyword string, pageNum, pageSize int) (
 
 	// 统计总数
 	var total int64
-	NewQueryBuilder().
+	_ = NewQueryBuilder().
 		WithPublished().
 		WithNotDeleted().
 		WithSearch(keyword).

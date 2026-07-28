@@ -25,15 +25,15 @@ func (h *Handler) SavePost(c *gin.Context) {
 	keywords := postObj.Tags
 	postObj.Author = "佚名"
 	postObj.CoverImage = pkg.GetPixabayImage()
-	err, id := h.Service.PostService.SavePost(postObj)
+	id, err := h.Service.PostService.SavePost(postObj)
 	for _, key := range keywords {
 		tag := model.Tag{TagName: key}
-		_, tagId := h.Service.TagService.Save(tag)
+		tagId, _ := h.Service.TagService.Save(tag)
 		postTag := model.PostTag{
 			TagId:  tagId,
 			PostId: id,
 		}
-		global.GORM.Table(model.TPostTagTable).Create(&postTag)
+		_ = global.GORM.Table(model.TPostTagTable).Create(&postTag)
 	}
 	if err != nil {
 		result.Error(c, err.Error())
@@ -53,17 +53,17 @@ func (h *Handler) UpdatePost(c *gin.Context) {
 		result.Error(c, err.Error())
 		return
 	}
-	global.GORM.Table(model.TPostTagTable).Where("post_id", postObj.PostId).Delete(model.PostTag{})
-	keywords := postObj.Tags
-	for _, key := range keywords {
-		tag := model.Tag{TagName: key}
-		_, tagId := h.Service.TagService.Save(tag)
-		postTag := model.PostTag{
-			TagId:  tagId,
-			PostId: postObj.PostId,
+		_ = global.GORM.Table(model.TPostTagTable).Where("post_id", postObj.PostId).Delete(model.PostTag{})
+		keywords := postObj.Tags
+		for _, key := range keywords {
+			tag := model.Tag{TagName: key}
+			tagId, _ := h.Service.TagService.Save(tag)
+			postTag := model.PostTag{
+				TagId:  tagId,
+				PostId: postObj.PostId,
+			}
+			_ = global.GORM.Table(model.TPostTagTable).Create(&postTag)
 		}
-		global.GORM.Table(model.TPostTagTable).Create(&postTag)
-	}
 
 	result.Ok(c, nil)
 }

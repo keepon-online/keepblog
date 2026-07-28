@@ -90,9 +90,9 @@
 
       <div class="security-content">
         <div
-          class="security-item"
           v-for="item in securityItems"
           :key="item.key"
+          class="security-item"
         >
           <div class="security-item-main">
             <div class="security-item-icon">
@@ -128,10 +128,7 @@
         label-width="90px"
         status-icon
       >
-        <el-form-item
-          label="原密码"
-          prop="oldPassword"
-        >
+        <el-form-item label="原密码" prop="oldPassword">
           <el-input
             v-model="ruleForm.oldPassword"
             type="password"
@@ -140,10 +137,7 @@
             autocomplete="off"
           />
         </el-form-item>
-        <el-form-item
-          label="新密码"
-          prop="newPassword"
-        >
+        <el-form-item label="新密码" prop="newPassword">
           <el-input
             v-model="ruleForm.newPassword"
             type="password"
@@ -152,10 +146,7 @@
             autocomplete="off"
           />
         </el-form-item>
-        <el-form-item
-          label="确认密码"
-          prop="confirmPassword"
-        >
+        <el-form-item label="确认密码" prop="confirmPassword">
           <el-input
             v-model="ruleForm.confirmPassword"
             type="password"
@@ -184,7 +175,12 @@
 <script lang="ts" setup>
 import { onMounted, ref, reactive, computed } from "vue";
 import type { FormInstance, FormRules } from "element-plus";
-import { changePassword, getUserInfo, updateProfile, type UserInfoResponse } from "@/api/profile";
+import {
+  changePassword,
+  getUserInfo,
+  updateProfile,
+  type UserInfoResponse
+} from "@/api/profile";
 import { upload } from "@/api/common";
 import { message } from "@/utils/message";
 import { formatAxis } from "@/utils/formatTime";

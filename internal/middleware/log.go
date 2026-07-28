@@ -132,7 +132,7 @@ func GinRecovery(stack bool) gin.HandlerFunc {
 
 				if brokenPipe {
 					slog.Error("Broken pipe panic", "details", string(logJSON))
-					c.Error(err.(error))
+					_ = c.Error(err.(error))
 					c.Abort()
 					return
 				}

@@ -31,7 +31,7 @@ func GetBingImage() string {
 		fmt.Println("Error fetching wallpaper info:", err)
 		return "https://www.bing.com/th?id=OHR.OcalaNF_ZH-CN1112502059_1920x1080.jpg&amp;rf=LaDigue_1920x1080.jpg&amp;pid=hp"
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	// 解析 JSON 响应获取壁纸的 URL
 	var data struct {
 		Images []struct {

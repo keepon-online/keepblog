@@ -13,7 +13,7 @@
           </el-button>
         </div>
       </template>
-      
+
       <el-form
         ref="ruleFormRef"
         :model="ruleForm"
@@ -23,21 +23,21 @@
         status-icon
       >
         <el-form-item label="文章标题" prop="title">
-          <el-input 
-            v-model="ruleForm.title" 
+          <el-input
+            v-model="ruleForm.title"
             placeholder="请输入文章标题"
             clearable
           />
         </el-form-item>
-        
+
         <el-form-item label="文章正文" prop="note" class="markdown-field">
-          <MdEditor 
-            v-model="ruleForm.note" 
-            @onUploadImg="onUploadImg" 
+          <MdEditor
+            v-model="ruleForm.note"
             :toolbars="toolbars"
             :preview="false"
             language="zh-CN"
             class="markdown-editor"
+            @onUploadImg="onUploadImg"
           />
           <div class="form-tip">支持 Markdown 语法格式</div>
         </el-form-item>
@@ -66,12 +66,31 @@ const ruleForm = ref({
 
 // Markdown编辑器工具栏配置
 const toolbars: ToolbarNames[] = [
-  'bold', 'underline', 'italic', '-',
-  'title', 'strikeThrough', 'sub', 'sup', '-',
-  'quote', 'unorderedList', 'orderedList', '-',
-  'codeRow', 'code', 'link', 'image', 'table', '-',
-  'revoke', 'next', 'save', '-',
-  'preview', 'catalog'
+  "bold",
+  "underline",
+  "italic",
+  "-",
+  "title",
+  "strikeThrough",
+  "sub",
+  "sup",
+  "-",
+  "quote",
+  "unorderedList",
+  "orderedList",
+  "-",
+  "codeRow",
+  "code",
+  "link",
+  "image",
+  "table",
+  "-",
+  "revoke",
+  "next",
+  "save",
+  "-",
+  "preview",
+  "catalog"
 ];
 
 onMounted(() => {
@@ -98,7 +117,7 @@ const rules = reactive<FormRules>({
 
 const submitForm = async (formEl: FormInstance | undefined) => {
   if (!formEl) return;
-  
+
   await formEl.validate(async (valid, fields) => {
     if (valid) {
       saveLoading.value = true;
@@ -120,7 +139,10 @@ const submitForm = async (formEl: FormInstance | undefined) => {
   });
 };
 
-const onUploadImg = async (files: File[], callback: (urls: string[]) => void) => {
+const onUploadImg = async (
+  files: File[],
+  callback: (urls: string[]) => void
+) => {
   const res = await Promise.all(
     files.map(file => {
       return new Promise((resolve, reject) => {
@@ -138,23 +160,23 @@ const onUploadImg = async (files: File[], callback: (urls: string[]) => void) =>
       });
     })
   );
-  
+
   // 处理上传结果
   const urls = res.map((item: string | { url?: string }) => {
-    if (typeof item === 'string') {
+    if (typeof item === "string") {
       return item;
-    } else if (item && typeof item === 'object' && item.url) {
+    } else if (item && typeof item === "object" && item.url) {
       return item.url;
     }
-    return '';
+    return "";
   });
-  
+
   callback(urls);
-  
+
   // 显示上传结果提示
   const successCount = urls.filter(url => url).length;
   const failCount = files.length - successCount;
-  
+
   if (failCount > 0) {
     message(`${failCount}个文件上传失败`, { type: "warning" });
   }
@@ -166,21 +188,21 @@ const onUploadImg = async (files: File[], callback: (urls: string[]) => void) =>
   padding: 20px;
   background-color: var(--el-bg-color-page);
   min-height: calc(100vh - 150px);
-  
+
   .about-card {
     border-radius: 8px;
     box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
     border: none;
-    
+
     :deep(.el-card__header) {
       border-bottom: 1px solid var(--el-border-color-light);
       padding: 18px 20px;
-      
+
       .card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        
+
         .card-title {
           font-size: 18px;
           font-weight: 600;
@@ -189,35 +211,35 @@ const onUploadImg = async (files: File[], callback: (urls: string[]) => void) =>
       }
     }
   }
-  
+
   .about-form {
     :deep(.el-form-item) {
       margin-bottom: 24px;
-      
+
       .el-form-item__label {
         font-weight: 500;
         color: var(--el-text-color-primary);
         margin-bottom: 8px;
       }
     }
-    
+
     .markdown-field {
       .markdown-editor {
         border: 1px solid var(--el-border-color);
         border-radius: 4px;
         transition: var(--el-transition-border);
-        
+
         &:hover {
           border-color: var(--el-border-color-hover);
         }
-        
+
         &:focus-within {
           border-color: var(--el-color-primary);
         }
       }
     }
   }
-  
+
   .form-tip {
     font-size: 12px;
     color: var(--el-color-info);
@@ -230,20 +252,20 @@ const onUploadImg = async (files: File[], callback: (urls: string[]) => void) =>
 @media (max-width: 768px) {
   .about-container {
     padding: 12px;
-    
+
     :deep(.el-card__header) {
       padding: 15px;
     }
-    
+
     .card-header {
       flex-direction: column;
       align-items: flex-start;
       gap: 12px;
-      
+
       .card-title {
         font-size: 16px;
       }
-      
+
       .el-button {
         align-self: flex-end;
       }

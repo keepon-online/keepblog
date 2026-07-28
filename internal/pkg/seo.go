@@ -24,7 +24,7 @@ func PushSite(urls []string, api string) *system.PushSite {
 		slog.Error(err)
 		return nil
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	slog.Infof("sate:%d", resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)

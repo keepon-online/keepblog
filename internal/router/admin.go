@@ -290,11 +290,43 @@ func tagAdminRouter(ctx *core.Context) {
 	}
 	group := ctx.Engine.Group(routeGroup.Prefix)
 	routes := []Route{
+		// /list 供前台侧边栏 tag cloud 使用（无需登录）
 		{
 			Method:     http.MethodGet,
 			Path:       "/list",
 			Handler:    handler.GetTags,
 			Middleware: []gin.HandlerFunc{},
+		},
+		// 以下为后台管理 CRUD，需登录
+		{
+			Method:     http.MethodGet,
+			Path:       "/manage-list",
+			Handler:    handler.GetTagList,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
+		},
+		{
+			Method:     http.MethodPost,
+			Path:       "/save",
+			Handler:    handler.SaveTag,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
+		},
+		{
+			Method:     http.MethodPut,
+			Path:       "/update",
+			Handler:    handler.UpdateTag,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
+		},
+		{
+			Method:     http.MethodDelete,
+			Path:       "/delete/:tagId",
+			Handler:    handler.DeleteTag,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
+		},
+		{
+			Method:     http.MethodGet,
+			Path:       "/detail/:tagId",
+			Handler:    handler.DetailTag,
+			Middleware: []gin.HandlerFunc{middleware.JwtVerify()},
 		},
 	}
 	RegisterRouter(group, routes)

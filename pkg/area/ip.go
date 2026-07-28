@@ -41,7 +41,7 @@ func downloadFile(url, filePath string) error {
 	if err != nil {
 		return fmt.Errorf("创建文件失败: %w", err)
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	// 创建带超时的 HTTP 客户端
 	client := &http.Client{
@@ -51,34 +51,34 @@ func downloadFile(url, filePath string) error {
 	// 发送请求
 	resp, err := client.Get(url)
 	if err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("下载失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// 检查状态码
 	if resp.StatusCode != http.StatusOK {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("服务器返回错误状态: %s", resp.Status)
 	}
 
 	// 复制内容到文件
 	written, err := io.Copy(out, resp.Body)
 	if err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("写入文件失败: %w", err)
 	}
 
 	// 验证文件大小
 	if written < 1024 {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("下载文件过小，可能不完整: %d bytes", written)
 	}
 
 	// 关闭文件后重命名
-	out.Close()
+	_ = out.Close()
 	if err := os.Rename(tmpPath, filePath); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("重命名文件失败: %w", err)
 	}
 

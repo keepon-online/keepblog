@@ -3,6 +3,7 @@ package router
 import (
 	"io/fs"
 	"net/http"
+	"time"
 
 	"gitee.com/jieepre/go-site/api/web/about"
 	"gitee.com/jieepre/go-site/api/web/archive"
@@ -20,6 +21,7 @@ import (
 
 func RegisterWebRouter(ctx *core.Context) {
 	staticRouter(ctx)
+	feedRouter(ctx)
 	aboutRouter(ctx)
 	tagWebRouter(ctx)
 	linkRouter(ctx)
@@ -43,8 +45,37 @@ func staticRouter(ctx *core.Context) {
 	staticGroup.StaticFS("/js", http.FS(jsEmbed))
 	staticGroup.StaticFS("/images", http.FS(imagesEmbed))
 	staticGroup.StaticFS("/plugins", http.FS(pluginsEmbed))
-	staticGroup.StaticFileFS("/robots.txt", "robots.txt", http.FS(static.Robots))
+	// robots.txt 改为 feedRouter 里的动态 handler（需注入站点 sitemap 地址）
 	staticGroup.StaticFileFS("/favicon.ico", "favicon.ico", http.FS(static.Favicon))
+}
+
+// feedRouter 注册 RSS / sitemap / robots 订阅与索引路由。
+// 这些内容来自 DB（站点信息 + 已发布文章），需动态生成，因此不挂在 staticGroup。
+// 注意：webGroup 的 CacheMiddleware 不会被子 group 继承，这里显式给每条路由加缓存。
+func feedRouter(ctx *core.Context) {
+	handler := post.Handler{Context: ctx}
+	group := ctx.Engine.Group("/")
+	routes := []Route{
+		{
+			Method:     http.MethodGet,
+			Path:       "/rss.xml",
+			Handler:    handler.Feed,
+			Middleware: []gin.HandlerFunc{middleware.CacheMiddleware(30 * time.Minute)},
+		},
+		{
+			Method:     http.MethodGet,
+			Path:       "/sitemap.xml",
+			Handler:    handler.Sitemap,
+			Middleware: []gin.HandlerFunc{middleware.CacheMiddleware(1 * time.Hour)},
+		},
+		{
+			Method:     http.MethodGet,
+			Path:       "/robots.txt",
+			Handler:    handler.Robots,
+			Middleware: []gin.HandlerFunc{middleware.CacheMiddleware(1 * time.Hour)},
+		},
+	}
+	RegisterRouter(group, routes)
 }
 
 func homeRouter(ctx *core.Context) {
