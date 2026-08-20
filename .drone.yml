@@ -16,6 +16,15 @@ volumes:
     temp: { }
 
 steps:
+  - name: 测试与检查
+    image: golang:1.24.11-bookworm
+    volumes:
+      - name: gocache
+        path: /go/cache
+    commands:
+      - go env -w GOPROXY=https://goproxy.cn,direct
+      - go vet ./...
+      - go test -race -cover ./...
   - name: 构建前端
     image: node:20-bookworm
     commands:
@@ -48,7 +57,7 @@ steps:
         from_secret: ssh_username
       port: 22
       source:
-        - ./bin/site
+        - ./bin/go-site-linux-amd64
       target:
         - /home/ubuntu/tmp
   - name: 部署
@@ -63,6 +72,8 @@ steps:
       port: 22
       script_stop: true
       script:
+        # 兼容服务器上可能仍引用旧产物名 site 的 deploy.sh
+        - cp /home/ubuntu/tmp/go-site-linux-amd64 /home/ubuntu/tmp/site
         - chmod +x /home/ubuntu/tmp/deploy.sh
         - sh /home/ubuntu/tmp/deploy.sh
   #  - name: release

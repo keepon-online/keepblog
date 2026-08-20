@@ -83,22 +83,26 @@ clean-frontend:
 run:
 	go run main.go
 
-# 运行测试
+# 运行测试（race 检测 + 覆盖率）
 test:
-	go test -v ./...
+	go test -race -cover ./...
 
 # ================================================
 # 代码静态检查（golangci-lint v2）
 # 要求：已安装 golangci-lint（go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest）
 # 配置见 .golangci.yml
+# 注意：golangci-lint 二进制内嵌的 go/types 需 ≥ go.mod 声明的语言版本，
+# 本地工具链更新时用 GOTOOLCHAIN 钉到 go.mod 版本，避免 "file requires newer Go version" 崩溃
 # ================================================
+GOMOD_GO_VERSION = $(shell awk '$$1=="go"{print $$2}' go.mod)
+
 lint:
 	@command -v golangci-lint > /dev/null 2>&1 || { \
 		echo "错误：未安装 golangci-lint，请执行："; \
 		echo "  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest"; \
 		exit 1; \
 	}
-	golangci-lint run ./...
+	GOTOOLCHAIN=go$(GOMOD_GO_VERSION) golangci-lint run ./...
 
 # 自动修复可修复的 lint 问题（如格式化、import 顺序），其余仍需手动处理
 lint-fix:
@@ -107,7 +111,7 @@ lint-fix:
 		echo "  go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest"; \
 		exit 1; \
 	}
-	golangci-lint run --fix ./...
+	GOTOOLCHAIN=go$(GOMOD_GO_VERSION) golangci-lint run --fix ./...
 
 # 构建Docker镜像（Dockerfile 内已包含前端构建阶段）
 docker:
