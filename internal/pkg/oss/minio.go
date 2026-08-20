@@ -18,19 +18,29 @@ var (
 	ctx    = context.Background()
 )
 
-func init() {
+// Init 初始化 minio 客户端，应用启动时在 config.Load 之后显式调用。
+// 未配置 endpoint 时跳过（client 保持 nil，上传接口返回错误）。
+func Init() error {
 	m := config.Get().Minio
+	if m == nil || m.Endpoint == "" {
+		return nil
+	}
 	minioClient, err := minio.New(m.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(m.AccessKeyID, m.SecretAccessKey, ""),
 		Secure: m.UseSSL})
 	if err != nil {
-		slog.Errorf("minio连接错误:%s", err.Error())
+		client = nil
+		return errors.Wrap(err, "minio 连接错误")
 	}
 	client = minioClient
+	return nil
 }
 
 // FileUploader 上传文件到指定 bucket。
 func FileUploader(bucketName, objectName, contextType string, size int64, data io.Reader) error {
+	if client == nil {
+		return errors.New("minio 未初始化或未配置")
+	}
 	object, err := client.PutObject(ctx, bucketName, objectName, data, size, minio.PutObjectOptions{ContentType: contextType})
 	if err != nil {
 		slog.Errorf("上传失败：%s", err.Error())

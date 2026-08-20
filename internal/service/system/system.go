@@ -92,7 +92,7 @@ func (service *Service) RefreshToken(refreshToken string) (*response.RefreshToke
 
 	// 检查令牌是否已被撤销（密码修改后的令牌失效检查）
 	if parseToken.IssuedAt != nil {
-		if !global.IsTokenValid(parseToken.Username, parseToken.IssuedAt.Unix()) {
+		if !jwttoken.IsUserTokenValid(parseToken.Username, parseToken.IssuedAt.Unix()) {
 			return nil, errors.New("令牌已失效，请重新登录")
 		}
 	}
@@ -136,7 +136,7 @@ func (service *Service) ChangePassword(req request.ChangePasswordRequest) error 
 	}
 
 	// 使该用户所有旧令牌失效（密码修改后的安全措施）
-	global.InvalidateUserTokens(req.Username, time.Now().Unix())
+	jwttoken.InvalidateUserTokens(req.Username, time.Now().Unix())
 	slog.Infof("用户 %s 密码已修改，旧令牌已失效", req.Username)
 
 	return nil

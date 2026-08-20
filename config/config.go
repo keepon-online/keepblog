@@ -1,21 +1,29 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"sync"
+	"sync/atomic"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/gookit/slog"
-	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
 
-var cfg = new(Configs)
+// 配置以原子快照对外暴露：热重载时整体替换指针，
+// 消除旧实现中 Unmarshal 直写共享结构体的并发读写风险。
+var (
+	cfgPtr atomic.Pointer[Configs]
+
+	loadMu sync.Mutex
+	loaded bool
+)
 
 type Configs struct {
 	Http    *http    `yaml:"http"`
-	Mysql   *mysql   `yaml:"mysql"`
 	Minio   *minio   `yaml:"minio"`
-	Baidu   *baidu   `yaml:"system"`
+	Baidu   *baidu   `yaml:"baidu"`
 	Gitalk  *gitalk  `yaml:"gitalk"`
 	Redis   *redis   `yaml:"redis"`
 	Jwt     *jwt     `yaml:"jwt"`
@@ -44,15 +52,6 @@ type http struct {
 	Port string `yaml:"port"`
 }
 
-// mysql 配置
-type mysql struct {
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-	Host     string `yaml:"host"`
-	Port     uint16 `yaml:"port"`
-	Database string `yaml:"database"`
-}
-
 // minio配置
 type minio struct {
 	ServerUrl       string `yaml:"serverUrl"`
@@ -62,6 +61,7 @@ type minio struct {
 	UseSSL          bool   `yaml:"useSSL"`
 	BucketName      string `yaml:"bucketName"`
 }
+
 type gitalk struct {
 	Enable       bool     `yaml:"enable"`
 	ClientID     string   `yaml:"clientID"`
@@ -80,9 +80,16 @@ type redis struct {
 	Enable   bool   `yaml:"enable"`
 }
 
-// Config file found and successfully parsed
-func init() {
-	slog.Infof("初始化配置")
+// Load 读取并解析配置，应用启动时显式调用（幂等，重复调用直接返回）。
+// 此前版本在包级 init() 中完成这些动作，import 即产生副作用；改为显式
+// 加载后，配置文件缺失不再阻塞任何包的导入。
+func Load() error {
+	loadMu.Lock()
+	defer loadMu.Unlock()
+	if loaded {
+		return nil
+	}
+	slog.Infof("加载配置")
 
 	// 设置配置文件名和类型
 	viper.SetConfigName("config")
@@ -98,17 +105,12 @@ func init() {
 	_ = viper.BindEnv("http.port", "GOSITE_HTTP_PORT")
 	_ = viper.BindEnv("jwt.secret", "JWT_SECRET", "GOSITE_JWT_SECRET")
 	_ = viper.BindEnv("hashids.salt", "GOSITE_HASHIDS_SALT")
-	_ = viper.BindEnv("mysql.host", "GOSITE_MYSQL_HOST")
-	_ = viper.BindEnv("mysql.port", "GOSITE_MYSQL_PORT")
-	_ = viper.BindEnv("mysql.username", "GOSITE_MYSQL_USERNAME")
-	_ = viper.BindEnv("mysql.password", "GOSITE_MYSQL_PASSWORD")
-	_ = viper.BindEnv("mysql.database", "GOSITE_MYSQL_DATABASE")
 	_ = viper.BindEnv("redis.host", "GOSITE_REDIS_HOST")
 	_ = viper.BindEnv("redis.port", "GOSITE_REDIS_PORT")
 	_ = viper.BindEnv("redis.password", "GOSITE_REDIS_PASSWORD")
 	_ = viper.BindEnv("redis.database", "GOSITE_REDIS_DATABASE")
 	_ = viper.BindEnv("redis.enable", "GOSITE_REDIS_ENABLE")
-	_ = viper.BindEnv("system.baseUrl", "GOSITE_BASE_URL")
+	_ = viper.BindEnv("baidu.url", "GOSITE_BASE_URL")
 
 	// 设置默认值
 	setDefaults()
@@ -123,36 +125,46 @@ func init() {
 		}
 	}
 
-	// 解析配置
-	if err := viper.Unmarshal(cfg); err != nil {
-		panic(fmt.Sprintf("配置解析失败: %v", err))
+	if err := storeSnapshot(); err != nil {
+		return err
 	}
 
-	// 监听配置文件变化
+	// 监听配置文件变化：解析成功后原子替换快照
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
 		fmt.Printf("配置文件发生变化: %s\n", e.Name)
-		if err := viper.Unmarshal(cfg); err != nil {
+		if err := storeSnapshot(); err != nil {
 			fmt.Printf("重新加载配置失败: %v\n", err)
 		}
 	})
+
+	loaded = true
+	return nil
 }
 
+// storeSnapshot 将 viper 当前值解析到全新结构体并原子发布
+func storeSnapshot() error {
+	fresh := new(Configs)
+	if err := viper.Unmarshal(fresh); err != nil {
+		return fmt.Errorf("配置解析失败: %w", err)
+	}
+	cfgPtr.Store(fresh)
+	return nil
+}
+
+// Get 返回当前配置快照。未调用 Load 时返回零值配置（各指针字段为 nil，
+// 调用方需自行判空；应用正常启动流程下不会出现这种情况）。
 func Get() Configs {
-	return *cfg
+	if p := cfgPtr.Load(); p != nil {
+		return *p
+	}
+	return Configs{}
 }
 
 // setDefaults 设置默认配置值
 func setDefaults() {
 	// HTTP 默认配置
 	viper.SetDefault("http.port", "8000")
-
-	// MySQL 默认配置
-	viper.SetDefault("mysql.host", "localhost")
-	viper.SetDefault("mysql.port", 3306)
-	viper.SetDefault("mysql.username", "root")
-	viper.SetDefault("mysql.password", "")
-	viper.SetDefault("mysql.database", "go_site")
 
 	// Redis 默认配置
 	viper.SetDefault("redis.host", "localhost")
@@ -174,10 +186,6 @@ func setDefaults() {
 	viper.SetDefault("minio.useSSL", false)
 	viper.SetDefault("minio.bucketName", "go-site")
 
-	// JWT / Hashids 默认配置
-	viper.SetDefault("jwt.secret", "")
-	viper.SetDefault("hashids.salt", "")
-
 	// Gitalk 默认配置
 	viper.SetDefault("gitalk.enable", false)
 	viper.SetDefault("gitalk.clientID", "")
@@ -185,6 +193,10 @@ func setDefaults() {
 	viper.SetDefault("gitalk.repo", "")
 	viper.SetDefault("gitalk.owner", "")
 	viper.SetDefault("gitalk.admin", []string{})
+
+	// JWT / Hashids 默认配置
+	viper.SetDefault("jwt.secret", "")
+	viper.SetDefault("hashids.salt", "")
 }
 
 // ValidateConfig 验证配置

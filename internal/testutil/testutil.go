@@ -25,7 +25,10 @@ import (
 // （预生成，避免每个测试进程都跑一次 cost=14 的 bcrypt）。
 const TestUserPassword = "admin-password-123"
 
-const testUserPasswordHash = "$2a$14$gqd1xHjVmOdNFkSboWeHc.oHanchA/yVl6AuGhY1PmnD/DTsBdzTa"
+// testUserPasswordHash 是 TestUserPassword 的 bcrypt 哈希。
+// 故意用 cost 10（生产为 14）：校验耗时由存储哈希的 cost 决定，
+// 降低 cost 让登录相关测试在 -race 下不至于每个用例耗时数秒。
+const testUserPasswordHash = "$2a$10$y.oJlTTn4DC9tpHTdht8OeXR4VTeeFE6wGbnCyvMVGaxW061C1jxC"
 
 var (
 	dbOnce sync.Once
@@ -34,7 +37,9 @@ var (
 )
 
 // NewTestDB 返回挂载好 fixture 的测试数据库（进程内单例），
-// 并保证 global.GORM 指向它。
+// 并保证 global.GORM 指向它。global.GORM 只在首次调用时赋值：
+// 服务里有 fire-and-forget 的 goroutine（如异步登录日志）可能在测试
+// 结束后仍读取该全局变量，重复赋值会与这些读取构成数据竞争。
 func NewTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 
@@ -75,12 +80,12 @@ func NewTestDB(t *testing.T) *gorm.DB {
 			return
 		}
 		testDB = db
+		global.GORM = db
 	})
 	if dbErr != nil {
 		t.Fatalf("初始化测试数据库失败: %v", dbErr)
 	}
 
-	global.GORM = testDB
 	return testDB
 }
 

@@ -101,7 +101,10 @@ func downloadWithFallback(urls []string, filePath string) error {
 	return fmt.Errorf("所有下载地址都失败: %w", lastErr)
 }
 
-func init() {
+// EnsureIPDB 确保 IP 数据库文件存在，缺失时尝试下载。
+// 由应用启动时显式调用（原先在 init() 里执行，import 即可能触发网络下载）；
+// 下载失败仅告警，Area 查询会降级返回空结果。
+func EnsureIPDB() {
 	ipdbPath := filepath.Join("data", "ip2region.xdb")
 
 	// 如果文件不存在则下载

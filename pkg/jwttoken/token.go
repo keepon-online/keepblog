@@ -3,29 +3,27 @@ package jwttoken
 import (
 	"time"
 
-	"gitee.com/jieepre/go-site/config"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/gookit/slog"
 	"github.com/pkg/errors"
 )
 
-// MySecret JWT 签名密钥（来自 config.yaml 的 jwt.secret 或环境变量 JWT_SECRET，
-// 不再提供代码内置默认值；未配置时由 config.ValidateConfig 在启动阶段拒绝启动）
+// MySecret JWT 签名密钥，由应用启动时通过 Configure 注入
+// （来源：config.yaml 的 jwt.secret 或环境变量 JWT_SECRET）。
+// 此前版本在 init() 里读配置并回退硬编码默认值，现为显式注入。
 var MySecret []byte
 
-func init() {
-	var secret string
-	if jwtConf := config.Get().Jwt; jwtConf != nil {
-		secret = jwtConf.Secret
-	}
-	if secret == "" {
-		slog.Warn("JWT 密钥未配置（jwt.secret / JWT_SECRET），签发与解析 token 将失败")
-		return
+// Configure 注入签名密钥，应用启动阶段在 config.Load 之后调用。
+// 密钥为空返回错误，与 config.ValidateConfig 的 fail-fast 保持一致。
+func Configure(secret []byte) error {
+	if len(secret) == 0 {
+		return errors.New("JWT 密钥为空：请配置 jwt.secret 或环境变量 JWT_SECRET")
 	}
 	if len(secret) < 32 {
 		slog.Warn("JWT 密钥长度建议至少 32 字符")
 	}
-	MySecret = []byte(secret)
+	MySecret = secret
+	return nil
 }
 
 // MyClaims JWT 自定义声明

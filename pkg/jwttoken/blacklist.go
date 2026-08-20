@@ -12,9 +12,11 @@ import (
 
 var (
 	// 内存黑名单（Redis 不可用时的备选方案）
-	memoryBlacklist    = make(map[string]time.Time)
-	memoryBlacklistMu  sync.RWMutex
-	blacklistCleanupOn sync.Once
+	memoryBlacklist   = make(map[string]time.Time)
+	memoryBlacklistMu sync.RWMutex
+
+	cleanupMu   sync.Mutex
+	cleanupStop chan struct{}
 )
 
 const (
@@ -22,11 +24,28 @@ const (
 	blacklistTTL       = 24 * time.Hour // Token 黑名单保留时间（应大于 Token 最大有效期）
 )
 
-// init 启动清理协程
-func init() {
-	blacklistCleanupOn.Do(func() {
-		go cleanupBlacklist()
-	})
+// StartBlacklistCleanup 启动内存黑名单的周期清理协程（幂等），
+// 由应用启动时显式调用；此前是 init() 里悄悄起协程。
+func StartBlacklistCleanup() {
+	cleanupMu.Lock()
+	defer cleanupMu.Unlock()
+	if cleanupStop != nil {
+		return
+	}
+	stop := make(chan struct{})
+	cleanupStop = stop
+	go cleanupBlacklist(stop)
+}
+
+// StopBlacklistCleanup 停止清理协程（幂等），优雅退出时调用
+func StopBlacklistCleanup() {
+	cleanupMu.Lock()
+	defer cleanupMu.Unlock()
+	if cleanupStop == nil {
+		return
+	}
+	close(cleanupStop)
+	cleanupStop = nil
 }
 
 // InvalidateToken 使 Token 失效（加入黑名单）
@@ -73,18 +92,23 @@ func IsTokenBlacklisted(tokenStr string) bool {
 }
 
 // cleanupBlacklist 定期清理过期的内存黑名单条目
-func cleanupBlacklist() {
+func cleanupBlacklist(stop chan struct{}) {
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		memoryBlacklistMu.Lock()
-		now := time.Now()
-		for token, expiry := range memoryBlacklist {
-			if now.After(expiry) {
-				delete(memoryBlacklist, token)
+	for {
+		select {
+		case <-stop:
+			return
+		case <-ticker.C:
+			memoryBlacklistMu.Lock()
+			now := time.Now()
+			for token, expiry := range memoryBlacklist {
+				if now.After(expiry) {
+					delete(memoryBlacklist, token)
+				}
 			}
+			memoryBlacklistMu.Unlock()
 		}
-		memoryBlacklistMu.Unlock()
 	}
 }
