@@ -6,7 +6,11 @@ site
 site.db
 test.db
 go-site
+bin/
 .zcode/
+
+# 真实运行配置含密钥，不入库（模板见 config-example.yaml）
+config.yaml
 
 # 前端（frontend）：依赖与构建产物不提交
 # static/console 的构建产物会提交，以保证 go build 时 embed 文件存在

@@ -7,6 +7,16 @@
 
 ## [未发布]
 
+### 安全
+- 移除 JWT 签名密钥的代码内置默认值：必须在 `config.yaml` 的 `jwt.secret` 或环境变量 `JWT_SECRET` 提供，缺失时启动报错退出；Docker 首次部署自动生成随机密钥。
+- hashids salt 可通过 `hashids.salt` 配置覆盖（默认保持历史值，旧文章 URL 不受影响）。
+- 管理员初始密码改为首次启动随机生成并打印一次（原为固定弱密码），种子数据不再包含真实手机号/邮箱。
+- `config.yaml` 移出 git 追踪（含真实密钥的配置不应入库）；**注意：历史提交中仍可见旧密钥，建议轮换 minio/gitalk/百度推送凭据**。
+- `config-example.yaml` 中的真实样例密钥替换为占位符。
+
+### 变更
+- 默认文章与默认音乐种子数据外置到 `internal/core/seeddata/`。
+
 ### 新增
 -
 

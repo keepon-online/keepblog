@@ -1,27 +1,29 @@
 package jwttoken
 
 import (
-	"os"
-
 	"time"
 
+	"gitee.com/jieepre/go-site/config"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/gookit/slog"
 	"github.com/pkg/errors"
 )
 
-// MySecret JWT 签名密钥（从环境变量读取，必须至少32字节）
+// MySecret JWT 签名密钥（来自 config.yaml 的 jwt.secret 或环境变量 JWT_SECRET，
+// 不再提供代码内置默认值；未配置时由 config.ValidateConfig 在启动阶段拒绝启动）
 var MySecret []byte
 
 func init() {
-	secret := os.Getenv("JWT_SECRET")
+	var secret string
+	if jwtConf := config.Get().Jwt; jwtConf != nil {
+		secret = jwtConf.Secret
+	}
 	if secret == "" {
-		// 开发环境默认值，生产环境必须设置环境变量
-		secret = "sq44jvTJfbBlsZSvNm440So77O9J9TA"
-		slog.Warn("JWT_SECRET not set, using default value. Set JWT_SECRET environment variable in production!")
+		slog.Warn("JWT 密钥未配置（jwt.secret / JWT_SECRET），签发与解析 token 将失败")
+		return
 	}
 	if len(secret) < 32 {
-		slog.Warn("JWT_SECRET should be at least 32 characters for security")
+		slog.Warn("JWT 密钥长度建议至少 32 字符")
 	}
 	MySecret = []byte(secret)
 }

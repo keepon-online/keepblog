@@ -22,6 +22,14 @@ if [ ! -f "${CONFIG_DIR}/config.yaml" ]; then
     chmod 644 "${CONFIG_DIR}/config.yaml"
 fi
 
+# 首次部署时自动生成随机 JWT 密钥，避免所有部署共享同一密钥。
+# 已有配置（含挂载卷里的）不会被修改；也可用环境变量 JWT_SECRET 覆盖。
+if ! grep -q '^jwt:' "${CONFIG_DIR}/config.yaml" && [ -z "${JWT_SECRET:-}" ]; then
+    GENERATED_SECRET="$(head -c 48 /dev/urandom | base64 | tr -d '/+=\n' | head -c 43)"
+    printf '\njwt:\n  secret: "%s"\n' "${GENERATED_SECRET}" >> "${CONFIG_DIR}/config.yaml"
+    echo "已生成随机 JWT 密钥并写入配置文件"
+fi
+
 # 验证配置文件
 if [ ! -s "${CONFIG_DIR}/config.yaml" ]; then
     echo "错误：配置文件为空"

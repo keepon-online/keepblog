@@ -1,0 +1,7 @@
+[
+  {"name": "Bubbles", "artist": "Royalty Free", "url": "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Bubbles.mp3", "cover": "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", "sort": 1, "state": 1},
+  {"name": "Happy Life", "artist": "Royalty Free", "url": "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Happy%20Life.mp3", "cover": "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", "sort": 2, "state": 1},
+  {"name": "Newness", "artist": "Royalty Free", "url": "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Newness.mp3", "cover": "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", "sort": 3, "state": 1},
+  {"name": "Planning", "artist": "Royalty Free", "url": "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Planning.mp3", "cover": "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", "sort": 4, "state": 1},
+  {"name": "Mysterious", "artist": "Royalty Free", "url": "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Mysterious.mp3", "cover": "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", "sort": 5, "state": 1}
+]

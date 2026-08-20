@@ -1,12 +1,21 @@
 http:
   port: 8589
 
+# JWT 签发密钥（必填）。生产环境必须设置为随机值，可用：openssl rand -base64 32
+# 也可通过环境变量 JWT_SECRET 提供。
+jwt:
+  secret: ""
 
-# 百度定时推送 方便收绿
+# hashids 编码 salt（可选）。留空使用内置默认值；注意：更换 salt 会使
+# 已发布文章的 URL 全部失效，除非你知道自己在做什么，否则不要修改。
+hashids:
+  salt: ""
+
+# 百度定时推送 方便收录
 baidu:
   push: false
-  url: https://www.xxx.com
-  token: VXXKVoNrqnSAWINAA
+  url: https://www.example.com
+  token: "your-baidu-push-token"
 
 # Redis配置
 redis:
@@ -17,18 +26,18 @@ redis:
   enable: false
 
 minio:
-  serverUrl: http://192.168.2.166:9000
-  endpoint: 192.168.2.166:9000
-  accessKeyID: tSvV3zWF8692PfCiUrlZ
-  secretAccessKey: Z7dqowc5nHfYmhLglj6OyECNF98KM13x4k2XtviS
+  serverUrl: http://127.0.0.1:9000
+  endpoint: 127.0.0.1:9000
+  accessKeyID: "your-access-key"
+  secretAccessKey: "your-secret-key"
   useSSL: false
-  bucketName: test
+  bucketName: go-site
 
 gitalk:
   enable: false
-  clientID: '4b719159ee203950a239'
-  clientSecret: 'b9d643cffab418205da3c8c1a1bf762a9d19817b'
-  repo: 'gitalk'
-  owner: 'xxx'
+  clientID: "your-github-oauth-client-id"
+  clientSecret: "your-github-oauth-client-secret"
+  repo: "blog-comments"
+  owner: "your-github-username"
   admin:
-    - 'xxx'
+    - "your-github-username"

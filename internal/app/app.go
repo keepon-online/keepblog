@@ -16,6 +16,7 @@ import (
 	"gitee.com/jieepre/go-site/internal/core"
 	"gitee.com/jieepre/go-site/internal/monitor"
 	"gitee.com/jieepre/go-site/internal/service"
+	"gitee.com/jieepre/go-site/pkg/hash"
 	"github.com/gookit/slog"
 
 	"golang.org/x/sync/errgroup"
@@ -47,6 +48,9 @@ func (app *Application) Initialize() error {
 	if err := config.ValidateConfig(); err != nil {
 		return fmt.Errorf("configuration validation failed: %w", err)
 	}
+
+	// hashids salt 可配置（默认与历史值一致，避免旧文章链接失效）
+	hash.Configure(config.Get().Hashids.Salt)
 
 	// 初始化日志
 	core.InitLog()

@@ -12,12 +12,24 @@ import (
 var cfg = new(Configs)
 
 type Configs struct {
-	Http   *http   `yaml:"http"`
-	Mysql  *mysql  `yaml:"mysql"`
-	Minio  *minio  `yaml:"minio"`
-	Baidu  *baidu  `yaml:"system"`
-	Gitalk *gitalk `yaml:"gitalk"`
-	Redis  *redis  `yaml:"redis"`
+	Http    *http    `yaml:"http"`
+	Mysql   *mysql   `yaml:"mysql"`
+	Minio   *minio   `yaml:"minio"`
+	Baidu   *baidu   `yaml:"system"`
+	Gitalk  *gitalk  `yaml:"gitalk"`
+	Redis   *redis   `yaml:"redis"`
+	Jwt     *jwt     `yaml:"jwt"`
+	Hashids *hashids `yaml:"hashids"`
+}
+
+// jwt 签发配置
+type jwt struct {
+	Secret string `yaml:"secret"`
+}
+
+// hashids 编码配置
+type hashids struct {
+	Salt string `yaml:"salt"`
 }
 
 // 百度收录
@@ -84,6 +96,8 @@ func init() {
 
 	// 环境变量映射（绑定失败属于配置期错误，启动时无法恢复，故忽略）
 	_ = viper.BindEnv("http.port", "GOSITE_HTTP_PORT")
+	_ = viper.BindEnv("jwt.secret", "JWT_SECRET", "GOSITE_JWT_SECRET")
+	_ = viper.BindEnv("hashids.salt", "GOSITE_HASHIDS_SALT")
 	_ = viper.BindEnv("mysql.host", "GOSITE_MYSQL_HOST")
 	_ = viper.BindEnv("mysql.port", "GOSITE_MYSQL_PORT")
 	_ = viper.BindEnv("mysql.username", "GOSITE_MYSQL_USERNAME")
@@ -160,6 +174,10 @@ func setDefaults() {
 	viper.SetDefault("minio.useSSL", false)
 	viper.SetDefault("minio.bucketName", "go-site")
 
+	// JWT / Hashids 默认配置
+	viper.SetDefault("jwt.secret", "")
+	viper.SetDefault("hashids.salt", "")
+
 	// Gitalk 默认配置
 	viper.SetDefault("gitalk.enable", false)
 	viper.SetDefault("gitalk.clientID", "")
@@ -172,6 +190,15 @@ func setDefaults() {
 // ValidateConfig 验证配置
 func ValidateConfig() error {
 	cfg := Get()
+
+	// JWT 密钥必须显式提供（config.yaml 的 jwt.secret 或环境变量 JWT_SECRET），
+	// 不允许回退到代码内置默认值，避免所有部署共享同一密钥
+	if cfg.Jwt == nil || cfg.Jwt.Secret == "" {
+		return fmt.Errorf("jwt.secret 不能为空：请在 config.yaml 设置 jwt.secret，或设置环境变量 JWT_SECRET（可用 openssl rand -base64 32 生成）")
+	}
+	if len(cfg.Jwt.Secret) < 32 {
+		slog.Warn("jwt.secret 长度小于 32 字符，建议使用更长的随机密钥")
+	}
 
 	// 验证Redis配置（如果启用）
 	if cfg.Redis != nil && cfg.Redis.Enable {

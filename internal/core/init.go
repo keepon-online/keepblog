@@ -59,19 +59,28 @@ func InitResource() {
 }
 
 func initAdmin() {
-	password, _ := pkg.HashPassword("Aa123456")
+	// 初始密码随机生成，仅在首次初始化时打印一次，登录后应立即修改
+	password := generatePassword(16)
+	hashed, err := pkg.HashPassword(password)
+	if err != nil {
+		slog.Errorf("初始化管理员账号失败（密码加密失败）:%s", err.Error())
+		return
+	}
 	user := model.User{
 		UserId:      1,
 		Username:    "admin",
-		Password:    password,
+		Password:    hashed,
 		NickName:    "管理员",
-		Email:       "jieepre@outlook.com",
-		Phonenumber: "19928902099",
+		Email:       "admin@example.com",
+		Phonenumber: "",
 		Sex:         1,
-		Avatar:      "https://img0.baidu.com/it/u=3138581320,1425802456&fm=253&fmt=auto&app=138&f=GIF?w=480&h=480",
+		Avatar:      "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png",
 	}
-	global.GORM.Save(&user)
-	slog.Info("初始化管理员账号")
+	if err := global.GORM.Save(&user).Error; err != nil {
+		slog.Errorf("初始化管理员账号失败:%s", err.Error())
+		return
+	}
+	slog.Infof("初始化管理员账号 admin，初始密码：%s（仅显示此次，请立即登录后台修改）", password)
 }
 
 func hasData() bool {
@@ -140,63 +149,6 @@ func initData() {
 	}
 	hid, _ := hash.New().HashidsEncode([]int{1})
 
-	content := `
-# MySQL 统计实战：从基础到性能优化
-
-## 一、统计的基石：核心函数
-MySQL 提供丰富的聚合函数来满足统计需求：
-
-1. ​**​COUNT​**​：统计行数
-    SELECT COUNT(*) FROM orders; -- 统计总订单量
-
-2. ​**​SUM/AVG​**​：数值计算
-    SELECT SUM(amount) AS total_sales, AVG(amount) AS avg_price 
-    FROM orders WHERE create_date > '2024-01-01';
-
-3. ​**​MAX/MIN​**​：极值查询
-    SELECT MAX(temperature), MIN(humidity) FROM sensor_data;
-
-## 二、进阶统计：分组与过滤
-通过 GROUP BY 实现多维统计：
-
-    -- 按日期统计销售额
-    SELECT DATE(create_time) AS day, 
-           SUM(amount) AS daily_sales,
-           COUNT(DISTINCT user_id) AS active_users 
-    FROM orders 
-    GROUP BY day 
-    HAVING daily_sales > 10000;
-
-注意：HAVING 用于分组后过滤，WHERE 用于分组前过滤
-
-## 三、性能优化三板斧
-### 1. 索引策略
-- 为 WHERE/GROUP BY/ORDER BY 涉及的列创建复合索引
-- 优先选择区分度高的字段作为索引前导列
-
-### 2. 统计信息管理
-    ANALYZE TABLE orders; -- 手动更新统计信息
-    SHOW TABLE STATUS LIKE 'orders'; -- 查看估算值
-
-建议在低峰期执行统计信息更新
-
-## 四、典型应用场景
-1. ​**​用户行为分析​**​  
-       -- 统计7日留存率
-       SELECT reg_date,
-              COUNT(DISTINCT user_id) AS reg_users,
-              COUNT(DISTINCT CASE WHEN login_date = reg_date + INTERVAL 7 DAY THEN user_id END)/COUNT(DISTINCT user_id) AS retention_rate
-       FROM user_events 
-       GROUP BY reg_date;
-
-
-**引用说明**
-: 基础聚合函数与应用场景
-: 分组统计与函数详解
-: 统计信息管理与性能优化
-: 典型业务场景示例
-: 高性能统计实现方案
-`
 	if err := tx.Save(&model.Post{
 		PostId:          1,
 		Status:          1,
@@ -205,7 +157,7 @@ MySQL 提供丰富的聚合函数来满足统计需求：
 		Author:          "佚名",
 		Title:           "MySQL 统计实战：从基础到性能优化",
 		CoverImage:      "https://ts1.tc.mm.bing.net/th/id/R-C.ccd320596cb9b0499c2d9e89079c7990?rik=bo30tkANeNk4Aw&riu=http%3a%2f%2fwww.finebornchina.cn%2fuploads%2fallimg%2f140430%2f1-140430150445413.jpg&ehk=Hjpp13uPkWtPTUVLZH%2f7V3MKAnXYJJNjmjRq1TE136k%3d&risl=&pid=ImgRaw&r=0",
-		PostContent:     content,
+		PostContent:     welcomePostContent,
 		PostContentHtml: "#这是",
 		Summary:         "MySQL 统计实战：从基础到性能优化",
 		Type:            1,
@@ -238,7 +190,7 @@ MySQL 提供丰富的聚合函数来满足统计需求：
 
 // initDefaultMusic 在 music 表为空时写入默认轻音乐。
 // CC0 协议（免版权、免署名），托管于 jsDelivr CDN 直链，支持 CORS 与 Range。
-// 仓库：effacestudios/Royalty-Free-Music-Pack。管理员可在后台随意增删改。
+// 曲目清单维护在 seeddata/musics.json。管理员可在后台随意增删改。
 func initDefaultMusic() {
 	var count int64
 	global.GORM.Table(model.TMusicTable).Count(&count)
@@ -246,12 +198,10 @@ func initDefaultMusic() {
 		return
 	}
 
-	defaultMusics := []model.Music{
-		{Name: "Bubbles", Artist: "Royalty Free", Url: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Bubbles.mp3", Cover: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", Sort: 1, State: 1},
-		{Name: "Happy Life", Artist: "Royalty Free", Url: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Happy%20Life.mp3", Cover: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", Sort: 2, State: 1},
-		{Name: "Newness", Artist: "Royalty Free", Url: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Newness.mp3", Cover: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", Sort: 3, State: 1},
-		{Name: "Planning", Artist: "Royalty Free", Url: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Planning.mp3", Cover: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", Sort: 4, State: 1},
-		{Name: "Mysterious", Artist: "Royalty Free", Url: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Mysterious.mp3", Cover: "https://cdn.jsdelivr.net/gh/effacestudios/Royalty-Free-Music-Pack@master/Royalty%20Free%20Music%20Pack%20Cover.png", Sort: 5, State: 1},
+	defaultMusics := defaultMusics()
+	if len(defaultMusics) == 0 {
+		slog.Error("默认音乐种子数据解析失败，跳过写入")
+		return
 	}
 	for i := range defaultMusics {
 		if err := global.GORM.Table(model.TMusicTable).Save(&defaultMusics[i]).Error; err != nil {
