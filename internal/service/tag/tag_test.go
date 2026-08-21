@@ -9,7 +9,7 @@ import (
 
 func TestGetTagList(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewTagService()
+	s := NewTagService(testutil.NewTestDB(t))
 
 	list, err := s.GetTagList()
 	if err != nil {
@@ -22,7 +22,7 @@ func TestGetTagList(t *testing.T) {
 
 func TestSave_IdempotentByTagName(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewTagService()
+	s := NewTagService(testutil.NewTestDB(t))
 
 	// 已存在的标签名返回既有 id，不重复创建
 	id, err := s.Save(model.Tag{TagName: "go"})
@@ -44,7 +44,7 @@ func TestSave_IdempotentByTagName(t *testing.T) {
 
 func TestGetTag(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewTagService()
+	s := NewTagService(testutil.NewTestDB(t))
 
 	tag, err := s.GetTag(2)
 	if err != nil {
@@ -60,7 +60,7 @@ func TestGetTag(t *testing.T) {
 
 func TestGetTags_OnlyPublishedPosts(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewTagService()
+	s := NewTagService(testutil.NewTestDB(t))
 
 	tags, err := s.GetTags()
 	if err != nil {
@@ -86,7 +86,7 @@ func TestGetTags_OnlyPublishedPosts(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewTagService()
+	s := NewTagService(testutil.NewTestDB(t))
 
 	if err := s.Update(model.Tag{TagId: 3, TagName: "sqlite3"}); err != nil {
 		t.Fatalf("Update 报错: %v", err)
@@ -99,7 +99,7 @@ func TestUpdate(t *testing.T) {
 
 func TestDelete_RemovesAssociations(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewTagService()
+	s := NewTagService(testutil.NewTestDB(t))
 
 	// 自建标签与关联，避免破坏共享 fixture
 	id, err := s.Save(model.Tag{TagName: "待删除标签"})

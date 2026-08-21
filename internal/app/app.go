@@ -36,10 +36,9 @@ type Application struct {
 	scheduler     *gocron.Scheduler
 }
 
-// New 创建新的应用实例。配置相关字段在 Initialize（config.Load 之后）中填充。
+// New 创建新的应用实例。服务层等依赖数据库的组件在 Initialize 中完成装配。
 func New() *Application {
 	return &Application{
-		service:       service.InitAppService(),
 		servers:       make([]*http.Server, 0),
 		healthChecker: monitor.NewHealthChecker(version.Version),
 		metrics:       monitor.NewMetrics(),
@@ -81,6 +80,9 @@ func (app *Application) Initialize() error {
 	// 数据库：建表/种子/索引（此前 core 包 init() 里 import 即连库）
 	global.GORM = core.InitDB()
 	core.InitResource()
+
+	// 服务层装配（依赖 database 连接，此前依赖全局变量，现在通过构造函数注入）
+	app.service = service.InitAppService(global.GORM)
 
 	// 定时任务
 	app.scheduler = core.Timer()

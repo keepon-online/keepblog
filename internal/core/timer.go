@@ -49,7 +49,7 @@ func updateCoverTask() {
 	var content []model.Post
 	global.GORM.Table(model.TPostsTable).Where("is_deleted=0 and is_published=1").Find(&content)
 	for _, post := range content {
-		_ = postService.NewPostService().UpdatePostCoverImag(int(post.PostId))
+		_ = postService.NewPostService(global.GORM).UpdatePostCoverImag(int(post.PostId))
 	}
 	slog.Infof("定时任务更新cover结束")
 }

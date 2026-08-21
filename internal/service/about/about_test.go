@@ -9,7 +9,7 @@ import (
 
 func TestInfo(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewAboutService()
+	s := NewAboutService(testutil.NewTestDB(t))
 
 	info, err := s.Info()
 	if err != nil {
@@ -22,7 +22,7 @@ func TestInfo(t *testing.T) {
 
 func TestSave_Overwrite(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewAboutService()
+	s := NewAboutService(testutil.NewTestDB(t))
 
 	// Save 对既有 Id 是整行覆盖
 	if err := s.Save(model.About{Id: 1, Title: "新的标题", Note: "# 新内容"}); err != nil {

@@ -7,10 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"gitee.com/jieepre/go-site/internal/model/response"
-	"gitee.com/jieepre/go-site/pkg/cmd"
-	"gitee.com/jieepre/go-site/pkg/copier"
-	"gitee.com/jieepre/go-site/pkg/xpack"
 	"github.com/gookit/slog"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
@@ -18,6 +14,11 @@ import (
 	"github.com/shirou/gopsutil/v3/load"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
+
+	"gitee.com/jieepre/go-site/internal/model/response"
+	"gitee.com/jieepre/go-site/pkg/cmd"
+	"gitee.com/jieepre/go-site/pkg/copier"
+	"gitee.com/jieepre/go-site/pkg/xpack"
 )
 
 func (s Service) LoadOsInfo() (*response.OsInfo, error) {

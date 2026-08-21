@@ -3,16 +3,18 @@ package dashboard
 import (
 	"strings"
 
-	"gitee.com/jieepre/go-site/global"
+	"gorm.io/gorm"
+
 	"gitee.com/jieepre/go-site/internal/model"
 	"gitee.com/jieepre/go-site/internal/model/system"
 )
 
 type Service struct {
+	db *gorm.DB
 }
 
-func NewDashboardService() *Service {
-	return &Service{}
+func NewDashboardService(db *gorm.DB) *Service {
+	return &Service{db: db}
 }
 
 func (s Service) DashboardData() *model.DashboardData {
@@ -37,32 +39,32 @@ func (s Service) PanelGroup() model.PanelGroup {
 	var todayVisit int64
 	var totalMusic int64
 
-	global.GORM.Table(model.TCategoryTable).Count(&categoryTotal)
-	global.GORM.Table(model.TPostsTable).Where("is_published=1 and is_deleted=0").Count(&postTotal)
-	global.GORM.Model(system.AccessLog{}).Select("COUNT(DISTINCT ip )").Scan(&visit)
-	global.GORM.Model(model.Tag{}).Select("COUNT(DISTINCT tag_name )").Scan(&tagTotal)
+	s.db.Table(model.TCategoryTable).Count(&categoryTotal)
+	s.db.Table(model.TPostsTable).Where("is_published=1 and is_deleted=0").Count(&postTotal)
+	s.db.Model(system.AccessLog{}).Select("COUNT(DISTINCT ip )").Scan(&visit)
+	s.db.Model(model.Tag{}).Select("COUNT(DISTINCT tag_name )").Scan(&tagTotal)
 
 	// 新增统计
 	// 总字数
-	global.GORM.Table(model.TPostsTable).
+	s.db.Table(model.TPostsTable).
 		Where("is_published=1 and is_deleted=0").
 		Select("COALESCE(SUM(word_count), 0)").
 		Scan(&totalWords)
 
 	// 总阅读量
-	global.GORM.Table(model.TPostsTable).
+	s.db.Table(model.TPostsTable).
 		Where("is_published=1 and is_deleted=0").
 		Select("COALESCE(SUM(read_count), 0)").
 		Scan(&totalReadCount)
 
 	// 今日访问（基于今天的访问记录）
-	global.GORM.Model(system.AccessLog{}).
+	s.db.Model(system.AccessLog{}).
 		Where("create_at >= strftime('%s', 'now', 'start of day')").
 		Select("COUNT(DISTINCT ip)").
 		Scan(&todayVisit)
 
 	// 音乐数量
-	global.GORM.Table("music").Count(&totalMusic)
+	s.db.Table("music").Count(&totalMusic)
 
 	return model.PanelGroup{
 		CategoryTotal:  uint(categoryTotal),
@@ -79,7 +81,7 @@ func (s Service) PanelGroup() model.PanelGroup {
 
 func (s Service) Pie() []map[string]any {
 	pie := make([]map[string]any, 0)
-	global.GORM.Table(model.TPostsTable).Select("c.category_name `name`,COUNT( post.category_id ) `value` ").
+	s.db.Table(model.TPostsTable).Select("c.category_name `name`,COUNT( post.category_id ) `value` ").
 		Joins("left join  category c ON post.category_id = c.category_id ").
 		Where("post.is_published = 1 AND post.is_deleted = 0 ").Group("post.category_id").Scan(&pie)
 
@@ -88,7 +90,7 @@ func (s Service) Pie() []map[string]any {
 
 func (s Service) Bar() []map[string]any {
 	pie := make([]map[string]any, 0)
-	global.GORM.Model(system.AccessLog{}).
+	s.db.Model(system.AccessLog{}).
 		Select("strftime('%m-%d',create_at,'unixepoch') `name`,SUM(pv) `value`").
 		Where("status = 200 AND url LIKE '%/post/%' AND create_at >= strftime('%s', 'now', '-7 days')").Group("strftime('%m-%d',create_at,'unixepoch')").
 		Find(&pie)
@@ -97,7 +99,7 @@ func (s Service) Bar() []map[string]any {
 
 func (s Service) Line() []map[string]any {
 	pie := make([]map[string]any, 0)
-	global.GORM.Model(system.AccessLog{}).
+	s.db.Model(system.AccessLog{}).
 		Select("strftime('%m-%d',create_at,'unixepoch') `name`,SUM(pv) `pv`,SUM(uv) `uv`").
 		Where("status = 200 AND url LIKE '%/post/%' AND create_at >= strftime('%s', 'now', '-7 days')").Group("strftime('%m-%d',create_at,'unixepoch')").
 		Find(&pie)
@@ -113,7 +115,7 @@ func (s Service) MapData() []map[string]any {
 		Count int64
 	}
 
-	global.GORM.Model(system.AccessLog{}).
+	s.db.Model(system.AccessLog{}).
 		Select("area as Area, COUNT(DISTINCT ip) as Count").
 		Where("area != '' AND area IS NOT NULL").
 		Group("area").

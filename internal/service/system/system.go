@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"gitee.com/jieepre/go-site/global"
+	"github.com/gin-gonic/gin"
+	"github.com/gookit/slog"
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
+
 	"gitee.com/jieepre/go-site/internal/model"
 	"gitee.com/jieepre/go-site/internal/model/request"
 	"gitee.com/jieepre/go-site/internal/model/response"
@@ -13,17 +17,14 @@ import (
 	"gitee.com/jieepre/go-site/pkg/area"
 	"gitee.com/jieepre/go-site/pkg/jwttoken"
 	"gitee.com/jieepre/go-site/pkg/page"
-	"github.com/gin-gonic/gin"
-	"github.com/gookit/slog"
-	"github.com/pkg/errors"
-	"gorm.io/gorm"
 )
 
 type Service struct {
+	db *gorm.DB
 }
 
-func NewSystemService() *Service {
-	return &Service{}
+func NewSystemService(db *gorm.DB) *Service {
+	return &Service{db: db}
 }
 
 func (service *Service) Login(request request.LoginRequest, c *gin.Context) (*response.LoginResponse, error) {
@@ -36,7 +37,7 @@ func (service *Service) Login(request request.LoginRequest, c *gin.Context) (*re
 		Ip:      &ipL,
 		Area:    area.Area(ipL),
 	}
-	if err := global.GORM.Where("username=?", request.Username).First(&user).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := service.db.Where("username=?", request.Username).First(&user).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		log.Note = "用户名不存在"
 		errSuccess := 2
 		log.Success = &errSuccess
@@ -118,7 +119,7 @@ func (service *Service) RefreshToken(refreshToken string) (*response.RefreshToke
 // ChangePassword 修改密码
 func (service *Service) ChangePassword(req request.ChangePasswordRequest) error {
 	user := model.User{}
-	if err := global.GORM.Where("username=?", req.Username).First(&user).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := service.db.Where("username=?", req.Username).First(&user).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		slog.Errorf("用户名%s不存在", err.Error())
 		return fmt.Errorf("用户名%s不存在", req.Username)
 	}
@@ -130,7 +131,7 @@ func (service *Service) ChangePassword(req request.ChangePasswordRequest) error 
 
 	newPassword, _ := pkg.HashPassword(req.NewPassword)
 
-	if err := global.GORM.Where("username=?", req.Username).Updates(model.User{Password: newPassword}).Error; err != nil {
+	if err := service.db.Where("username=?", req.Username).Updates(model.User{Password: newPassword}).Error; err != nil {
 		slog.Errorf("修改密码失败", err.Error())
 		return fmt.Errorf("密码修改失败")
 	}
@@ -145,7 +146,7 @@ func (service *Service) ChangePassword(req request.ChangePasswordRequest) error 
 // GetUserInfo 获取用户个人信息
 func (service *Service) GetUserInfo(username string) (*response.UserInfoResponse, error) {
 	user := model.User{}
-	if err := global.GORM.Where("username", username).First(&user).Error; err != nil {
+	if err := service.db.Where("username", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("用户不存在")
 		}
@@ -156,8 +157,8 @@ func (service *Service) GetUserInfo(username string) (*response.UserInfoResponse
 	// 获取最近登录信息
 	var loginLog system.LoginLog
 	var loginCount int64
-	global.GORM.Model(&system.LoginLog{}).Where("success = ?", 1).Count(&loginCount)
-	global.GORM.Where("success = ?", 1).Order("create_at desc").First(&loginLog)
+	service.db.Model(&system.LoginLog{}).Where("success = ?", 1).Count(&loginCount)
+	service.db.Where("success = ?", 1).Order("create_at desc").First(&loginLog)
 
 	loginIP := ""
 	loginTime := ""
@@ -187,7 +188,7 @@ func (service *Service) GetUserInfo(username string) (*response.UserInfoResponse
 // UpdateProfile 更新用户资料
 func (service *Service) UpdateProfile(username string, req request.UpdateProfileRequest) error {
 	user := model.User{}
-	if err := global.GORM.Where("username", username).First(&user).Error; err != nil {
+	if err := service.db.Where("username", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("用户不存在")
 		}
@@ -216,7 +217,7 @@ func (service *Service) UpdateProfile(username string, req request.UpdateProfile
 		return nil
 	}
 
-	if err := global.GORM.Model(&user).Updates(updates).Error; err != nil {
+	if err := service.db.Model(&user).Updates(updates).Error; err != nil {
 		slog.Errorf("更新用户资料失败: %v", err)
 		return errors.New("更新用户资料失败")
 	}
@@ -225,13 +226,13 @@ func (service *Service) UpdateProfile(username string, req request.UpdateProfile
 }
 
 func (service *Service) LoginLog(log system.LoginLog) {
-	global.GORM.Save(&log)
+	service.db.Save(&log)
 }
 func (service *Service) LoginLogList(req request.LoginLogQuery) (*page.Info, error) {
 	logs := make([]system.LoginLog, 0)
 	total := int64(0)
-	global.GORM.Model(system.LoginLog{}).Scopes(success(req.Success)).Count(&total)
-	global.GORM.Offset((req.PageNum - 1) * req.PageSize).Limit(req.PageSize).Order("create_at desc").Scopes(success(req.Success)).Find(&logs)
+	service.db.Model(system.LoginLog{}).Scopes(success(req.Success)).Count(&total)
+	service.db.Offset((req.PageNum - 1) * req.PageSize).Limit(req.PageSize).Order("create_at desc").Scopes(success(req.Success)).Find(&logs)
 	bInfo := page.PaginationInfo(logs, req.PageNum, req.PageSize, int(total))
 	return bInfo, nil
 }
@@ -239,8 +240,8 @@ func (service *Service) LoginLogList(req request.LoginLogQuery) (*page.Info, err
 func (service *Service) AccessLogList(req request.AccessLogQuery) (*page.Info, error) {
 	logs := make([]system.AccessLog, 0)
 	total := int64(0)
-	global.GORM.Model(system.AccessLog{}).Scopes(daterange(req.Start, req.End), ip(req.IP), status(req.Status)).Count(&total)
-	global.GORM.Offset((req.PageNum-1)*req.PageSize).
+	service.db.Model(system.AccessLog{}).Scopes(daterange(req.Start, req.End), ip(req.IP), status(req.Status)).Count(&total)
+	service.db.Offset((req.PageNum-1)*req.PageSize).
 		Limit(req.PageSize).
 		Order("create_at desc").Scopes(daterange(req.Start, req.End), ip(req.IP), status(req.Status)).Find(&logs)
 	bInfo := page.PaginationInfo(logs, req.PageNum, req.PageSize, int(total))

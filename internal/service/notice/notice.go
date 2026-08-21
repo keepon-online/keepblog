@@ -1,18 +1,21 @@
 package notice
 
 import (
-	"gitee.com/jieepre/go-site/global"
+	"github.com/gookit/slog"
+	"gorm.io/gorm"
+
 	"gitee.com/jieepre/go-site/internal/model/system"
 	ws "gitee.com/jieepre/go-site/internal/websocket"
-	"github.com/gookit/slog"
 )
 
 // Service 通知服务
-type Service struct{}
+type Service struct {
+	db *gorm.DB
+}
 
 // NewNoticeService 创建通知服务
-func NewNoticeService() *Service {
-	return &Service{}
+func NewNoticeService(db *gorm.DB) *Service {
+	return &Service{db: db}
 }
 
 // NoticeListResponse 通知列表响应
@@ -38,7 +41,7 @@ type NoticeItem struct {
 // GetUserNotices 获取用户通知（分类展示）
 func (s *Service) GetUserNotices(userID int64) ([]NoticeListResponse, int, error) {
 	var notices []system.Notice
-	if err := global.GORM.Where("user_id = ?", userID).Order("created_at desc").Find(&notices).Error; err != nil {
+	if err := s.db.Where("user_id = ?", userID).Order("created_at desc").Find(&notices).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -95,7 +98,7 @@ func (s *Service) GetUserNotices(userID int64) ([]NoticeListResponse, int, error
 
 // CreateNotice 创建通知
 func (s *Service) CreateNotice(notice *system.Notice) error {
-	if err := global.GORM.Create(notice).Error; err != nil {
+	if err := s.db.Create(notice).Error; err != nil {
 		slog.Errorf("Failed to create notice: %v", err)
 		return err
 	}
@@ -114,14 +117,14 @@ func (s *Service) CreateNotice(notice *system.Notice) error {
 
 // MarkAsRead 标记通知为已读
 func (s *Service) MarkAsRead(noticeID int64, userID int64) error {
-	return global.GORM.Model(&system.Notice{}).
+	return s.db.Model(&system.Notice{}).
 		Where("id = ? AND user_id = ?", noticeID, userID).
 		Update("status", system.NoticeStatusRead).Error
 }
 
 // MarkAllAsRead 标记所有通知为已读
 func (s *Service) MarkAllAsRead(userID int64, noticeType *system.NoticeType) error {
-	query := global.GORM.Model(&system.Notice{}).Where("user_id = ?", userID)
+	query := s.db.Model(&system.Notice{}).Where("user_id = ?", userID)
 	if noticeType != nil {
 		query = query.Where("type = ?", *noticeType)
 	}
@@ -130,13 +133,13 @@ func (s *Service) MarkAllAsRead(userID int64, noticeType *system.NoticeType) err
 
 // DeleteNotice 删除通知
 func (s *Service) DeleteNotice(noticeID int64, userID int64) error {
-	return global.GORM.Where("id = ? AND user_id = ?", noticeID, userID).
+	return s.db.Where("id = ? AND user_id = ?", noticeID, userID).
 		Delete(&system.Notice{}).Error
 }
 
 // ClearNotices 清空通知
 func (s *Service) ClearNotices(userID int64, noticeType *system.NoticeType) error {
-	query := global.GORM.Where("user_id = ?", userID)
+	query := s.db.Where("user_id = ?", userID)
 	if noticeType != nil {
 		query = query.Where("type = ?", *noticeType)
 	}

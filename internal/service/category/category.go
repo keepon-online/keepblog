@@ -1,24 +1,26 @@
 package category
 
 import (
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/model"
 	"github.com/gookit/slog"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
+
+	"gitee.com/jieepre/go-site/internal/model"
 )
 
 // Service 分类服务
 type Service struct {
+	db *gorm.DB
 }
 
 // NewCategoryService 创建分类服务实例
-func NewCategoryService() *Service {
-	return &Service{}
+func NewCategoryService(db *gorm.DB) *Service {
+	return &Service{db: db}
 }
 
 // Save 保存分类
 func (service Service) Save(info model.Category) error {
-	if err := global.GORM.Table(model.TCategoryTable).Create(&info).Error; err != nil {
+	if err := service.db.Table(model.TCategoryTable).Create(&info).Error; err != nil {
 		slog.Errorf("保存分类失败: %s", err.Error())
 		return errors.New("保存分类失败: " + err.Error())
 	}
@@ -27,7 +29,7 @@ func (service Service) Save(info model.Category) error {
 
 // Update 更新分类
 func (service Service) Update(info model.Category) error {
-	if err := global.GORM.Table(model.TCategoryTable).Save(&info).Error; err != nil {
+	if err := service.db.Table(model.TCategoryTable).Save(&info).Error; err != nil {
 		slog.Errorf("更新分类失败: %s", err.Error())
 		return errors.New("更新分类失败: " + err.Error())
 	}
@@ -36,7 +38,7 @@ func (service Service) Update(info model.Category) error {
 
 // Delete 删除分类
 func (service Service) Delete(categoryId int) error {
-	if err := global.GORM.Table(model.TCategoryTable).Delete(&model.Category{}, categoryId).Error; err != nil {
+	if err := service.db.Table(model.TCategoryTable).Delete(&model.Category{}, categoryId).Error; err != nil {
 		slog.Errorf("删除分类失败: %s", err.Error())
 		return errors.New("删除分类失败: " + err.Error())
 	}
@@ -47,7 +49,7 @@ func (service Service) Delete(categoryId int) error {
 func (service Service) GetCategory(categoryId uint32) (*model.Category, error) {
 	var categoryInfo model.Category
 
-	err := NewQueryBuilder().
+	err := NewQueryBuilder(service.db).
 		ById(categoryId).
 		First(&categoryInfo)
 
@@ -63,7 +65,7 @@ func (service Service) GetCategory(categoryId uint32) (*model.Category, error) {
 func (service Service) GetCategoryList() ([]model.Category, error) {
 	categories := make([]model.Category, 0)
 
-	err := NewQueryBuilder().Find(&categories)
+	err := NewQueryBuilder(service.db).Find(&categories)
 
 	if err != nil {
 		slog.Errorf("获取分类列表失败: %s", err.Error())
@@ -77,7 +79,7 @@ func (service Service) GetCategoryList() ([]model.Category, error) {
 func (service Service) GetCategories() ([]model.CategoryCount, error) {
 	categories := make([]model.CategoryCount, 0)
 
-	err := NewQueryBuilder().
+	err := NewQueryBuilder(service.db).
 		WithPostCount().
 		Find(&categories)
 

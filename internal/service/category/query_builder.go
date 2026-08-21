@@ -1,9 +1,9 @@
 package category
 
 import (
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/model"
 	"gorm.io/gorm"
+
+	"gitee.com/jieepre/go-site/internal/model"
 )
 
 // QueryBuilder 分类查询构建器
@@ -13,9 +13,9 @@ type QueryBuilder struct {
 }
 
 // NewQueryBuilder 创建查询构建器
-func NewQueryBuilder() *QueryBuilder {
+func NewQueryBuilder(db *gorm.DB) *QueryBuilder {
 	return &QueryBuilder{
-		db:     global.GORM.Table(model.TCategoryTable),
+		db:     db.Table(model.TCategoryTable),
 		scopes: make([]func(*gorm.DB) *gorm.DB, 0),
 	}
 }

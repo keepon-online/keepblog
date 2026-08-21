@@ -9,7 +9,7 @@ import (
 
 func TestGetLinks_OnlyActive(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewLinkService()
+	s := NewLinkService(testutil.NewTestDB(t))
 
 	links, err := s.GetLinks()
 	if err != nil {
@@ -22,7 +22,7 @@ func TestGetLinks_OnlyActive(t *testing.T) {
 
 func TestGetLinkList_AllOrderedByTimeDesc(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewLinkService()
+	s := NewLinkService(testutil.NewTestDB(t))
 
 	links, err := s.GetLinkList()
 	if err != nil {
@@ -38,7 +38,7 @@ func TestGetLinkList_AllOrderedByTimeDesc(t *testing.T) {
 
 func TestLinkCRUD(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewLinkService()
+	s := NewLinkService(testutil.NewTestDB(t))
 
 	created := model.FriendLink{Title: "新友链", LinkUrl: "https://new.example.com", State: 1, Type: 1}
 	if err := s.Save(created); err != nil {

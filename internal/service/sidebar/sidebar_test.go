@@ -9,7 +9,7 @@ import (
 // Sidebar 聚合了各服务的前台数据，钉住聚合结构与计数。
 func TestSidebar_Aggregate(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewSidebarService()
+	s := NewSidebarService(testutil.NewTestDB(t))
 
 	sb := s.Sidebar()
 

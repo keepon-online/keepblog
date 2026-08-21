@@ -9,7 +9,7 @@ import (
 
 func TestGetEnabledMusicList_SortedBySort(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewMusicService()
+	s := NewMusicService(testutil.NewTestDB(t))
 
 	musics, err := s.GetEnabledMusicList()
 	if err != nil {
@@ -25,7 +25,7 @@ func TestGetEnabledMusicList_SortedBySort(t *testing.T) {
 
 func TestGetMusicList_All(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewMusicService()
+	s := NewMusicService(testutil.NewTestDB(t))
 
 	musics, err := s.GetMusicList()
 	if err != nil {
@@ -38,7 +38,7 @@ func TestGetMusicList_All(t *testing.T) {
 
 func TestMusicCRUD(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewMusicService()
+	s := NewMusicService(testutil.NewTestDB(t))
 
 	created := model.Music{Name: "测试曲", Url: "https://cdn.example.com/t.mp3", Sort: 9, State: 1}
 	if err := s.Save(created); err != nil {

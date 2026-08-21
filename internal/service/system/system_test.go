@@ -26,7 +26,7 @@ func TestLogin_Success(t *testing.T) {
 	if err := jwttoken.Configure([]byte("test-secret-0123456789abcdef0123456")); err != nil {
 		t.Fatalf("Configure 报错: %v", err)
 	}
-	s := NewSystemService()
+	s := NewSystemService(testutil.NewTestDB(t))
 
 	resp, err := s.Login(request.LoginRequest{
 		Username: "admin",
@@ -58,7 +58,7 @@ func TestLogin_Success(t *testing.T) {
 func TestLogin_WrongPassword(t *testing.T) {
 	testutil.NewTestDB(t)
 	_ = jwttoken.Configure([]byte("test-secret-0123456789abcdef0123456"))
-	s := NewSystemService()
+	s := NewSystemService(testutil.NewTestDB(t))
 
 	_, err := s.Login(request.LoginRequest{
 		Username: "admin",
@@ -75,7 +75,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 func TestLogin_UnknownUser(t *testing.T) {
 	testutil.NewTestDB(t)
 	_ = jwttoken.Configure([]byte("test-secret-0123456789abcdef0123456"))
-	s := NewSystemService()
+	s := NewSystemService(testutil.NewTestDB(t))
 
 	_, err := s.Login(request.LoginRequest{
 		Username: "nobody",
@@ -89,7 +89,7 @@ func TestLogin_UnknownUser(t *testing.T) {
 func TestRefreshToken_Flow(t *testing.T) {
 	testutil.NewTestDB(t)
 	_ = jwttoken.Configure([]byte("test-secret-0123456789abcdef0123456"))
-	s := NewSystemService()
+	s := NewSystemService(testutil.NewTestDB(t))
 
 	loginResp, err := s.Login(request.LoginRequest{
 		Username: "admin",
@@ -123,7 +123,7 @@ func TestRefreshToken_Flow(t *testing.T) {
 func TestChangePassword_InvalidatesOldTokens(t *testing.T) {
 	testutil.NewTestDB(t)
 	_ = jwttoken.Configure([]byte("test-secret-0123456789abcdef0123456"))
-	s := NewSystemService()
+	s := NewSystemService(testutil.NewTestDB(t))
 
 	loginResp, err := s.Login(request.LoginRequest{
 		Username: "admin",

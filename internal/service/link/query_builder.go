@@ -1,9 +1,9 @@
 package link
 
 import (
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/model"
 	"gorm.io/gorm"
+
+	"gitee.com/jieepre/go-site/internal/model"
 )
 
 // QueryBuilder 友链查询构建器
@@ -13,9 +13,9 @@ type QueryBuilder struct {
 }
 
 // NewQueryBuilder 创建查询构建器
-func NewQueryBuilder() *QueryBuilder {
+func NewQueryBuilder(db *gorm.DB) *QueryBuilder {
 	return &QueryBuilder{
-		db:     global.GORM.Table(model.TFriendLinkTable),
+		db:     db.Table(model.TFriendLinkTable),
 		scopes: make([]func(*gorm.DB) *gorm.DB, 0),
 	}
 }

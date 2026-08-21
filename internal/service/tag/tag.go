@@ -1,30 +1,31 @@
 package tag
 
 import (
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/pkg/cloudtag"
-	tags_remove "gitee.com/jieepre/go-site/pkg/tags-remove"
 	"github.com/gookit/slog"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
+
+	"gitee.com/jieepre/go-site/internal/model"
+	"gitee.com/jieepre/go-site/pkg/cloudtag"
+	tags_remove "gitee.com/jieepre/go-site/pkg/tags-remove"
 )
 
 type Service struct {
+	db *gorm.DB
 }
 
-func NewTagService() *Service {
-	return &Service{}
+func NewTagService(db *gorm.DB) *Service {
+	return &Service{db: db}
 }
 
 func (service Service) Save(tagInfo model.Tag) (uint32, error) {
 	var t model.Tag
-	err := global.GORM.Table(model.TTagTable).Where("tag_name", tagInfo.TagName).Last(&t).Error
+	err := service.db.Table(model.TTagTable).Where("tag_name", tagInfo.TagName).Last(&t).Error
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 
 		return t.TagId, nil
 	}
-	if err := global.GORM.Table(model.TTagTable).Create(&tagInfo).Error; err != nil {
+	if err := service.db.Table(model.TTagTable).Create(&tagInfo).Error; err != nil {
 		return 0, errors.New("save tag error " + err.Error())
 	}
 	return tagInfo.TagId, nil
@@ -32,7 +33,7 @@ func (service Service) Save(tagInfo model.Tag) (uint32, error) {
 
 func (service Service) GetTag(tagId uint32) (*model.Tag, error) {
 	var tagInfo model.Tag
-	if err := global.GORM.Table(model.TTagTable).Where("tag_id", tagId).First(&tagInfo).Error; err != nil {
+	if err := service.db.Table(model.TTagTable).Where("tag_id", tagId).First(&tagInfo).Error; err != nil {
 		slog.Errorf("save tag error %s", err.Error())
 		return nil, errors.New("save tag error")
 	}
@@ -41,7 +42,7 @@ func (service Service) GetTag(tagId uint32) (*model.Tag, error) {
 
 // Update 更新标签名（后台编辑）。仅改 tag_name，保留 tag_id。
 func (service Service) Update(tag model.Tag) error {
-	if err := global.GORM.Table(model.TTagTable).
+	if err := service.db.Table(model.TTagTable).
 		Model(&model.Tag{}).
 		Where("tag_id = ?", tag.TagId).
 		Update("tag_name", tag.TagName).Error; err != nil {
@@ -55,14 +56,14 @@ func (service Service) Update(tag model.Tag) error {
 // 不校验是否被文章引用——标签被删后，文章的 Tags 查询会自动少一项（走 JOIN）。
 func (service Service) Delete(tagId uint32) error {
 	// 先清理关联表
-	if err := global.GORM.Table(model.TPostTagTable).
+	if err := service.db.Table(model.TPostTagTable).
 		Where("tag_id = ?", tagId).
 		Delete(&model.PostTag{}).Error; err != nil {
 		slog.Errorf("清理 post_tag 关联失败: %s", err.Error())
 		return errors.New("清理标签关联失败: " + err.Error())
 	}
 	// 再删标签本身
-	if err := global.GORM.Table(model.TTagTable).
+	if err := service.db.Table(model.TTagTable).
 		Delete(&model.Tag{}, tagId).Error; err != nil {
 		slog.Errorf("删除标签失败: %s", err.Error())
 		return errors.New("删除标签失败: " + err.Error())
@@ -74,7 +75,7 @@ func (service Service) Delete(tagId uint32) error {
 // 与 GetTags（前台 tag cloud，带样式去重）不同，这里返回原始数据供后台 CRUD。
 func (service Service) GetTagList() ([]model.Tag, error) {
 	tagList := make([]model.Tag, 0)
-	if err := global.GORM.Table(model.TTagTable).
+	if err := service.db.Table(model.TTagTable).
 		Order("tag_id DESC").
 		Find(&tagList).Error; err != nil {
 		slog.Errorf("获取标签列表失败: %s", err.Error())
@@ -96,14 +97,14 @@ func (service Service) GetTags() ([]model.Tag, error) {
 		  and p.is_published = 1
 	`
 
-	if err := global.GORM.Raw(sql).
+	if err := service.db.Raw(sql).
 		Scan(&tagList).Error; err != nil {
 		return nil, err
 	}
 	tagCounts := make([]model.TagCount, 0)
 	tagsCloud := make([]model.Tag, 0)
 	tags := tags_remove.RemoveDuplicateElement(tagList)
-	global.GORM.Raw("SELECT tag_name,COUNT(tag_name) ratio FROM tag GROUP BY tag_name").Scan(&tagCounts)
+	service.db.Raw("SELECT tag_name,COUNT(tag_name) ratio FROM tag GROUP BY tag_name").Scan(&tagCounts)
 	for _, tsg := range tagCounts {
 		for _, tag := range tags {
 			if tag.TagName == tsg.TagName {

@@ -26,7 +26,7 @@ func (h *Handler) GetNotices(c *gin.Context) {
 		return
 	}
 
-	service := noticeService.NewNoticeService()
+	service := noticeService.NewNoticeService(global.GORM)
 	notices, unreadCount, err := service.GetUserNotices(userID)
 	if err != nil {
 		result.Error(c, "获取通知失败")
@@ -54,7 +54,7 @@ func (h *Handler) MarkAsRead(c *gin.Context) {
 		return
 	}
 
-	service := noticeService.NewNoticeService()
+	service := noticeService.NewNoticeService(global.GORM)
 	if err := service.MarkAsRead(noticeID, userID); err != nil {
 		result.Error(c, "标记失败")
 		return
@@ -85,7 +85,7 @@ func (h *Handler) MarkAllAsRead(c *gin.Context) {
 		noticeType = &t
 	}
 
-	service := noticeService.NewNoticeService()
+	service := noticeService.NewNoticeService(global.GORM)
 	if err := service.MarkAllAsRead(userID, noticeType); err != nil {
 		result.Error(c, "标记失败")
 		return
@@ -109,7 +109,7 @@ func (h *Handler) DeleteNotice(c *gin.Context) {
 		return
 	}
 
-	service := noticeService.NewNoticeService()
+	service := noticeService.NewNoticeService(global.GORM)
 	if err := service.DeleteNotice(noticeID, userID); err != nil {
 		result.Error(c, "删除失败")
 		return
@@ -140,7 +140,7 @@ func (h *Handler) ClearNotices(c *gin.Context) {
 		noticeType = &t
 	}
 
-	service := noticeService.NewNoticeService()
+	service := noticeService.NewNoticeService(global.GORM)
 	if err := service.ClearNotices(userID, noticeType); err != nil {
 		result.Error(c, "清空失败")
 		return
@@ -183,7 +183,7 @@ func (h *Handler) SendNotice(c *gin.Context) {
 		Description: req.Description,
 	}
 
-	service := noticeService.NewNoticeService()
+	service := noticeService.NewNoticeService(global.GORM)
 
 	// 保存到数据库并推送
 	if err := service.CreateNotice(notice); err != nil {

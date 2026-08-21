@@ -9,7 +9,7 @@ import (
 
 func TestGetCategories_WithPostCount(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewCategoryService()
+	s := NewCategoryService(testutil.NewTestDB(t))
 
 	cats, err := s.GetCategories()
 	if err != nil {
@@ -33,7 +33,7 @@ func TestGetCategories_WithPostCount(t *testing.T) {
 
 func TestGetCategoryList_ReturnsAll(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewCategoryService()
+	s := NewCategoryService(testutil.NewTestDB(t))
 
 	cats, err := s.GetCategoryList()
 	if err != nil {
@@ -46,7 +46,7 @@ func TestGetCategoryList_ReturnsAll(t *testing.T) {
 
 func TestGetCategory_ById(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewCategoryService()
+	s := NewCategoryService(testutil.NewTestDB(t))
 
 	cat, err := s.GetCategory(2)
 	if err != nil {
@@ -62,7 +62,7 @@ func TestGetCategory_ById(t *testing.T) {
 
 func TestCategoryCRUD(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewCategoryService()
+	s := NewCategoryService(testutil.NewTestDB(t))
 
 	created := model.Category{CategoryName: "测试新建分类", Note: "n", State: 1}
 	if err := s.Save(created); err != nil {

@@ -9,7 +9,7 @@ import (
 
 func TestGetWebSite(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewWebSiteService()
+	s := NewWebSiteService(testutil.NewTestDB(t))
 
 	info, err := s.GetWebSite()
 	if err != nil {
@@ -25,7 +25,7 @@ func TestGetWebSite(t *testing.T) {
 
 func TestSave(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewWebSiteService()
+	s := NewWebSiteService(testutil.NewTestDB(t))
 
 	updated := system.WebSite{Id: 1, Title: "改后站点", URL: "https://update.example.com"}
 	if err := s.Save(updated); err != nil {

@@ -5,18 +5,20 @@ import (
 	"sort"
 	"strings"
 
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/model"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
+
+	"gitee.com/jieepre/go-site/internal/model"
 )
 
 // Service 文章服务
 type Service struct {
+	db *gorm.DB
 }
 
 // NewPostService 创建文章服务实例
-func NewPostService() *Service {
-	return &Service{}
+func NewPostService(db *gorm.DB) *Service {
+	return &Service{db: db}
 }
 
 // GetPost 前台获取文章（已发布、未删除）
@@ -34,7 +36,7 @@ func (service Service) getPostWithConditions(id int, onlyPublished, onlyNotDelet
 	var postInfo model.Post
 
 	// 构建查询
-	qb := NewQueryBuilder().
+	qb := NewQueryBuilder(service.db).
 		Select("post.*, category.category_name, t.tag_name").
 		ById(id).
 		WithCategory().
@@ -72,7 +74,7 @@ func (service Service) getPostWithConditions(id int, onlyPublished, onlyNotDelet
 func (service Service) getPostTags(postId int, onlyPublished, onlyNotDeleted bool) ([]string, error) {
 	var tags []string
 
-	qb := NewQueryBuilder().
+	qb := NewQueryBuilder(service.db).
 		Select("t.tag_name").
 		ById(postId).
 		WithTags()
@@ -95,7 +97,7 @@ func (service Service) getPostTags(postId int, onlyPublished, onlyNotDeleted boo
 func (service Service) GetLatestPosts() ([]model.LatestPosts, error) {
 	var latestPosts []model.LatestPosts
 
-	err := NewQueryBuilder().
+	err := NewQueryBuilder(service.db).
 		Select("post.title, post.author, post.pub_time, post.cover_image, post.post_slug, post.pub_time, category.category_name, category.category_id").
 		WithPublished().
 		WithNotDeleted().
@@ -116,7 +118,7 @@ func (service Service) GetLatestPosts() ([]model.LatestPosts, error) {
 func (service Service) GetPublishedPostsForFeed(limit int) ([]model.Post, error) {
 	var posts []model.Post
 
-	err := NewQueryBuilder().
+	err := NewQueryBuilder(service.db).
 		Select("post.title, post.post_slug, post.summary, post.cover_image, post.pub_time, post.last_modified_time").
 		WithPublished().
 		WithNotDeleted().
@@ -139,7 +141,7 @@ func (service Service) GetAdjacentPosts(postId uint64, currentPubTime uint64) (p
 
 	// 上一篇：pub_time < 当前，按 pub_time DESC 取第一条
 	var prevPost model.LatestPosts
-	if err = global.GORM.Table(model.TPostsTable).
+	if err = service.db.Table(model.TPostsTable).
 		Select("title, post_slug, cover_image, pub_time").
 		Where(baseWhere+" AND pub_time < ?", postId, currentPubTime).
 		Order("pub_time DESC").
@@ -150,7 +152,7 @@ func (service Service) GetAdjacentPosts(postId uint64, currentPubTime uint64) (p
 
 	// 下一篇：pub_time > 当前，按 pub_time ASC 取第一条
 	var nextPost model.LatestPosts
-	if err = global.GORM.Table(model.TPostsTable).
+	if err = service.db.Table(model.TPostsTable).
 		Select("title, post_slug, cover_image, pub_time").
 		Where(baseWhere+" AND pub_time > ?", postId, currentPubTime).
 		Order("pub_time ASC").
@@ -173,7 +175,7 @@ func (service Service) GetRelatedPosts(postId uint64, tags []string, limit int) 
 	}
 
 	var posts []model.LatestPosts
-	err := global.GORM.Table(model.TPostsTable).
+	err := service.db.Table(model.TPostsTable).
 		Select("post.title, post.post_slug, post.cover_image, post.pub_time").
 		Joins("JOIN post_tag pt ON post.post_id = pt.post_id").
 		Joins("JOIN tag t ON pt.tag_id = t.tag_id").
@@ -198,7 +200,7 @@ func (service Service) GetCoverPosts(pageNum int) ([]model.LatestPosts, int64, e
 	var total int64
 
 	// 先统计总数（不需要 JOIN）
-	countQb := NewQueryBuilder().
+	countQb := NewQueryBuilder(service.db).
 		WithPublished().
 		WithNotDeleted()
 
@@ -207,7 +209,7 @@ func (service Service) GetCoverPosts(pageNum int) ([]model.LatestPosts, int64, e
 	}
 
 	// 查询列表（需要 JOIN）
-	qb := NewQueryBuilder().
+	qb := NewQueryBuilder(service.db).
 		Select("post.title, post.author, post.pub_time, post.cover_image, post.top, post.post_slug, category.category_name, category.category_id, t.tag_name").
 		WithPublished().
 		WithNotDeleted().
@@ -227,7 +229,7 @@ func (service Service) GetCoverPosts(pageNum int) ([]model.LatestPosts, int64, e
 
 // Total 统计文章总数
 func (service Service) Total() (total int64) {
-	_ = NewQueryBuilder().
+	_ = NewQueryBuilder(service.db).
 		WithPublished().
 		WithNotDeleted().
 		Count(&total)
@@ -236,7 +238,7 @@ func (service Service) Total() (total int64) {
 
 // UpdatePostReadCount 更新文章阅读数
 func (service Service) UpdatePostReadCount(postId uint64, readCount uint32) error {
-	err := global.GORM.Table(model.TPostsTable).
+	err := service.db.Table(model.TPostsTable).
 		Where("post_id", postId).
 		Update("read_count", readCount+1).Error
 	if err != nil {
@@ -248,7 +250,7 @@ func (service Service) UpdatePostReadCount(postId uint64, readCount uint32) erro
 // GetArchivePosts 获取归档文章
 func (service Service) GetArchivePosts(year, month string) (*model.ArchivesPosts, error) {
 	var years []string
-	global.GORM.Table(model.TPostsTable).
+	service.db.Table(model.TPostsTable).
 		Raw(`SELECT strftime('%Y-%m', pub_time, 'unixepoch') year FROM post WHERE is_published = 1 AND is_deleted = 0 GROUP BY year`).
 		Scan(&years)
 
@@ -257,7 +259,7 @@ func (service Service) GetArchivePosts(year, month string) (*model.ArchivesPosts
 
 	if year != "" && month != "" {
 		posts := make([]model.ArchivePosts, 0)
-		global.GORM.Table(model.TPostsTable).
+		service.db.Table(model.TPostsTable).
 			Raw("SELECT title, post_slug, pub_time, cover_image FROM post WHERE is_published = 1 AND is_deleted = 0 AND strftime('%Y/%m', pub_time, 'unixepoch') = ?", year+"/"+month).
 			Scan(&posts)
 		m[year+"-"+month] = posts
@@ -267,7 +269,7 @@ func (service Service) GetArchivePosts(year, month string) (*model.ArchivesPosts
 
 	for _, year := range years {
 		posts := make([]model.ArchivePosts, 0)
-		global.GORM.Table(model.TPostsTable).
+		service.db.Table(model.TPostsTable).
 			Raw("SELECT title, post_slug, pub_time, cover_image FROM post WHERE is_published = 1 AND is_deleted = 0 AND strftime('%Y-%m', pub_time, 'unixepoch') = ?", year).
 			Scan(&posts)
 		m[year] = posts
@@ -281,7 +283,7 @@ func (service Service) GetArchivePosts(year, month string) (*model.ArchivesPosts
 func (service Service) GetArchivePostsPaged(pageNum, pageSize int) (*model.ArchivesPosts, int, int, error) {
 	// 获取所有年月分组，按时间倒序
 	var yearMonths []string
-	global.GORM.Raw(`SELECT strftime('%Y-%m', pub_time, 'unixepoch') as year_month
+	service.db.Raw(`SELECT strftime('%Y-%m', pub_time, 'unixepoch') as year_month
 		FROM post
 		WHERE is_published = 1 AND is_deleted = 0
 		GROUP BY year_month
@@ -291,7 +293,7 @@ func (service Service) GetArchivePostsPaged(pageNum, pageSize int) (*model.Archi
 
 	// 获取总文章数
 	var totalPosts int64
-	_ = NewQueryBuilder().
+	_ = NewQueryBuilder(service.db).
 		WithPublished().
 		WithNotDeleted().
 		Count(&totalPosts)
@@ -318,7 +320,7 @@ func (service Service) GetArchivePostsPaged(pageNum, pageSize int) (*model.Archi
 	m := make(map[string][]model.ArchivePosts)
 	for _, ym := range pagedYearMonths {
 		posts := make([]model.ArchivePosts, 0)
-		global.GORM.Table(model.TPostsTable).
+		service.db.Table(model.TPostsTable).
 			Raw("SELECT title, post_slug, pub_time, cover_image FROM post WHERE is_published = 1 AND is_deleted = 0 AND strftime('%Y-%m', pub_time, 'unixepoch') = ? ORDER BY pub_time DESC", ym).
 			Scan(&posts)
 		m[ym] = posts
@@ -334,7 +336,7 @@ func (service Service) GetPostsByCategory(category string, pageNum int) ([]model
 	var total int64
 
 	// 先统计总数
-	countQb := NewQueryBuilder().
+	countQb := NewQueryBuilder(service.db).
 		WithPublished().
 		WithNotDeleted().
 		WithCategory().
@@ -345,7 +347,7 @@ func (service Service) GetPostsByCategory(category string, pageNum int) ([]model
 	}
 
 	// 查询列表
-	qb := NewQueryBuilder().
+	qb := NewQueryBuilder(service.db).
 		Select("post.title, post.post_slug, post.pub_time, post.cover_image").
 		WithPublished().
 		WithNotDeleted().
@@ -367,7 +369,7 @@ func (service Service) GetPostsByTag(tagName string, pageNum int) ([]model.TagCa
 	var total int64
 
 	// 先统计总数
-	countQb := NewQueryBuilder().
+	countQb := NewQueryBuilder(service.db).
 		WithPublished().
 		WithNotDeleted().
 		WithTags().
@@ -378,7 +380,7 @@ func (service Service) GetPostsByTag(tagName string, pageNum int) ([]model.TagCa
 	}
 
 	// 查询列表
-	qb := NewQueryBuilder().
+	qb := NewQueryBuilder(service.db).
 		Select("post.title, post.post_slug, post.pub_time, post.cover_image").
 		WithPublished().
 		WithNotDeleted().
@@ -398,7 +400,7 @@ func (service Service) GetPostsByTag(tagName string, pageNum int) ([]model.TagCa
 func (service Service) GetPostsByCategoryId(id int64) ([]model.Post, error) {
 	posts := make([]model.Post, 0)
 
-	err := NewQueryBuilder().
+	err := NewQueryBuilder(service.db).
 		ByCategoryId(id).
 		Find(&posts)
 
@@ -416,14 +418,14 @@ func (service Service) GetPostsArchive(num int64) ([]map[string]any, int64, erro
 		Month string
 		Count int
 	}
-	global.GORM.Raw("SELECT strftime('%Y', create_time, 'unixepoch') AS year, strftime('%m', create_time, 'unixepoch') AS month, COUNT(*) AS count FROM post GROUP BY year, month ORDER BY year DESC, month DESC").Scan(&archives)
+	service.db.Raw("SELECT strftime('%Y', create_time, 'unixepoch') AS year, strftime('%m', create_time, 'unixepoch') AS month, COUNT(*) AS count FROM post GROUP BY year, month ORDER BY year DESC, month DESC").Scan(&archives)
 
 	// 生成归档数据
 	archiveData := make([]map[string]any, len(archives))
 	for i, archive := range archives {
 		// 查询归档时间段内的文章
 		var articles []model.ArchivePosts
-		global.GORM.Table("post").
+		service.db.Table("post").
 			Where("strftime('%Y', create_time, 'unixepoch') = ? AND strftime('%m', create_time, 'unixepoch') = ?", archive.Year, archive.Month).
 			Order("create_time DESC").
 			Find(&articles)
@@ -471,7 +473,7 @@ func (service Service) SearchPaged(keyword string, pageNum, pageSize int) ([]mod
 		CreateTime int64  `gorm:"column:create_time"`
 	}
 
-	err := NewQueryBuilder().
+	err := NewQueryBuilder(service.db).
 		Select("post_id, title, post_slug, summary, post_content, cover_image, create_time").
 		WithPublished().
 		WithNotDeleted().
@@ -551,7 +553,7 @@ func (service Service) SearchWithResult(keyword string, pageNum, pageSize int) (
 
 	// 统计总数
 	var total int64
-	_ = NewQueryBuilder().
+	_ = NewQueryBuilder(service.db).
 		WithPublished().
 		WithNotDeleted().
 		WithSearch(keyword).

@@ -1,21 +1,23 @@
 package website
 
 import (
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/model/system"
 	"github.com/gookit/slog"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
+
+	"gitee.com/jieepre/go-site/internal/model/system"
 )
 
 type Service struct {
+	db *gorm.DB
 }
 
-func NewWebSiteService() *Service {
-	return &Service{}
+func NewWebSiteService(db *gorm.DB) *Service {
+	return &Service{db: db}
 }
 
 func (service *Service) Save(info system.WebSite) error {
-	if err := global.GORM.Save(&info).Error; err != nil {
+	if err := service.db.Save(&info).Error; err != nil {
 		slog.Errorf("save web info error %s", err.Error())
 		return errors.New("save error ")
 	}
@@ -23,7 +25,7 @@ func (service *Service) Save(info system.WebSite) error {
 }
 
 func (service *Service) GetWebSite() (info *system.WebSite, err error) {
-	if err := global.GORM.Model(system.WebSite{}).First(&info).Error; err != nil {
+	if err := service.db.Model(system.WebSite{}).First(&info).Error; err != nil {
 		slog.Errorf("get web info error: %s", err.Error())
 		return nil, errors.New("get info error ")
 	}

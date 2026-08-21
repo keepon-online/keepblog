@@ -13,7 +13,7 @@ import (
 
 func TestGetPost_OnlyPublishedVisible(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	p, err := s.GetPost(1)
 	if err != nil {
@@ -32,7 +32,7 @@ func TestGetPost_OnlyPublishedVisible(t *testing.T) {
 
 func TestGetPost_IncrementsReadCount(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	before, err := s.GetPost(1)
 	if err != nil {
@@ -54,7 +54,7 @@ func TestGetPost_DraftDeletedMissingReturnZeroValue(t *testing.T) {
 	// 特征（怪癖）：GetPost 对草稿/已删除/不存在的文章不报错，而是返回零值文章，
 	// 由调用方（api/web 渲染层）自行判断 PostId==0。重构若收紧此契约需同步调用方。
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	for _, id := range []int{90, 91, 9999} {
 		p, err := s.GetPost(id)
@@ -70,7 +70,7 @@ func TestGetPost_DraftDeletedMissingReturnZeroValue(t *testing.T) {
 
 func TestGetPostDetail_HasTags(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	p, err := s.GetPostDetail(2)
 	if err != nil {
@@ -95,7 +95,7 @@ func TestGetPostDetail_PostWithoutTagsErrors(t *testing.T) {
 	// 扫描 []string 失败而报错。生产环境后台编辑无标签文章同样会失败，
 	// 数据层治理阶段修复后此断言应反转为"正常返回空标签列表"。
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	for _, id := range []int{90, 12} { // 90=草稿、12=无标签的填充文章
 		if _, err := s.GetPostDetail(id); err == nil {
@@ -106,7 +106,7 @@ func TestGetPostDetail_PostWithoutTagsErrors(t *testing.T) {
 
 func TestGetLatestPosts_LimitFiveByTimeDesc(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	posts, err := s.GetLatestPosts()
 	if err != nil {
@@ -129,7 +129,7 @@ func TestGetLatestPosts_LimitFiveByTimeDesc(t *testing.T) {
 
 func TestTotal_OnlyPublishedNotDeleted(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	if got := s.Total(); got != 12 {
 		t.Errorf("Total = %d, want 12（草稿/已删除不计）", got)
@@ -138,7 +138,7 @@ func TestTotal_OnlyPublishedNotDeleted(t *testing.T) {
 
 func TestGetCoverPosts_PaginationAndTopFirst(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	page1, total, err := s.GetCoverPosts(1)
 	if err != nil {
@@ -165,7 +165,7 @@ func TestGetCoverPosts_PaginationAndTopFirst(t *testing.T) {
 
 func TestGetPostsByCategory(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	posts, total, err := s.GetPostsByCategory("MySQL", 1)
 	if err != nil {
@@ -187,7 +187,7 @@ func TestGetPostsByCategory(t *testing.T) {
 
 func TestGetPostsByTag(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	posts, total, err := s.GetPostsByTag("go", 1)
 	if err != nil {
@@ -200,7 +200,7 @@ func TestGetPostsByTag(t *testing.T) {
 
 func TestGetAdjacentPosts(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	// P2 发布于 2024-02-10：上一篇应为 P1（2024-01-10），下一篇应为 P3（2024-03-10）
 	p2, err := s.GetPostDetail(2)
@@ -221,7 +221,7 @@ func TestGetAdjacentPosts(t *testing.T) {
 
 func TestGetAdjacentPosts_AtBoundaries(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	// 填充文章 P12（2024-05-07）无标签，不能走 GetPostDetail，直接读库取时间基准
 	var latest model.Post
@@ -242,7 +242,7 @@ func TestGetAdjacentPosts_AtBoundaries(t *testing.T) {
 
 func TestGetRelatedPosts(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	// P2(mysql) 的相关文章：同为 mysql 标签的 P5
 	related, err := s.GetRelatedPosts(2, []string{"mysql"}, 6)
@@ -262,7 +262,7 @@ func TestGetRelatedPosts(t *testing.T) {
 
 func TestGetArchivePostsPaged(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	// 12 篇已发布文章分布在 5 个年月：2024-05(7) 2024-04(1) 2024-03(2) 2024-02(1) 2024-01(1)
 	archives, totalGroups, totalPosts, err := s.GetArchivePostsPaged(1, 3)
@@ -294,7 +294,7 @@ func TestGetArchivePostsPaged(t *testing.T) {
 
 func TestGetArchivePosts_SpecificMonth(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	archives, err := s.GetArchivePosts("2024", "03")
 	if err != nil {
@@ -307,7 +307,7 @@ func TestGetArchivePosts_SpecificMonth(t *testing.T) {
 
 func TestSearchPaged_RelevanceAndHighlight(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	results, err := s.SearchPaged("mysql", 1, 20)
 	if err != nil {
@@ -337,7 +337,7 @@ func TestSearchPaged_RelevanceAndHighlight(t *testing.T) {
 
 func TestSearch_EmptyKeyword(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	posts, err := s.Search("")
 	if err != nil || len(posts) != 0 {
@@ -347,7 +347,7 @@ func TestSearch_EmptyKeyword(t *testing.T) {
 
 func TestSearchWithResult(t *testing.T) {
 	testutil.NewTestDB(t)
-	s := NewPostService()
+	s := NewPostService(testutil.NewTestDB(t))
 
 	result, err := s.SearchWithResult("mysql", 1, 10)
 	if err != nil {
@@ -412,10 +412,10 @@ func TestExtractHighlight(t *testing.T) {
 }
 
 func TestQueryBuilder_Integration(t *testing.T) {
-	testutil.NewTestDB(t)
+	db := testutil.NewTestDB(t)
 
 	var total int64
-	if err := NewQueryBuilder().
+	if err := NewQueryBuilder(db).
 		WithPublished().
 		WithNotDeleted().
 		Count(&total); err != nil {
@@ -427,7 +427,7 @@ func TestQueryBuilder_Integration(t *testing.T) {
 
 	// ByCategoryId 不带发布过滤（后台语义）
 	var posts []struct{ PostId uint64 }
-	if err := NewQueryBuilder().
+	if err := NewQueryBuilder(db).
 		ByCategoryId(1).
 		Find(&posts); err != nil {
 		t.Fatalf("Find 报错: %v", err)
@@ -439,6 +439,7 @@ func TestQueryBuilder_Integration(t *testing.T) {
 }
 
 func TestPaginationScope_EdgeValues(t *testing.T) {
+	db := testutil.NewTestDB(t)
 	// pageNum<=0 归一为 1；pageSize<=0 归一为 DefaultPageSize
 	scope := PaginationScope(0, 0)
 	if scope == nil {
@@ -446,7 +447,7 @@ func TestPaginationScope_EdgeValues(t *testing.T) {
 	}
 
 	var total int64
-	err := NewQueryBuilder().
+	err := NewQueryBuilder(db).
 		WithPublished().
 		WithNotDeleted().
 		WithPagination(0, 0).
