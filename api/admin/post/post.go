@@ -53,17 +53,17 @@ func (h *Handler) UpdatePost(c *gin.Context) {
 		result.Error(c, err.Error())
 		return
 	}
-		_ = global.GORM.Table(model.TPostTagTable).Where("post_id", postObj.PostId).Delete(model.PostTag{})
-		keywords := postObj.Tags
-		for _, key := range keywords {
-			tag := model.Tag{TagName: key}
-			tagId, _ := h.Service.TagService.Save(tag)
-			postTag := model.PostTag{
-				TagId:  tagId,
-				PostId: postObj.PostId,
-			}
-			_ = global.GORM.Table(model.TPostTagTable).Create(&postTag)
+	_ = global.GORM.Table(model.TPostTagTable).Where("post_id", postObj.PostId).Delete(model.PostTag{})
+	keywords := postObj.Tags
+	for _, key := range keywords {
+		tag := model.Tag{TagName: key}
+		tagId, _ := h.Service.TagService.Save(tag)
+		postTag := model.PostTag{
+			TagId:  tagId,
+			PostId: postObj.PostId,
 		}
+		_ = global.GORM.Table(model.TPostTagTable).Create(&postTag)
+	}
 
 	result.Ok(c, nil)
 }
@@ -102,7 +102,11 @@ func (h *Handler) GetList(c *gin.Context) {
 		result.Error(c, "参数错误")
 		return
 	}
-	posts := h.Service.PostService.GetList(req)
+	posts, err := h.Service.PostService.GetList(req)
+	if err != nil {
+		result.Error(c, err.Error())
+		return
+	}
 	result.Ok(c, posts)
 }
 func (h *Handler) DetailPost(c *gin.Context) {

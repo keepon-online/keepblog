@@ -109,13 +109,12 @@ func (service Service) UpdatePostAllCoverImag() error {
 }
 
 // GetList 获取文章列表（后台管理）
-func (service Service) GetList(req request.PostRequest) *page.Info {
+func (service Service) GetList(req request.PostRequest) (*page.Info, error) {
 	var content []model.Post
 	var total int64
 	pageNum := req.PageNum
 	pageSize := req.PageSize
 
-	// 使用查询构建器
 	qb := NewQueryBuilder(service.db).
 		Select("post.*, pc.category_name").
 		WithNotDeleted().
@@ -126,15 +125,15 @@ func (service Service) GetList(req request.PostRequest) *page.Info {
 	// 关联分类表（使用 join 而不是 left join，因为后台需要显示分类）
 	qb.db = qb.db.Joins("JOIN category pc ON post.category_id = pc.category_id")
 
-	// 统计总数
-	_ = qb.Count(&total)
-
-	// 查询列表
-	_ = qb.
+	if err := qb.Count(&total); err != nil {
+		return nil, errors.New("统计文章失败: " + err.Error())
+	}
+	if err := qb.
 		Order("post_id DESC").
 		WithPagination(pageNum, pageSize).
-		Find(&content)
+		Find(&content); err != nil {
+		return nil, errors.New("查询文章失败: " + err.Error())
+	}
 
-	bInfo := page.PaginationInfo(content, pageNum, pageSize, int(total))
-	return bInfo
+	return page.PaginationInfo(content, pageNum, pageSize, int(total)), nil
 }

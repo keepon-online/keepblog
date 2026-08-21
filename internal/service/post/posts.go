@@ -55,6 +55,11 @@ func (service Service) getPostWithConditions(id int, onlyPublished, onlyNotDelet
 		return nil, errors.New("找不到记录")
 	}
 
+	// 查询未命中时保留历史兼容行为：返回零值文章，不继续查询标签或更新阅读数。
+	if postInfo.PostId == 0 {
+		return &postInfo, nil
+	}
+
 	// 获取标签列表
 	tags, err := service.getPostTags(id, onlyPublished, onlyNotDeleted)
 	if err != nil {
@@ -62,34 +67,34 @@ func (service Service) getPostWithConditions(id int, onlyPublished, onlyNotDelet
 	}
 	postInfo.Tags = tags
 
-	// 更新阅读数（仅前台）
+	// 更新阅读数（仅前台）。更新使用 SQL 原子自增，避免并发请求丢失计数。
 	if onlyPublished {
-		_ = service.UpdatePostReadCount(postInfo.PostId, postInfo.ReadCount)
+		if err := service.UpdatePostReadCount(postInfo.PostId); err != nil {
+			return nil, err
+		}
 	}
 
 	return &postInfo, nil
 }
 
-// getPostTags 获取文章标签（提取公共逻辑）
+// getPostTags 获取文章标签。使用 INNER JOIN + 非空条件，
+// 无标签文章返回空切片而不是让 NULL 扫描到 string 失败。
 func (service Service) getPostTags(postId int, onlyPublished, onlyNotDeleted bool) ([]string, error) {
-	var tags []string
-
-	qb := NewQueryBuilder(service.db).
+	tags := make([]string, 0)
+	query := service.db.Table(model.TTagTable+" t").
 		Select("t.tag_name").
-		ById(postId).
-		WithTags()
-
+		Joins("JOIN post_tag pt ON t.tag_id = pt.tag_id").
+		Joins("JOIN post p ON pt.post_id = p.post_id").
+		Where("pt.post_id = ? AND t.tag_name IS NOT NULL", postId)
 	if onlyPublished {
-		qb = qb.WithPublished()
+		query = query.Where("p.is_published = ?", 1)
 	}
 	if onlyNotDeleted {
-		qb = qb.WithNotDeleted()
+		query = query.Where("p.is_deleted = ?", 0)
 	}
-
-	if err := qb.Scan(&tags); err != nil {
-		return nil, errors.New("获取标签失败")
+	if err := query.Scan(&tags).Error; err != nil {
+		return nil, errors.New("获取标签失败: " + err.Error())
 	}
-
 	return tags, nil
 }
 
@@ -228,106 +233,141 @@ func (service Service) GetCoverPosts(pageNum int) ([]model.LatestPosts, int64, e
 }
 
 // Total 统计文章总数
-func (service Service) Total() (total int64) {
-	_ = NewQueryBuilder(service.db).
+func (service Service) Total() (int64, error) {
+	var total int64
+	if err := NewQueryBuilder(service.db).
 		WithPublished().
 		WithNotDeleted().
-		Count(&total)
-	return
+		Count(&total); err != nil {
+		return 0, errors.New("统计文章失败: " + err.Error())
+	}
+	return total, nil
 }
 
-// UpdatePostReadCount 更新文章阅读数
-func (service Service) UpdatePostReadCount(postId uint64, readCount uint32) error {
-	err := service.db.Table(model.TPostsTable).
-		Where("post_id", postId).
-		Update("read_count", readCount+1).Error
-	if err != nil {
-		return errors.New("更新失败: " + err.Error())
+// UpdatePostReadCount 原子增加文章阅读数。
+// 参数不再接收调用方读到的旧值，避免并发请求的读-改-写覆盖彼此更新。
+func (service Service) UpdatePostReadCount(postId uint64) error {
+	result := service.db.Table(model.TPostsTable).
+		Where("post_id = ?", postId).
+		UpdateColumn("read_count", gorm.Expr("read_count + ?", 1))
+	if result.Error != nil {
+		return errors.New("更新失败: " + result.Error.Error())
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("更新失败: 文章不存在")
 	}
 	return nil
 }
 
-// GetArchivePosts 获取归档文章
-func (service Service) GetArchivePosts(year, month string) (*model.ArchivesPosts, error) {
-	var years []string
-	service.db.Table(model.TPostsTable).
-		Raw(`SELECT strftime('%Y-%m', pub_time, 'unixepoch') year FROM post WHERE is_published = 1 AND is_deleted = 0 GROUP BY year`).
-		Scan(&years)
-
-	m := make(map[string][]model.ArchivePosts, 0)
-	archives := model.ArchivesPosts{}
-
-	if year != "" && month != "" {
-		posts := make([]model.ArchivePosts, 0)
-		service.db.Table(model.TPostsTable).
-			Raw("SELECT title, post_slug, pub_time, cover_image FROM post WHERE is_published = 1 AND is_deleted = 0 AND strftime('%Y/%m', pub_time, 'unixepoch') = ?", year+"/"+month).
-			Scan(&posts)
-		m[year+"-"+month] = posts
-		archives.Archives = m
-		return &archives, nil
-	}
-
-	for _, year := range years {
-		posts := make([]model.ArchivePosts, 0)
-		service.db.Table(model.TPostsTable).
-			Raw("SELECT title, post_slug, pub_time, cover_image FROM post WHERE is_published = 1 AND is_deleted = 0 AND strftime('%Y-%m', pub_time, 'unixepoch') = ?", year).
-			Scan(&posts)
-		m[year] = posts
-	}
-
-	archives.Archives = m
-	return &archives, nil
+// archiveRow 是归档查询的扁平结果。SQLite 的 strftime 是当前 SQLite 存储
+// 格式的一部分，查询集中在这里，避免调用方按年月循环发起 N+1 查询。
+type archiveRow struct {
+	YearMonth  string `gorm:"column:year_month"`
+	Title      string `gorm:"column:title"`
+	PostSlug   string `gorm:"column:post_slug"`
+	PubTime    uint64 `gorm:"column:pub_time"`
+	CoverImage string `gorm:"column:cover_image"`
 }
 
-// GetArchivePostsPaged 分页获取归档文章（按年月分组）
-func (service Service) GetArchivePostsPaged(pageNum, pageSize int) (*model.ArchivesPosts, int, int, error) {
-	// 获取所有年月分组，按时间倒序
+// fetchArchiveRows 一次查询指定年月的全部文章，再在内存中分组。
+func (service Service) fetchArchiveRows(yearMonths []string) ([]archiveRow, error) {
+	if len(yearMonths) == 0 {
+		return []archiveRow{}, nil
+	}
+	rows := make([]archiveRow, 0)
+	err := service.db.Table(model.TPostsTable).
+		Select("strftime('%Y-%m', pub_time, 'unixepoch') AS year_month, title, post_slug, pub_time, cover_image").
+		Where("is_published = ? AND is_deleted = ?", 1, 0).
+		Where("strftime('%Y-%m', pub_time, 'unixepoch') IN ?", yearMonths).
+		Order("pub_time DESC").
+		Scan(&rows).Error
+	return rows, err
+}
+
+func groupArchiveRows(rows []archiveRow, yearMonths []string) map[string][]model.ArchivePosts {
+	archives := make(map[string][]model.ArchivePosts, len(yearMonths))
+	for _, ym := range yearMonths {
+		archives[ym] = make([]model.ArchivePosts, 0)
+	}
+	for _, row := range rows {
+		archives[row.YearMonth] = append(archives[row.YearMonth], model.ArchivePosts{
+			Title: row.Title, PostSlug: row.PostSlug, PubTime: row.PubTime, CoverImage: row.CoverImage,
+		})
+	}
+	return archives
+}
+
+// GetArchivePosts 获取归档文章。所有年月模式固定为两条查询（分组 + 文章），
+// 指定月份模式只发起一条文章查询，不再按年月逐组查询。
+func (service Service) GetArchivePosts(year, month string) (*model.ArchivesPosts, error) {
+	if year != "" && month != "" {
+		ym := year + "-" + month
+		rows, err := service.fetchArchiveRows([]string{ym})
+		if err != nil {
+			return nil, errors.New("查询归档文章失败: " + err.Error())
+		}
+		return &model.ArchivesPosts{Archives: groupArchiveRows(rows, []string{ym})}, nil
+	}
+
 	var yearMonths []string
-	service.db.Raw(`SELECT strftime('%Y-%m', pub_time, 'unixepoch') as year_month
-		FROM post
-		WHERE is_published = 1 AND is_deleted = 0
-		GROUP BY year_month
-		ORDER BY year_month DESC`).Scan(&yearMonths)
+	if err := service.db.Table(model.TPostsTable).
+		Select("strftime('%Y-%m', pub_time, 'unixepoch') AS year_month").
+		Where("is_published = ? AND is_deleted = ?", 1, 0).
+		Group("year_month").
+		Order("year_month DESC").
+		Scan(&yearMonths).Error; err != nil {
+		return nil, errors.New("查询归档分组失败: " + err.Error())
+	}
+	rows, err := service.fetchArchiveRows(yearMonths)
+	if err != nil {
+		return nil, errors.New("查询归档文章失败: " + err.Error())
+	}
+	return &model.ArchivesPosts{Archives: groupArchiveRows(rows, yearMonths)}, nil
+}
 
-	totalGroups := len(yearMonths)
-
-	// 获取总文章数
-	var totalPosts int64
-	_ = NewQueryBuilder(service.db).
-		WithPublished().
-		WithNotDeleted().
-		Count(&totalPosts)
-
-	// 计算分页
+// GetArchivePostsPaged 分页获取归档文章（按年月分组）。年月分组页内的
+// 文章通过 IN 一次取回，将原先每个年月一次查询的 N+1 降为固定 3 条查询。
+func (service Service) GetArchivePostsPaged(pageNum, pageSize int) (*model.ArchivesPosts, int, int, error) {
 	if pageNum <= 0 {
 		pageNum = 1
 	}
-	start := (pageNum - 1) * pageSize
-	end := start + pageSize
+	if pageSize <= 0 {
+		pageSize = DefaultPageSize
+	}
 
+	var yearMonths []string
+	if err := service.db.Table(model.TPostsTable).
+		Select("strftime('%Y-%m', pub_time, 'unixepoch') AS year_month").
+		Where("is_published = ? AND is_deleted = ?", 1, 0).
+		Group("year_month").
+		Order("year_month DESC").
+		Scan(&yearMonths).Error; err != nil {
+		return nil, 0, 0, errors.New("查询归档分组失败: " + err.Error())
+	}
+
+	var totalPosts int64
+	if err := NewQueryBuilder(service.db).
+		WithPublished().
+		WithNotDeleted().
+		Count(&totalPosts); err != nil {
+		return nil, len(yearMonths), 0, errors.New("统计文章失败: " + err.Error())
+	}
+
+	totalGroups := len(yearMonths)
+	start := (pageNum - 1) * pageSize
 	if start >= totalGroups {
 		return &model.ArchivesPosts{Archives: make(map[string][]model.ArchivePosts)}, totalGroups, int(totalPosts), nil
 	}
-
+	end := start + pageSize
 	if end > totalGroups {
 		end = totalGroups
 	}
-
-	// 获取当前页的年月分组
 	pagedYearMonths := yearMonths[start:end]
-
-	// 为每个年月分组获取文章
-	m := make(map[string][]model.ArchivePosts)
-	for _, ym := range pagedYearMonths {
-		posts := make([]model.ArchivePosts, 0)
-		service.db.Table(model.TPostsTable).
-			Raw("SELECT title, post_slug, pub_time, cover_image FROM post WHERE is_published = 1 AND is_deleted = 0 AND strftime('%Y-%m', pub_time, 'unixepoch') = ? ORDER BY pub_time DESC", ym).
-			Scan(&posts)
-		m[ym] = posts
+	rows, err := service.fetchArchiveRows(pagedYearMonths)
+	if err != nil {
+		return nil, totalGroups, int(totalPosts), errors.New("查询归档文章失败: " + err.Error())
 	}
-
-	archives := &model.ArchivesPosts{Archives: m}
-	return archives, totalGroups, int(totalPosts), nil
+	return &model.ArchivesPosts{Archives: groupArchiveRows(rows, pagedYearMonths)}, totalGroups, int(totalPosts), nil
 }
 
 // GetPostsByCategory 根据分类获取文章
@@ -418,17 +458,21 @@ func (service Service) GetPostsArchive(num int64) ([]map[string]any, int64, erro
 		Month string
 		Count int
 	}
-	service.db.Raw("SELECT strftime('%Y', create_time, 'unixepoch') AS year, strftime('%m', create_time, 'unixepoch') AS month, COUNT(*) AS count FROM post GROUP BY year, month ORDER BY year DESC, month DESC").Scan(&archives)
+	if err := service.db.Raw("SELECT strftime('%Y', create_time, 'unixepoch') AS year, strftime('%m', create_time, 'unixepoch') AS month, COUNT(*) AS count FROM post GROUP BY year, month ORDER BY year DESC, month DESC").Scan(&archives).Error; err != nil {
+		return nil, 0, errors.New("查询归档统计失败: " + err.Error())
+	}
 
 	// 生成归档数据
 	archiveData := make([]map[string]any, len(archives))
 	for i, archive := range archives {
 		// 查询归档时间段内的文章
 		var articles []model.ArchivePosts
-		service.db.Table("post").
+		if err := service.db.Table("post").
 			Where("strftime('%Y', create_time, 'unixepoch') = ? AND strftime('%m', create_time, 'unixepoch') = ?", archive.Year, archive.Month).
 			Order("create_time DESC").
-			Find(&articles)
+			Find(&articles).Error; err != nil {
+			return nil, 0, errors.New("查询归档文章失败: " + err.Error())
+		}
 
 		// 生成文章列表数据
 		articleData := make([]map[string]interface{}, len(articles))
@@ -553,11 +597,13 @@ func (service Service) SearchWithResult(keyword string, pageNum, pageSize int) (
 
 	// 统计总数
 	var total int64
-	_ = NewQueryBuilder(service.db).
+	if err := NewQueryBuilder(service.db).
 		WithPublished().
 		WithNotDeleted().
 		WithSearch(keyword).
-		Count(&total)
+		Count(&total); err != nil {
+		return nil, errors.New("统计搜索结果失败: " + err.Error())
+	}
 
 	return &model.SearchResult{
 		Posts:    posts,

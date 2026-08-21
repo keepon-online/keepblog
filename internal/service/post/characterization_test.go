@@ -90,16 +90,17 @@ func TestGetPostDetail_HasTags(t *testing.T) {
 	}
 }
 
-func TestGetPostDetail_PostWithoutTagsErrors(t *testing.T) {
-	// 特征（已知怪癖）：无标签文章的详情查询因 LEFT JOIN 产生 NULL tag_name 行、
-	// 扫描 []string 失败而报错。生产环境后台编辑无标签文章同样会失败，
-	// 数据层治理阶段修复后此断言应反转为"正常返回空标签列表"。
-	testutil.NewTestDB(t)
-	s := NewPostService(testutil.NewTestDB(t))
+func TestGetPostDetail_PostWithoutTagsReturnsEmptyTags(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	s := NewPostService(db)
 
 	for _, id := range []int{90, 12} { // 90=草稿、12=无标签的填充文章
-		if _, err := s.GetPostDetail(id); err == nil {
-			t.Errorf("GetPostDetail(%d) 现状应报错（NULL tag_name 扫描失败）", id)
+		postInfo, err := s.GetPostDetail(id)
+		if err != nil {
+			t.Fatalf("GetPostDetail(%d) 报错: %v", id, err)
+		}
+		if len(postInfo.Tags) != 0 {
+			t.Errorf("GetPostDetail(%d) Tags = %v, want empty", id, postInfo.Tags)
 		}
 	}
 }
@@ -131,7 +132,11 @@ func TestTotal_OnlyPublishedNotDeleted(t *testing.T) {
 	testutil.NewTestDB(t)
 	s := NewPostService(testutil.NewTestDB(t))
 
-	if got := s.Total(); got != 12 {
+	got, err := s.Total()
+	if err != nil {
+		t.Fatalf("Total 报错: %v", err)
+	}
+	if got != 12 {
 		t.Errorf("Total = %d, want 12（草稿/已删除不计）", got)
 	}
 }

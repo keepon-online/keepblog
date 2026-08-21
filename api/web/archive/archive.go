@@ -8,6 +8,7 @@ import (
 	"gitee.com/jieepre/go-site/internal/pkg/core"
 	"gitee.com/jieepre/go-site/pkg/page"
 	"github.com/gin-gonic/gin"
+	"github.com/gookit/slog"
 )
 
 type Handler struct {
@@ -67,7 +68,12 @@ func (h Handler) ArchivesInfo(c *gin.Context) {
 	year := c.Param("year")
 	month := c.Param("month")
 	sidebarInfo := h.Service.SidebarService.Sidebar()
-	archivePosts, _ := h.Service.PostService.GetArchivePosts(year, month)
+	archivePosts, err := h.Service.PostService.GetArchivePosts(year, month)
+	if err != nil {
+		slog.Errorf("归档查询错误: %s", err.Error())
+		c.HTML(http.StatusInternalServerError, "error.html", nil)
+		return
+	}
 
 	// 计算当前筛选条件下的文章总数
 	totalPosts := 0

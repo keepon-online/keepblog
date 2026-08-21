@@ -14,6 +14,7 @@ import (
 	"gitee.com/jieepre/go-site/internal/cache"
 	appconfig "gitee.com/jieepre/go-site/internal/config"
 	"gitee.com/jieepre/go-site/internal/core"
+	"gitee.com/jieepre/go-site/internal/core/migrations"
 	"gitee.com/jieepre/go-site/internal/monitor"
 	"gitee.com/jieepre/go-site/internal/pkg/oss"
 	"gitee.com/jieepre/go-site/internal/service"
@@ -77,8 +78,12 @@ func (app *Application) Initialize() error {
 		slog.Errorf("Redis initialization failed: %v", err)
 	}
 
-	// 数据库：建表/种子/索引（此前 core 包 init() 里 import 即连库）
+	// 数据库：连接 → 版本化迁移 → 种子数据。
+	// 迁移使用 IF NOT EXISTS，已有 AutoMigrate 数据库可无损启动。
 	global.GORM = core.InitDB()
+	if err := migrations.Run(global.GORM); err != nil {
+		return fmt.Errorf("run database migrations failed: %w", err)
+	}
 	core.InitResource()
 
 	// 服务层装配（依赖 database 连接，此前依赖全局变量，现在通过构造函数注入）

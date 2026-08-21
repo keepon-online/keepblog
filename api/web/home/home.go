@@ -21,8 +21,18 @@ type Handler struct {
 func (h *Handler) Home(c *gin.Context) {
 	pageNum := c.Param("page")
 	num, _ := strconv.ParseInt(pageNum, 10, 64)
-	coverPosts, _, _ := h.Service.PostService.GetCoverPosts(int(num))
-	total := h.Service.PostService.Total()
+	coverPosts, _, err := h.Service.PostService.GetCoverPosts(int(num))
+	if err != nil {
+		slog.Errorf("首页文章错误: %s", err.Error())
+		c.HTML(http.StatusInternalServerError, "error.html", nil)
+		return
+	}
+	total, err := h.Service.PostService.Total()
+	if err != nil {
+		slog.Errorf("首页统计错误: %s", err.Error())
+		c.HTML(http.StatusInternalServerError, "error.html", nil)
+		return
+	}
 	sidebarInfo := h.Service.SidebarService.Sidebar()
 	site, err := h.Service.WebSiteService.GetWebSite()
 	if err != nil {
