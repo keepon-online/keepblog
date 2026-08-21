@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pkg/errors"
+	"errors"
 	"gorm.io/gorm"
 
 	"gitee.com/jieepre/go-site/internal/model"

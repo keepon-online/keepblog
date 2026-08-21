@@ -1,8 +1,8 @@
 package post
 
 import (
+	"errors"
 	"github.com/gookit/slog"
-	"github.com/pkg/errors"
 
 	"gitee.com/jieepre/go-site/internal/model"
 	"gitee.com/jieepre/go-site/internal/model/request"

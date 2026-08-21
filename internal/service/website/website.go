@@ -1,8 +1,8 @@
 package website
 
 import (
+	"errors"
 	"github.com/gookit/slog"
-	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
 	"gitee.com/jieepre/go-site/internal/model/system"

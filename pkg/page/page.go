@@ -3,7 +3,7 @@ package page
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
+	"errors"
 	"gorm.io/gorm"
 )
 

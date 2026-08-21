@@ -2,15 +2,16 @@ package oss
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/url"
 	"time"
 
+	"errors"
 	"gitee.com/jieepre/go-site/config"
 	"github.com/gookit/slog"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -30,7 +31,7 @@ func Init() error {
 		Secure: m.UseSSL})
 	if err != nil {
 		client = nil
-		return errors.Wrap(err, "minio 连接错误")
+		return fmt.Errorf("minio 连接错误: %w", err)
 	}
 	client = minioClient
 	return nil

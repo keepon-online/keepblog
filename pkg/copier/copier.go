@@ -2,17 +2,16 @@ package copier
 
 import (
 	"encoding/json"
-
-	"github.com/pkg/errors"
+	"fmt"
 )
 
 func Copy(to, from any) error {
 	b, err := json.Marshal(from)
 	if err != nil {
-		return errors.Wrap(err, "marshal from data err")
+		return fmt.Errorf("marshal from data err: %w", err)
 	}
 	if err = json.Unmarshal(b, to); err != nil {
-		return errors.Wrap(err, "unmarshal to data err")
+		return fmt.Errorf("unmarshal to data err: %w", err)
 	}
 	return nil
 }

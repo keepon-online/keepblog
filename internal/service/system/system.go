@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/slog"
-	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
 	"gitee.com/jieepre/go-site/internal/model"

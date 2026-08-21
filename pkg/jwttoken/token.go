@@ -3,9 +3,9 @@ package jwttoken
 import (
 	"time"
 
+	"errors"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/gookit/slog"
-	"github.com/pkg/errors"
 )
 
 // MySecret JWT 签名密钥，由应用启动时通过 Configure 注入
