@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Go-Site 发版脚本（git tag 驱动）
+# KeepBlog 发版脚本（git tag 驱动）
 #
 # 用法：
 #   sh scripts/release.sh v5           # 发版 v5：校验 → 打 annotated tag → push → 构建

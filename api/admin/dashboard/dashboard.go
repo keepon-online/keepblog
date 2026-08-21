@@ -1,8 +1,8 @@
 package dashboard
 
 import (
-	"gitee.com/jieepre/go-site/internal/pkg/core"
-	"gitee.com/jieepre/go-site/pkg/result"
+	"gitee.com/jieepre/keepblog/internal/pkg/core"
+	"gitee.com/jieepre/keepblog/pkg/result"
 	"github.com/gin-gonic/gin"
 )
 

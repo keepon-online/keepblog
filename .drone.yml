@@ -8,7 +8,7 @@ when:
 
 workspace:
   base: /go
-  path: src/go-site
+  path: src/keepblog
 
 
 volumes:
@@ -57,7 +57,7 @@ steps:
         from_secret: ssh_username
       port: 22
       source:
-        - ./bin/go-site-linux-amd64
+        - ./bin/keepblog-linux-amd64
       target:
         - /home/ubuntu/tmp
   - name: 部署
@@ -73,7 +73,7 @@ steps:
       script_stop: true
       script:
         # 兼容服务器上可能仍引用旧产物名 site 的 deploy.sh
-        - cp /home/ubuntu/tmp/go-site-linux-amd64 /home/ubuntu/tmp/site
+        - cp /home/ubuntu/tmp/keepblog-linux-amd64 /home/ubuntu/tmp/site
         - chmod +x /home/ubuntu/tmp/deploy.sh
         - sh /home/ubuntu/tmp/deploy.sh
   #  - name: release

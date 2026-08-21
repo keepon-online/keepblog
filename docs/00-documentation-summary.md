@@ -2,7 +2,7 @@
 
 ## 已生成的文档
 
-本次为 go-site 项目生成了以下核心文档：
+本次为 keepblog 项目生成了以下核心文档：
 
 ### 1. README.md - 文档导航索引
 **位置**: `docs/README.md`

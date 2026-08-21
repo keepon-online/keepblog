@@ -1,4 +1,4 @@
-# Go-Site 项目文档索引
+# KeepBlog 项目文档索引
 
 > 全功能博客系统 (CMS) - 基于 Go + Gin + SQLite
 

@@ -1,6 +1,6 @@
 package tags_remove
 
-import "gitee.com/jieepre/go-site/internal/model"
+import "gitee.com/jieepre/keepblog/internal/model"
 
 func RemoveDuplicateElement(tags []model.Tag) []model.Tag {
 	result := make([]model.Tag, 0, len(tags))

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"gitee.com/jieepre/go-site/pkg/jwttoken"
+	"gitee.com/jieepre/keepblog/pkg/jwttoken"
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/slog"
 	"github.com/gorilla/websocket"

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"gitee.com/jieepre/go-site/pkg/result"
+	"gitee.com/jieepre/keepblog/pkg/result"
 	"github.com/gin-gonic/gin"
 )
 

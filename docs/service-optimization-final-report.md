@@ -122,7 +122,7 @@ internal/service/
 ```bash
 ✅ go build                          # 主程序编译成功
 ✅ go build internal/service/...     # 所有模块编译成功
-✅ 生成可执行文件: bin/go-site.exe (75MB)
+✅ 生成可执行文件: bin/keepblog.exe (75MB)
 ```
 
 ### 功能测试
@@ -219,7 +219,7 @@ func (s Service) GetPostDetail(id int) (*model.Post, error) {
 
 ```bash
 # 编译测试
-go build -o bin/go-site.exe
+go build -o bin/keepblog.exe
 
 # 运行测试
 go test ./internal/service/...
@@ -232,16 +232,16 @@ cat config.yaml
 
 ```bash
 # 1. 备份数据库
-mysqldump -u root -p go_site > backup.sql
+mysqldump -u root -p keepblog > backup.sql
 
 # 2. 停止旧服务
-systemctl stop go-site
+systemctl stop keepblog
 
 # 3. 替换可执行文件
-cp bin/go-site.exe /path/to/production/
+cp bin/keepblog.exe /path/to/production/
 
 # 4. 启动新服务
-systemctl start go-site
+systemctl start keepblog
 
 # 5. 验证服务
 curl http://localhost:8589/
@@ -253,13 +253,13 @@ curl http://localhost:8589/
 
 ```bash
 # 1. 停止服务
-systemctl stop go-site
+systemctl stop keepblog
 
 # 2. 恢复旧版本
-cp /path/to/backup/go-site.exe /path/to/production/
+cp /path/to/backup/keepblog.exe /path/to/production/
 
 # 3. 启动服务
-systemctl start go-site
+systemctl start keepblog
 ```
 
 ---

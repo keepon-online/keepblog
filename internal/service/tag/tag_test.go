@@ -3,8 +3,8 @@ package tag
 import (
 	"testing"
 
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/internal/testutil"
+	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/testutil"
 )
 
 func TestGetTagList(t *testing.T) {

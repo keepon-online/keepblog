@@ -7,11 +7,11 @@ import (
 
 	_ "embed"
 
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/internal/model/system"
-	"gitee.com/jieepre/go-site/pkg"
-	"gitee.com/jieepre/go-site/pkg/hash"
+	"gitee.com/jieepre/keepblog/global"
+	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/model/system"
+	"gitee.com/jieepre/keepblog/pkg"
+	"gitee.com/jieepre/keepblog/pkg/hash"
 	"github.com/gookit/slog"
 )
 

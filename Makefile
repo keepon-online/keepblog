@@ -1,5 +1,5 @@
 GC = go build
-APP_NAME = go-site
+APP_NAME = keepblog
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 GIT_COMMIT = $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME = $(shell date -u '+%Y-%m-%d_%H:%M:%S')
@@ -19,10 +19,10 @@ endif
 
 # 版本注入参数
 LDFLAGS = -s -w \
-	-X 'gitee.com/jieepre/go-site/internal/version.Version=$(VERSION)' \
-	-X 'gitee.com/jieepre/go-site/internal/version.GitCommit=$(GIT_COMMIT)' \
-	-X 'gitee.com/jieepre/go-site/internal/version.BuildTime=$(BUILD_TIME)' \
-	-X 'gitee.com/jieepre/go-site/internal/version.GoVersion=$(GO_VERSION)'
+	-X 'gitee.com/jieepre/keepblog/internal/version.Version=$(VERSION)' \
+	-X 'gitee.com/jieepre/keepblog/internal/version.GitCommit=$(GIT_COMMIT)' \
+	-X 'gitee.com/jieepre/keepblog/internal/version.BuildTime=$(BUILD_TIME)' \
+	-X 'gitee.com/jieepre/keepblog/internal/version.GoVersion=$(GO_VERSION)'
 
 BUILD_FLAGS = -trimpath -ldflags "$(LDFLAGS)"
 
@@ -146,7 +146,7 @@ version:
 
 # 帮助信息
 help:
-	@echo "Go-Site 构建命令:"
+	@echo "KeepBlog 构建命令:"
 	@echo "  make build           - 本地构建（前端 + Go 一键）"
 	@echo "  make build-frontend  - 仅构建前端并同步产物到 static/console"
 	@echo "  make build-go        - 仅构建 Go（使用已有前端产物）"

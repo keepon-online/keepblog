@@ -1,5 +1,5 @@
 # ================================
-# 多阶段构建 - Go-Site
+# 多阶段构建 - KeepBlog
 # ================================
 
 # 构建参数
@@ -54,11 +54,11 @@ COPY --from=frontend /fe/dist/. static/console/
 # 版本注入编译
 RUN go build -trimpath \
     -ldflags="-s -w \
-    -X 'gitee.com/jieepre/go-site/internal/version.Version=${VERSION}' \
-    -X 'gitee.com/jieepre/go-site/internal/version.GitCommit=${GIT_COMMIT}' \
-    -X 'gitee.com/jieepre/go-site/internal/version.BuildTime=${BUILD_DATE}' \
-    -X 'gitee.com/jieepre/go-site/internal/version.GoVersion=$(go version | cut -d\" \" -f3)'" \
-    -o go-site .
+    -X 'gitee.com/jieepre/keepblog/internal/version.Version=${VERSION}' \
+    -X 'gitee.com/jieepre/keepblog/internal/version.GitCommit=${GIT_COMMIT}' \
+    -X 'gitee.com/jieepre/keepblog/internal/version.BuildTime=${BUILD_DATE}' \
+    -X 'gitee.com/jieepre/keepblog/internal/version.GoVersion=$(go version | cut -d\" \" -f3)'" \
+    -o keepblog .
 
 # ================================
 # 阶段2: 运行
@@ -76,7 +76,7 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
 
 # 从构建阶段复制文件
-COPY --from=builder /app/go-site /app/go-site
+COPY --from=builder /app/keepblog /app/keepblog
 COPY --from=builder /app/config-example.yaml /app/default/config.yaml
 
 # 创建数据目录并设置权限

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"gitee.com/jieepre/go-site/internal/pkg/core"
-	"gitee.com/jieepre/go-site/pkg/page"
+	"gitee.com/jieepre/keepblog/internal/pkg/core"
+	"gitee.com/jieepre/keepblog/pkg/page"
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/slog"
 )

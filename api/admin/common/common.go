@@ -2,10 +2,10 @@ package common
 
 import (
 	"fmt"
-	"gitee.com/jieepre/go-site/config"
-	"gitee.com/jieepre/go-site/internal/pkg/core"
-	"gitee.com/jieepre/go-site/internal/pkg/oss"
-	"gitee.com/jieepre/go-site/pkg/result"
+	"gitee.com/jieepre/keepblog/config"
+	"gitee.com/jieepre/keepblog/internal/pkg/core"
+	"gitee.com/jieepre/keepblog/internal/pkg/oss"
+	"gitee.com/jieepre/keepblog/pkg/result"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"path"

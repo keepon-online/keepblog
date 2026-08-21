@@ -260,7 +260,7 @@ result := NewQueryBuilder().
 ```bash
 ✅ go build                          # 主程序编译成功
 ✅ go build internal/service/...     # 所有模块编译成功
-✅ 生成可执行文件: bin/go-site.exe
+✅ 生成可执行文件: bin/keepblog.exe
 ```
 
 ### 功能验证

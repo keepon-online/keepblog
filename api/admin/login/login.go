@@ -3,11 +3,11 @@ package login
 import (
 	"strings"
 
-	"gitee.com/jieepre/go-site/internal/model/request"
-	"gitee.com/jieepre/go-site/internal/model/response"
-	"gitee.com/jieepre/go-site/internal/pkg/core"
-	"gitee.com/jieepre/go-site/pkg/jwttoken"
-	"gitee.com/jieepre/go-site/pkg/result"
+	"gitee.com/jieepre/keepblog/internal/model/request"
+	"gitee.com/jieepre/keepblog/internal/model/response"
+	"gitee.com/jieepre/keepblog/internal/pkg/core"
+	"gitee.com/jieepre/keepblog/pkg/jwttoken"
+	"gitee.com/jieepre/keepblog/pkg/result"
 	"github.com/gin-gonic/gin"
 )
 

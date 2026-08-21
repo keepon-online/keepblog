@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/internal/testutil"
+	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/testutil"
 )
 
 // 以下为特征测试：钉住 post 服务当前的对外行为，重构（依赖注入、

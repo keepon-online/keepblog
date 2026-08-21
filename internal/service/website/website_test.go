@@ -3,8 +3,8 @@ package website
 import (
 	"testing"
 
-	"gitee.com/jieepre/go-site/internal/model/system"
-	"gitee.com/jieepre/go-site/internal/testutil"
+	"gitee.com/jieepre/keepblog/internal/model/system"
+	"gitee.com/jieepre/keepblog/internal/testutil"
 )
 
 func TestGetWebSite(t *testing.T) {

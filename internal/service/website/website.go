@@ -5,7 +5,7 @@ import (
 	"github.com/gookit/slog"
 	"gorm.io/gorm"
 
-	"gitee.com/jieepre/go-site/internal/model/system"
+	"gitee.com/jieepre/keepblog/internal/model/system"
 )
 
 type Service struct {

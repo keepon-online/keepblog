@@ -5,7 +5,7 @@ import (
 	"github.com/gookit/slog"
 	"gorm.io/gorm"
 
-	"gitee.com/jieepre/go-site/internal/model"
+	"gitee.com/jieepre/keepblog/internal/model"
 )
 
 // Service 音乐服务

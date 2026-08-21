@@ -1,13 +1,13 @@
 package post
 
 import (
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/internal/model/request"
-	"gitee.com/jieepre/go-site/internal/pkg/core"
-	"gitee.com/jieepre/go-site/pkg"
-	"gitee.com/jieepre/go-site/pkg/hash"
-	"gitee.com/jieepre/go-site/pkg/result"
+	"gitee.com/jieepre/keepblog/global"
+	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/model/request"
+	"gitee.com/jieepre/keepblog/internal/pkg/core"
+	"gitee.com/jieepre/keepblog/pkg"
+	"gitee.com/jieepre/keepblog/pkg/hash"
+	"gitee.com/jieepre/keepblog/pkg/result"
 	"github.com/gin-gonic/gin"
 )
 

@@ -5,9 +5,9 @@ import (
 	"github.com/gookit/slog"
 	"gorm.io/gorm"
 
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/pkg/cloudtag"
-	tags_remove "gitee.com/jieepre/go-site/pkg/tags-remove"
+	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/pkg/cloudtag"
+	tags_remove "gitee.com/jieepre/keepblog/pkg/tags-remove"
 )
 
 type Service struct {

@@ -15,10 +15,10 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
 
-	"gitee.com/jieepre/go-site/internal/model/response"
-	"gitee.com/jieepre/go-site/pkg/cmd"
-	"gitee.com/jieepre/go-site/pkg/copier"
-	"gitee.com/jieepre/go-site/pkg/xpack"
+	"gitee.com/jieepre/keepblog/internal/model/response"
+	"gitee.com/jieepre/keepblog/pkg/cmd"
+	"gitee.com/jieepre/keepblog/pkg/copier"
+	"gitee.com/jieepre/keepblog/pkg/xpack"
 )
 
 func (s Service) LoadOsInfo() (*response.OsInfo, error) {

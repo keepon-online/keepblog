@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"gitee.com/jieepre/go-site/config"
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/model"
-	inpkg "gitee.com/jieepre/go-site/internal/pkg"
-	postService "gitee.com/jieepre/go-site/internal/service/post"
+	"gitee.com/jieepre/keepblog/config"
+	"gitee.com/jieepre/keepblog/global"
+	"gitee.com/jieepre/keepblog/internal/model"
+	inpkg "gitee.com/jieepre/keepblog/internal/pkg"
+	postService "gitee.com/jieepre/keepblog/internal/service/post"
 	"github.com/go-co-op/gocron"
 	"github.com/gookit/slog"
 )

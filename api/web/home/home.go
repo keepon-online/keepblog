@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"gitee.com/jieepre/go-site/internal/pkg/core"
-	"gitee.com/jieepre/go-site/pkg"
-	"gitee.com/jieepre/go-site/pkg/daily"
-	"gitee.com/jieepre/go-site/pkg/page"
-	"gitee.com/jieepre/go-site/pkg/result"
+	"gitee.com/jieepre/keepblog/internal/pkg/core"
+	"gitee.com/jieepre/keepblog/pkg"
+	"gitee.com/jieepre/keepblog/pkg/daily"
+	"gitee.com/jieepre/keepblog/pkg/page"
+	"gitee.com/jieepre/keepblog/pkg/result"
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/slog"
 )

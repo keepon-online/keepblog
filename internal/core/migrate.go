@@ -1,8 +1,8 @@
 package core
 
 import (
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/model"
+	"gitee.com/jieepre/keepblog/global"
+	"gitee.com/jieepre/keepblog/internal/model"
 )
 
 // InitResource 初始化数据库种子数据。

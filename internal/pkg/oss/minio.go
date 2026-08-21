@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"errors"
-	"gitee.com/jieepre/go-site/config"
+	"gitee.com/jieepre/keepblog/config"
 	"github.com/gookit/slog"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"

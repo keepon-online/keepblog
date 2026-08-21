@@ -4,11 +4,11 @@ import (
 	"errors"
 	"github.com/gookit/slog"
 
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/internal/model/request"
-	"gitee.com/jieepre/go-site/pkg"
-	"gitee.com/jieepre/go-site/pkg/hash"
-	"gitee.com/jieepre/go-site/pkg/page"
+	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/model/request"
+	"gitee.com/jieepre/keepblog/pkg"
+	"gitee.com/jieepre/keepblog/pkg/hash"
+	"gitee.com/jieepre/keepblog/pkg/page"
 )
 
 // SavePost 保存文章

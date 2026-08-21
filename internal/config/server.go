@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	"gitee.com/jieepre/go-site/config"
+	"gitee.com/jieepre/keepblog/config"
 )
 
 // ServerConfig 服务器配置

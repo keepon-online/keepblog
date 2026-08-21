@@ -3,7 +3,7 @@
 ## 目录树
 
 ```
-go-site/
+keepblog/
 ├── api/                          # API 处理器层
 │   ├── admin/                    # 后台管理 API (14 个模块)
 │   │   ├── about/                # 关于页面管理
@@ -466,7 +466,7 @@ var DB *gorm.DB
 
 ### 配置文件
 - **YAML 格式**: `config.yaml`, `config-example.yaml`
-- **环境变量**: `GOSITE_*`
+- **环境变量**: `KEEPBLOG_*`
 
 ### 构建文件
 - **Makefile**: 构建命令

@@ -4,8 +4,8 @@ import (
 	"github.com/gookit/slog"
 	"gorm.io/gorm"
 
-	"gitee.com/jieepre/go-site/internal/model/system"
-	ws "gitee.com/jieepre/go-site/internal/websocket"
+	"gitee.com/jieepre/keepblog/internal/model/system"
+	ws "gitee.com/jieepre/keepblog/internal/websocket"
 )
 
 // Service 通知服务

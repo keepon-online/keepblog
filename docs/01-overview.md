@@ -2,7 +2,7 @@
 
 ## 项目简介
 
-Go-Site 是一个基于 Go 语言开发的全功能博客系统 (CMS)，采用现代化的技术栈和架构设计，提供完整的内容管理、系统监控和性能优化功能。
+KeepBlog 是一个基于 Go 语言开发的全功能博客系统 (CMS)，采用现代化的技术栈和架构设计，提供完整的内容管理、系统监控和性能优化功能。
 
 ## 核心特性
 
@@ -101,7 +101,7 @@ type Context struct {
 ## 项目结构
 
 ```
-go-site/
+keepblog/
 ├── api/                    # API 处理器层
 │   ├── admin/             # 后台管理 API (14 个模块)
 │   └── web/               # 前台展示 API (8 个模块)
@@ -283,9 +283,9 @@ make windows        # Windows AMD64
 ### 环境变量
 支持通过环境变量覆盖配置:
 ```bash
-GOSITE_HTTP_PORT=8589
-GOSITE_REDIS_ENABLE=true
-GOSITE_BASE_URL=https://example.com
+KEEPBLOG_HTTP_PORT=8589
+KEEPBLOG_REDIS_ENABLE=true
+KEEPBLOG_BASE_URL=https://example.com
 ```
 
 详细配置请参阅 [配置管理](./18-configuration.md)。
@@ -351,6 +351,6 @@ make version        # 显示版本信息
 ---
 
 **相关链接**:
-- [GitHub 仓库](https://github.com/your-repo/go-site)
-- [问题反馈](https://github.com/your-repo/go-site/issues)
+- [GitHub 仓库](https://github.com/your-repo/keepblog)
+- [问题反馈](https://github.com/your-repo/keepblog/issues)
 - [更新日志](../CHANGELOG.md)

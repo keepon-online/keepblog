@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"strconv"
 
-	exmath "gitee.com/jieepre/go-site/pkg/math"
+	exmath "gitee.com/jieepre/keepblog/pkg/math"
 )
 
 // 预定义的美观配色方案（HSL色相值）

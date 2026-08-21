@@ -3,7 +3,7 @@ package core
 import (
 	"fmt"
 
-	"gitee.com/jieepre/go-site/internal/logger"
+	"gitee.com/jieepre/keepblog/internal/logger"
 	"github.com/gookit/slog"
 )
 

@@ -1,6 +1,6 @@
 package monitor
 
-import "gitee.com/jieepre/go-site/internal/pkg/core"
+import "gitee.com/jieepre/keepblog/internal/pkg/core"
 
 // Handler 监控接口处理器
 type Handler struct {

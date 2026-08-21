@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"gitee.com/jieepre/go-site/internal/cache"
+	"gitee.com/jieepre/keepblog/internal/cache"
 )
 
 // TokenBlacklist Token 黑名单管理

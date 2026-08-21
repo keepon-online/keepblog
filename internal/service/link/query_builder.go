@@ -1,8 +1,8 @@
 package link
 
 import (
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/internal/pkg/querybuilder"
+	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/pkg/querybuilder"
 	"gorm.io/gorm"
 )
 

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"gitee.com/jieepre/go-site/internal/errors"
+	"gitee.com/jieepre/keepblog/internal/errors"
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/slog"
 )

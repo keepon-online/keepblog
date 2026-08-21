@@ -1,4 +1,4 @@
-# Go-Site 博客系统知识库
+# KeepBlog 博客系统知识库
 
 > 完整的项目文档索引，涵盖架构设计、API 参考、实现指南和开发规范。
 
@@ -44,7 +44,7 @@
 
 ### 简介
 
-Go-Site 是一个基于 Go 语言和 Gin 框架开发的全功能博客系统，提供完整的前后台管理功能。项目采用现代化的架构设计，支持高并发访问，内置监控、日志、缓存等企业级特性。
+KeepBlog 是一个基于 Go 语言和 Gin 框架开发的全功能博客系统，提供完整的前后台管理功能。项目采用现代化的架构设计，支持高并发访问，内置监控、日志、缓存等企业级特性。
 
 ### 核心特性
 
@@ -242,7 +242,7 @@ func InitAppService() *AppService {
 ## 项目结构
 
 ```
-go-site/
+keepblog/
 ├── api/                      # API 处理器层
 │   ├── admin/                # 后台管理 API
 │   │   ├── about/           # 关于管理
@@ -401,8 +401,8 @@ go-site/
 #### 1. 克隆项目
 
 ```bash
-git clone https://github.com/username/go-site.git
-cd go-site
+git clone https://github.com/username/keepblog.git
+cd keepblog
 ```
 
 #### 2. 安装依赖
@@ -461,7 +461,7 @@ make docker
 docker run -d \
   -p 8589:8589 \
   -v ./data:/app/data \
-  jieepre/go-site:latest
+  jieepre/keepblog:latest
 ```
 
 ---
@@ -1087,11 +1087,11 @@ make docker
 
 ```bash
 docker run -d \
-  --name go-site \
+  --name keepblog \
   -p 8589:8589 \
   -v $(pwd)/data:/app/data \
   -v $(pwd)/config.yaml:/app/config.yaml \
-  jieepre/go-site:latest
+  jieepre/keepblog:latest
 ```
 
 #### Docker Compose
@@ -1099,8 +1099,8 @@ docker run -d \
 ```yaml
 version: '3.8'
 services:
-  go-site:
-    image: jieepre/go-site:latest
+  keepblog:
+    image: jieepre/keepblog:latest
     ports:
       - "8589:8589"
     volumes:
@@ -1134,36 +1134,36 @@ services:
 
 ```bash
 # 下载构建产物
-wget https://github.com/username/go-site/releases/latest/go-site-linux-amd64
+wget https://github.com/username/keepblog/releases/latest/keepblog-linux-amd64
 
 # 赋予执行权限
-chmod +x go-site-linux-amd64
+chmod +x keepblog-linux-amd64
 
 # 运行
-./go-site-linux-amd64
+./keepblog-linux-amd64
 ```
 
 #### Windows
 
 ```powershell
 # 下载构建产物
-# go-site-windows-amd64.exe
+# keepblog-windows-amd64.exe
 
 # 运行
-.\go-site-windows-amd64.exe
+.\keepblog-windows-amd64.exe
 ```
 
 #### macOS
 
 ```bash
 # 下载构建产物
-wget https://github.com/username/go-site/releases/latest/go-site-darwin-amd64
+wget https://github.com/username/keepblog/releases/latest/keepblog-darwin-amd64
 
 # 赋予执行权限
-chmod +x go-site-darwin-amd64
+chmod +x keepblog-darwin-amd64
 
 # 运行
-./go-site-darwin-amd64
+./keepblog-darwin-amd64
 ```
 
 ### Nginx 反向代理
@@ -1192,14 +1192,14 @@ server {
 
 ```ini
 [Unit]
-Description=Go-Site Blog System
+Description=KeepBlog Blog System
 After=network.target
 
 [Service]
 Type=simple
 User=www-data
-WorkingDirectory=/opt/go-site
-ExecStart=/opt/go-site/go-site
+WorkingDirectory=/opt/keepblog
+ExecStart=/opt/keepblog/keepblog
 Restart=always
 RestartSec=10
 
@@ -1210,8 +1210,8 @@ WantedBy=multi-user.target
 启动服务：
 
 ```bash
-sudo systemctl start go-site
-sudo systemctl enable go-site
+sudo systemctl start keepblog
+sudo systemctl enable keepblog
 ```
 
 ---
@@ -1393,7 +1393,7 @@ A: 在 `internal/middleware/` 目录下创建新文件，并在 `routers.go` 中
 
 ### 项目概览
 
-Go-Site 前端项目采用 Vue 3 + Vite + Element Plus 技术栈，基于 [vue-pure-admin](https://github.com/pure-admin/vue-pure-admin) 精简版构建，提供完整的管理后台界面。
+KeepBlog 前端项目采用 Vue 3 + Vite + Element Plus 技术栈，基于 [vue-pure-admin](https://github.com/pure-admin/vue-pure-admin) 精简版构建，提供完整的管理后台界面。
 
 ### 技术栈
 
@@ -1838,7 +1838,7 @@ pnpm preview
 1. **启动后端服务**：
 
 ```bash
-cd go-site
+cd keepblog
 make run
 ```
 
@@ -1881,7 +1881,7 @@ pnpm build
 2. **同步到后端**：
 
 ```bash
-cd ../go-site
+cd ../keepblog
 ./sync-console.sh
 ```
 
@@ -1900,7 +1900,7 @@ make build
 4. **运行**：
 
 ```bash
-./bin/go-site
+./bin/keepblog
 ```
 
 访问后台管理：http://localhost:8589/console
@@ -1974,4 +1974,4 @@ MIT License
 
 **文档版本**：1.1.0
 **最后更新**：2026-01-26
-**维护者**：Go-Site Team
+**维护者**：KeepBlog Team

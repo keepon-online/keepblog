@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Go-Site Docker 构建脚本
+# KeepBlog Docker 构建脚本
 # 自动获取版本信息
 
 set -e
@@ -11,10 +11,10 @@ GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_DATE=$(date -u '+%Y-%m-%d')
 
 # 镜像名称
-IMAGE_NAME="jieepre/go-site"
+IMAGE_NAME="jieepre/keepblog"
 
 echo "================================================"
-echo "构建 Go-Site Docker 镜像"
+echo "构建 KeepBlog Docker 镜像"
 echo "================================================"
 echo "版本: $VERSION"
 echo "提交: $GIT_COMMIT"

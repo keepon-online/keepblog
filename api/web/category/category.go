@@ -1,8 +1,8 @@
 package category
 
 import (
-	"gitee.com/jieepre/go-site/internal/pkg/core"
-	"gitee.com/jieepre/go-site/pkg/page"
+	"gitee.com/jieepre/keepblog/internal/pkg/core"
+	"gitee.com/jieepre/keepblog/pkg/page"
 	"github.com/gin-gonic/gin"
 	"html/template"
 	"net/http"

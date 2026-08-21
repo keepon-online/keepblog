@@ -3,11 +3,11 @@ package tags
 import (
 	"strconv"
 
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/internal/pkg/core"
-	"gitee.com/jieepre/go-site/pkg/result"
-	tags_remove "gitee.com/jieepre/go-site/pkg/tags-remove"
+	"gitee.com/jieepre/keepblog/global"
+	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/pkg/core"
+	"gitee.com/jieepre/keepblog/pkg/result"
+	tags_remove "gitee.com/jieepre/keepblog/pkg/tags-remove"
 	"github.com/gin-gonic/gin"
 )
 

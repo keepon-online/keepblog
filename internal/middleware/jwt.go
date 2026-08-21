@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"gitee.com/jieepre/go-site/internal/errors"
-	"gitee.com/jieepre/go-site/pkg/jwttoken"
+	"gitee.com/jieepre/keepblog/internal/errors"
+	"gitee.com/jieepre/keepblog/pkg/jwttoken"
 	"github.com/gin-gonic/gin"
 )
 
@@ -64,43 +64,43 @@ func JwtVerify() gin.HandlerFunc {
 			return
 		}
 
-// 获取Authorization头
-	authorization := c.Request.Header.Get("Authorization")
-	if authorization == "" {
-		_ = c.Error(errors.New(errors.ErrUnauthorized, "未提供认证信息"))
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
+		// 获取Authorization头
+		authorization := c.Request.Header.Get("Authorization")
+		if authorization == "" {
+			_ = c.Error(errors.New(errors.ErrUnauthorized, "未提供认证信息"))
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
 
-	// 检查Bearer格式
-	if !strings.HasPrefix(authorization, "Bearer ") {
-		_ = c.Error(errors.New(errors.ErrUnauthorized, "Token格式错误"))
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
+		// 检查Bearer格式
+		if !strings.HasPrefix(authorization, "Bearer ") {
+			_ = c.Error(errors.New(errors.ErrUnauthorized, "Token格式错误"))
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
 
-	// 提取token
-	tokenStr := strings.TrimPrefix(authorization, "Bearer ")
-	if tokenStr == "" {
-		_ = c.Error(errors.New(errors.ErrUnauthorized, "Token不能为空"))
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
+		// 提取token
+		tokenStr := strings.TrimPrefix(authorization, "Bearer ")
+		if tokenStr == "" {
+			_ = c.Error(errors.New(errors.ErrUnauthorized, "Token不能为空"))
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
 
-	// 验证token
-	claims, err := jwttoken.ParseToken(tokenStr)
-	if err != nil {
-		_ = c.Error(errors.New(errors.ErrTokenExpired, err.Error()))
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
+		// 验证token
+		claims, err := jwttoken.ParseToken(tokenStr)
+		if err != nil {
+			_ = c.Error(errors.New(errors.ErrTokenExpired, err.Error()))
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
 
-	// 检查 Token 是否在黑名单中（已注销）
-	if jwttoken.IsTokenBlacklisted(tokenStr) {
-		_ = c.Error(errors.New(errors.ErrUnauthorized, "Token已失效，请重新登录"))
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
+		// 检查 Token 是否在黑名单中（已注销）
+		if jwttoken.IsTokenBlacklisted(tokenStr) {
+			_ = c.Error(errors.New(errors.ErrUnauthorized, "Token已失效，请重新登录"))
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
 
 		// 检查token是否即将过期（剩余时间小于30分钟）
 		if time.Until(claims.ExpiresAt.Time) < 30*time.Minute {

@@ -1,7 +1,7 @@
 package link
 
 import (
-	"gitee.com/jieepre/go-site/internal/pkg/core"
+	"gitee.com/jieepre/keepblog/internal/pkg/core"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )

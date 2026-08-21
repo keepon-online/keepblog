@@ -1,7 +1,7 @@
 package main
 
 import (
-	"gitee.com/jieepre/go-site/internal/app"
+	"gitee.com/jieepre/keepblog/internal/app"
 	"github.com/gookit/slog"
 )
 

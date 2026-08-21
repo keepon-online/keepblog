@@ -4,10 +4,10 @@ import (
 	"strings"
 	"time"
 
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/model/system"
-	"gitee.com/jieepre/go-site/pkg"
-	"gitee.com/jieepre/go-site/pkg/area"
+	"gitee.com/jieepre/keepblog/global"
+	"gitee.com/jieepre/keepblog/internal/model/system"
+	"gitee.com/jieepre/keepblog/pkg"
+	"gitee.com/jieepre/keepblog/pkg/area"
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/slog"
 )

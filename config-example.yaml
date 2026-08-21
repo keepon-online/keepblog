@@ -31,7 +31,7 @@ minio:
   accessKeyID: "your-access-key"
   secretAccessKey: "your-secret-key"
   useSSL: false
-  bucketName: go-site
+  bucketName: keepblog
 
 gitalk:
   enable: false

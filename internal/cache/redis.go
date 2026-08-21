@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"gitee.com/jieepre/go-site/config"
+	"gitee.com/jieepre/keepblog/config"
 	"github.com/gookit/slog"
 	"github.com/redis/go-redis/v9"
 )

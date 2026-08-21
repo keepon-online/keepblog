@@ -1,4 +1,4 @@
-# Go-Site 博客系统
+# KeepBlog 博客系统
 
 [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -6,7 +6,7 @@
 
 ## 项目简介
 
-Go-Site 是一个基于 Go 语言和 Gin 框架开发的全功能博客系统，提供完整的前后台管理功能。
+KeepBlog 是一个基于 Go 语言和 Gin 框架开发的全功能博客系统，提供完整的前后台管理功能。
 
 ## 功能特性
 
@@ -49,8 +49,8 @@ Go-Site 是一个基于 Go 语言和 Gin 框架开发的全功能博客系统，
 
 ```bash
 # 克隆项目
-git clone https://github.com/username/go-site.git
-cd go-site
+git clone https://github.com/username/keepblog.git
+cd keepblog
 
 # 安装依赖
 go mod download
@@ -86,7 +86,7 @@ make help          # 查看所有命令
 make docker
 
 # 运行容器
-docker run -d -p 8589:8589 -v ./data:/app/data jieepre/go-site:latest
+docker run -d -p 8589:8589 -v ./data:/app/data jieepre/keepblog:latest
 ```
 
 ## 配置说明
@@ -104,7 +104,7 @@ redis:
 
 minio:
   endpoint: "127.0.0.1:9000"
-  bucketName: "go-site"
+  bucketName: "keepblog"
 ```
 
 ## API 端点
@@ -120,7 +120,7 @@ minio:
 ## 项目结构
 
 ```
-go-site/
+keepblog/
 ├── api/              # API 处理器
 ├── config/           # 配置
 ├── internal/         # 内部包

@@ -11,9 +11,9 @@ import (
 
 // rssFeed 是 RSS 2.0 的根元素，用于 xml.Marshal 输出。
 type rssFeed struct {
-	XMLName xml.Name    `xml:"rss"`
-	Version string      `xml:"version,attr"`
-	Channel rssChannel  `xml:"channel"`
+	XMLName xml.Name   `xml:"rss"`
+	Version string     `xml:"version,attr"`
+	Channel rssChannel `xml:"channel"`
 }
 
 type rssChannel struct {

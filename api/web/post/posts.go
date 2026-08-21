@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"gitee.com/jieepre/go-site/config"
-	"gitee.com/jieepre/go-site/internal/pkg/core"
-	"gitee.com/jieepre/go-site/pkg/hash"
-	"gitee.com/jieepre/go-site/pkg/md"
+	"gitee.com/jieepre/keepblog/config"
+	"gitee.com/jieepre/keepblog/internal/pkg/core"
+	"gitee.com/jieepre/keepblog/pkg/hash"
+	"gitee.com/jieepre/keepblog/pkg/md"
 	"github.com/gin-gonic/gin"
 )
 

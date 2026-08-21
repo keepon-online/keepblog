@@ -5,11 +5,11 @@ import (
 
 	"gorm.io/gorm"
 
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/internal/model/system"
-	"gitee.com/jieepre/go-site/internal/service/category"
-	"gitee.com/jieepre/go-site/internal/service/post"
-	"gitee.com/jieepre/go-site/internal/service/tag"
+	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/model/system"
+	"gitee.com/jieepre/keepblog/internal/service/category"
+	"gitee.com/jieepre/keepblog/internal/service/post"
+	"gitee.com/jieepre/keepblog/internal/service/tag"
 )
 
 type Service struct {

@@ -5,8 +5,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/internal/model/system"
+	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/model/system"
 )
 
 type Service struct {

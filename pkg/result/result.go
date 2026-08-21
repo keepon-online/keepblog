@@ -3,7 +3,7 @@ package result
 import (
 	"net/http"
 
-	"gitee.com/jieepre/go-site/internal/errors"
+	"gitee.com/jieepre/keepblog/internal/errors"
 	"github.com/gin-gonic/gin"
 )
 

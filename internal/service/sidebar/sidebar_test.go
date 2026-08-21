@@ -3,7 +3,7 @@ package sidebar
 import (
 	"testing"
 
-	"gitee.com/jieepre/go-site/internal/testutil"
+	"gitee.com/jieepre/keepblog/internal/testutil"
 )
 
 // Sidebar 聚合了各服务的前台数据，钉住聚合结构与计数。

@@ -43,4 +43,4 @@ mkdir -p /app/data /app/logs
 chmod -R 755 /app/logs 2>/dev/null || true
 
 echo "启动应用程序..."
-exec /app/go-site "$@"
+exec /app/keepblog "$@"

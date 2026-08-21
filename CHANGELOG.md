@@ -7,6 +7,11 @@
 
 ## [未发布]
 
+### 变更
+- **项目更名为 KeepBlog**：Go module 路径由 `gitee.com/jieepre/go-site` 改为 `gitee.com/jieepre/keepblog`，二进制产物、Docker 镜像名（`jieepre/keepblog`）、前端包名同步更新。
+- **环境变量前缀变更**：`GOSITE_*` 改为 `KEEPBLOG_*`（如 `KEEPBLOG_HTTP_PORT`）；`JWT_SECRET` 不变。使用环境变量覆盖配置的部署需同步修改。
+- minio 默认 bucket 名由 `go-site` 改为 `keepblog`（已显式配置 bucketName 的部署不受影响）。
+
 ### 重构
 - 完成 service 层数据库依赖注入、版本化 Goose 迁移、归档查询 N+1 治理与阅读数原子自增。
 - 升级 Gin 至 1.11.0、go-redis 至 v9.6.1、golang-jwt 至 v5.2.2。

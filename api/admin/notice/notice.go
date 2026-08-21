@@ -3,13 +3,13 @@ package notice
 import (
 	"strconv"
 
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/internal/model/system"
-	"gitee.com/jieepre/go-site/internal/pkg/core"
-	noticeService "gitee.com/jieepre/go-site/internal/service/notice"
-	"gitee.com/jieepre/go-site/pkg/jwttoken"
-	"gitee.com/jieepre/go-site/pkg/result"
+	"gitee.com/jieepre/keepblog/global"
+	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/model/system"
+	"gitee.com/jieepre/keepblog/internal/pkg/core"
+	noticeService "gitee.com/jieepre/keepblog/internal/service/notice"
+	"gitee.com/jieepre/keepblog/pkg/jwttoken"
+	"gitee.com/jieepre/keepblog/pkg/result"
 	"github.com/gin-gonic/gin"
 )
 

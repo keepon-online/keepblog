@@ -1,15 +1,15 @@
-# go-site 管理后台
+# keepblog 管理后台
 
-go-site 博客系统的管理后台前端，基于 [Vue 3](https://vuejs.org/) + [Vite](https://vitejs.dev/) + [Element Plus](https://element-plus.org/) + [TypeScript](https://www.typescriptlang.org/) 构建，脚手架源自 [pure-admin-thin](https://github.com/pure-admin/pure-admin-thin)。
+keepblog 博客系统的管理后台前端，基于 [Vue 3](https://vuejs.org/) + [Vite](https://vitejs.dev/) + [Element Plus](https://element-plus.org/) + [TypeScript](https://www.typescriptlang.org/) 构建，脚手架源自 [pure-admin-thin](https://github.com/pure-admin/pure-admin-thin)。
 
 构建产物通过 Go 的 `embed` 嵌入后端二进制，经 `/console` 路径提供服务。
 
 ## 目录说明
 
-本目录是主仓库 `go-site` 的前端子项目，与后端共同构成 monorepo：
+本目录是主仓库 `keepblog` 的前端子项目，与后端共同构成 monorepo：
 
 ```
-go-site/
+keepblog/
 ├── frontend/          ← 本目录：管理后台前端源码
 │   ├── src/           应用源码
 │   ├── build/         vite 构建辅助

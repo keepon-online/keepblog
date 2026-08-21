@@ -1,6 +1,6 @@
 # 快速开始
 
-本指南将帮助您快速安装、配置和运行 Go-Site 项目。
+本指南将帮助您快速安装、配置和运行 KeepBlog 项目。
 
 ---
 
@@ -24,7 +24,7 @@
 
 ```bash
 git clone <repository-url>
-cd go-site
+cd keepblog
 ```
 
 ### 2. 安装依赖
@@ -166,7 +166,7 @@ make docker
 或手动构建：
 
 ```bash
-docker build -t go-site:latest .
+docker build -t keepblog:latest .
 ```
 
 ### 2. 使用 Docker Compose
@@ -217,13 +217,13 @@ docker-compose down
 
 ```bash
 docker run -d \
-  --name go-site \
+  --name keepblog \
   -p 8589:8589 \
   -v $(pwd)/logs:/app/logs \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data:/app/data \
   -e TZ=Asia/Shanghai \
-  go-site:latest
+  keepblog:latest
 ```
 
 ---
@@ -234,17 +234,17 @@ docker run -d \
 
 ```bash
 # HTTP 端口
-export GOSITE_HTTP_PORT=8589
+export KEEPBLOG_HTTP_PORT=8589
 
 # Redis 配置
-export GOSITE_REDIS_HOST=localhost
-export GOSITE_REDIS_PORT=6379
-export GOSITE_REDIS_PASSWORD=
-export GOSITE_REDIS_DATABASE=0
-export GOSITE_REDIS_ENABLE=false
+export KEEPBLOG_REDIS_HOST=localhost
+export KEEPBLOG_REDIS_PORT=6379
+export KEEPBLOG_REDIS_PASSWORD=
+export KEEPBLOG_REDIS_DATABASE=0
+export KEEPBLOG_REDIS_ENABLE=false
 
 # 基础 URL
-export GOSITE_BASE_URL=https://example.com
+export KEEPBLOG_BASE_URL=https://example.com
 ```
 
 ---
@@ -308,7 +308,7 @@ make version        # 显示版本信息
 go run main.go
 
 # 构建项目
-go build -o bin/go-site main.go
+go build -o bin/keepblog main.go
 
 # 运行测试
 go test ./...
@@ -324,10 +324,10 @@ go mod tidy
 
 ```bash
 # 构建镜像
-docker build -t go-site:latest .
+docker build -t keepblog:latest .
 
 # 运行容器
-docker run -d -p 8589:8589 go-site:latest
+docker run -d -p 8589:8589 keepblog:latest
 
 # 查看日志
 docker logs -f <container-id>
@@ -349,7 +349,7 @@ docker rm <container-id>
 运行后会自动创建以下目录：
 
 ```
-go-site/
+keepblog/
 ├── data/                   # 数据目录
 │   └── site.db            # SQLite 数据库
 ├── logs/                   # 日志目录
@@ -625,7 +625,7 @@ make version
 或运行二进制文件：
 
 ```bash
-./bin/go-site --version
+./bin/keepblog --version
 ```
 
 ---

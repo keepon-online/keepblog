@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/internal/model/system"
+	"gitee.com/jieepre/keepblog/global"
+	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/model/system"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -44,7 +44,7 @@ func NewTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 
 	dbOnce.Do(func() {
-		dir, err := os.MkdirTemp("", "go-site-test-*")
+		dir, err := os.MkdirTemp("", "keepblog-test-*")
 		if err != nil {
 			dbErr = err
 			return

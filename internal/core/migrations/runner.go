@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io/fs"
 
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/internal/model/system"
+	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/model/system"
 	"github.com/pressly/goose/v3"
 	"gorm.io/gorm"
 )

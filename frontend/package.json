@@ -1,5 +1,5 @@
 {
-  "name": "go-site-console",
+  "name": "keepblog-console",
   "version": "6.2.0",
   "private": true,
   "type": "module",
@@ -21,7 +21,7 @@
     "preinstall": "npx only-allow pnpm"
   },
   "keywords": [
-    "go-site",
+    "keepblog",
     "console",
     "element-plus",
     "tailwindcss",

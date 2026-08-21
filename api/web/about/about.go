@@ -3,8 +3,8 @@ package about
 import (
 	"net/http"
 
-	"gitee.com/jieepre/go-site/internal/pkg/core"
-	"gitee.com/jieepre/go-site/pkg/md"
+	"gitee.com/jieepre/keepblog/internal/pkg/core"
+	"gitee.com/jieepre/keepblog/pkg/md"
 	"github.com/gin-gonic/gin"
 )
 

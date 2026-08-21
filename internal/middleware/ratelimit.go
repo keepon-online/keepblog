@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"gitee.com/jieepre/go-site/internal/cache"
-	"gitee.com/jieepre/go-site/pkg/result"
+	"gitee.com/jieepre/keepblog/internal/cache"
+	"gitee.com/jieepre/keepblog/pkg/result"
 	"github.com/gin-gonic/gin"
 )
 

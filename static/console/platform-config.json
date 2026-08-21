@@ -1,6 +1,6 @@
 {
   "Version": "6.2.0",
-  "Title": "go-site",
+  "Title": "keepblog",
   "FixedHeader": true,
   "HiddenSideBar": false,
   "MultiTagsCache": false,

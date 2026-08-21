@@ -3,7 +3,7 @@ package pkg
 import (
 	"bytes"
 	"encoding/json"
-	"gitee.com/jieepre/go-site/internal/model/system"
+	"gitee.com/jieepre/keepblog/internal/model/system"
 	"github.com/gookit/slog"
 	"io"
 	"net/http"

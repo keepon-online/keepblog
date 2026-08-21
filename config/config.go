@@ -98,19 +98,19 @@ func Load() error {
 	viper.AddConfigPath("./config")
 
 	// 设置环境变量前缀
-	viper.SetEnvPrefix("GOSITE")
+	viper.SetEnvPrefix("KEEPBLOG")
 	viper.AutomaticEnv()
 
 	// 环境变量映射（绑定失败属于配置期错误，启动时无法恢复，故忽略）
-	_ = viper.BindEnv("http.port", "GOSITE_HTTP_PORT")
-	_ = viper.BindEnv("jwt.secret", "JWT_SECRET", "GOSITE_JWT_SECRET")
-	_ = viper.BindEnv("hashids.salt", "GOSITE_HASHIDS_SALT")
-	_ = viper.BindEnv("redis.host", "GOSITE_REDIS_HOST")
-	_ = viper.BindEnv("redis.port", "GOSITE_REDIS_PORT")
-	_ = viper.BindEnv("redis.password", "GOSITE_REDIS_PASSWORD")
-	_ = viper.BindEnv("redis.database", "GOSITE_REDIS_DATABASE")
-	_ = viper.BindEnv("redis.enable", "GOSITE_REDIS_ENABLE")
-	_ = viper.BindEnv("baidu.url", "GOSITE_BASE_URL")
+	_ = viper.BindEnv("http.port", "KEEPBLOG_HTTP_PORT")
+	_ = viper.BindEnv("jwt.secret", "JWT_SECRET", "KEEPBLOG_JWT_SECRET")
+	_ = viper.BindEnv("hashids.salt", "KEEPBLOG_HASHIDS_SALT")
+	_ = viper.BindEnv("redis.host", "KEEPBLOG_REDIS_HOST")
+	_ = viper.BindEnv("redis.port", "KEEPBLOG_REDIS_PORT")
+	_ = viper.BindEnv("redis.password", "KEEPBLOG_REDIS_PASSWORD")
+	_ = viper.BindEnv("redis.database", "KEEPBLOG_REDIS_DATABASE")
+	_ = viper.BindEnv("redis.enable", "KEEPBLOG_REDIS_ENABLE")
+	_ = viper.BindEnv("baidu.url", "KEEPBLOG_BASE_URL")
 
 	// 设置默认值
 	setDefaults()
@@ -184,7 +184,7 @@ func setDefaults() {
 	viper.SetDefault("minio.accessKeyID", "")
 	viper.SetDefault("minio.secretAccessKey", "")
 	viper.SetDefault("minio.useSSL", false)
-	viper.SetDefault("minio.bucketName", "go-site")
+	viper.SetDefault("minio.bucketName", "keepblog")
 
 	// Gitalk 默认配置
 	viper.SetDefault("gitalk.enable", false)

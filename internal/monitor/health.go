@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"gitee.com/jieepre/go-site/global"
-	"gitee.com/jieepre/go-site/internal/cache"
+	"gitee.com/jieepre/keepblog/global"
+	"gitee.com/jieepre/keepblog/internal/cache"
 
 	"github.com/gin-gonic/gin"
 )

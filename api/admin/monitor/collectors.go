@@ -16,7 +16,7 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 	psNet "github.com/shirou/gopsutil/v3/net"
 
-	"gitee.com/jieepre/go-site/pkg/result"
+	"gitee.com/jieepre/keepblog/pkg/result"
 )
 
 // 实现方法：获取完整系统信息

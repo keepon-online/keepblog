@@ -9,14 +9,14 @@ import (
 	"github.com/gookit/slog"
 	"gorm.io/gorm"
 
-	"gitee.com/jieepre/go-site/internal/model"
-	"gitee.com/jieepre/go-site/internal/model/request"
-	"gitee.com/jieepre/go-site/internal/model/response"
-	"gitee.com/jieepre/go-site/internal/model/system"
-	"gitee.com/jieepre/go-site/pkg"
-	"gitee.com/jieepre/go-site/pkg/area"
-	"gitee.com/jieepre/go-site/pkg/jwttoken"
-	"gitee.com/jieepre/go-site/pkg/page"
+	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/model/request"
+	"gitee.com/jieepre/keepblog/internal/model/response"
+	"gitee.com/jieepre/keepblog/internal/model/system"
+	"gitee.com/jieepre/keepblog/pkg"
+	"gitee.com/jieepre/keepblog/pkg/area"
+	"gitee.com/jieepre/keepblog/pkg/jwttoken"
+	"gitee.com/jieepre/keepblog/pkg/page"
 )
 
 type Service struct {

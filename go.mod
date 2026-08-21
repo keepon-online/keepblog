@@ -1,4 +1,4 @@
-module gitee.com/jieepre/go-site
+module gitee.com/jieepre/keepblog
 
 go 1.24.11
 

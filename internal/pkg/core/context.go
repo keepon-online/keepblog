@@ -1,7 +1,7 @@
 package core
 
 import (
-	"gitee.com/jieepre/go-site/internal/service"
+	"gitee.com/jieepre/keepblog/internal/service"
 	"github.com/gin-gonic/gin"
 )
 

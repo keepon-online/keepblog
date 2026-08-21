@@ -81,7 +81,7 @@ pageSize := 10  // 在多个方法中重复
 package post
 
 import (
-    "gitee.com/jieepre/go-site/internal/model"
+    "gitee.com/jieepre/keepblog/internal/model"
     "gorm.io/gorm"
 )
 
@@ -197,8 +197,8 @@ func SearchScope(keyword string) func(db *gorm.DB) *gorm.DB {
 package post
 
 import (
-    "gitee.com/jieepre/go-site/global"
-    "gitee.com/jieepre/go-site/internal/model"
+    "gitee.com/jieepre/keepblog/global"
+    "gitee.com/jieepre/keepblog/internal/model"
     "gorm.io/gorm"
 )
 
@@ -323,8 +323,8 @@ func (qb *QueryBuilder) Scan(dest interface{}) error {
 package post
 
 import (
-    "gitee.com/jieepre/go-site/global"
-    "gitee.com/jieepre/go-site/internal/model"
+    "gitee.com/jieepre/keepblog/global"
+    "gitee.com/jieepre/keepblog/internal/model"
     "errors"
 )
 

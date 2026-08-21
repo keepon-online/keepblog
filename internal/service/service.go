@@ -1,17 +1,17 @@
 package service
 
 import (
-	"gitee.com/jieepre/go-site/internal/service/about"
-	"gitee.com/jieepre/go-site/internal/service/category"
-	"gitee.com/jieepre/go-site/internal/service/dashboard"
-	"gitee.com/jieepre/go-site/internal/service/link"
-	"gitee.com/jieepre/go-site/internal/service/music"
-	"gitee.com/jieepre/go-site/internal/service/notice"
-	"gitee.com/jieepre/go-site/internal/service/post"
-	"gitee.com/jieepre/go-site/internal/service/sidebar"
-	"gitee.com/jieepre/go-site/internal/service/system"
-	"gitee.com/jieepre/go-site/internal/service/tag"
-	"gitee.com/jieepre/go-site/internal/service/website"
+	"gitee.com/jieepre/keepblog/internal/service/about"
+	"gitee.com/jieepre/keepblog/internal/service/category"
+	"gitee.com/jieepre/keepblog/internal/service/dashboard"
+	"gitee.com/jieepre/keepblog/internal/service/link"
+	"gitee.com/jieepre/keepblog/internal/service/music"
+	"gitee.com/jieepre/keepblog/internal/service/notice"
+	"gitee.com/jieepre/keepblog/internal/service/post"
+	"gitee.com/jieepre/keepblog/internal/service/sidebar"
+	"gitee.com/jieepre/keepblog/internal/service/system"
+	"gitee.com/jieepre/keepblog/internal/service/tag"
+	"gitee.com/jieepre/keepblog/internal/service/website"
 	"gorm.io/gorm"
 )
 

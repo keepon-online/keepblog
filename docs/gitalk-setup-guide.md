@@ -1,6 +1,6 @@
 # Gitalk 评论系统配置指南
 
-本指南将帮助您在 go-site 项目中配置和启用 Gitalk 评论系统。
+本指南将帮助您在 keepblog 项目中配置和启用 Gitalk 评论系统。
 
 ---
 
@@ -329,12 +329,12 @@ language: "en",     // 英文
 
 ```bash
 # 设置环境变量
-export GOSITE_GITALK_CLIENT_SECRET="your-client-secret"
+export KEEPBLOG_GITALK_CLIENT_SECRET="your-client-secret"
 ```
 
 修改 `config/config.go` 添加环境变量绑定：
 ```go
-viper.BindEnv("gitalk.clientSecret", "GOSITE_GITALK_CLIENT_SECRET")
+viper.BindEnv("gitalk.clientSecret", "KEEPBLOG_GITALK_CLIENT_SECRET")
 ```
 
 **方法 2：使用 .gitignore**

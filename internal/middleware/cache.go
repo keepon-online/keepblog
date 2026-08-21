@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"gitee.com/jieepre/go-site/internal/cache"
+	"gitee.com/jieepre/keepblog/internal/cache"
 
 	"github.com/gin-gonic/gin"
 )

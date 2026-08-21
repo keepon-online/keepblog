@@ -4,9 +4,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gitee.com/jieepre/go-site/internal/model/request"
-	"gitee.com/jieepre/go-site/internal/testutil"
-	"gitee.com/jieepre/go-site/pkg/jwttoken"
+	"gitee.com/jieepre/keepblog/internal/model/request"
+	"gitee.com/jieepre/keepblog/internal/testutil"
+	"gitee.com/jieepre/keepblog/pkg/jwttoken"
 
 	"github.com/gin-gonic/gin"
 )
