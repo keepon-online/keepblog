@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"errors"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gookit/slog"
 )
 
@@ -83,19 +83,16 @@ func Secret() jwt.Keyfunc {
 func ParseToken(tokensStr string) (*MyClaims, error) {
 	token, err := jwt.ParseWithClaims(tokensStr, &MyClaims{}, Secret())
 	if err != nil {
-		if ve, ok := err.(*jwt.ValidationError); ok {
-			if ve.Errors&jwt.ValidationErrorMalformed != 0 {
-				return nil, errors.New("that's not even a token")
-			} else if ve.Errors&jwt.ValidationErrorExpired != 0 {
-				return nil, errors.New("token is expired")
-			} else if ve.Errors&jwt.ValidationErrorNotValidYet != 0 {
-				return nil, errors.New("token not active yet")
-			}
-
+		switch {
+		case errors.Is(err, jwt.ErrTokenMalformed):
+			return nil, errors.New("that's not even a token")
+		case errors.Is(err, jwt.ErrTokenExpired):
+			return nil, errors.New("token is expired")
+		case errors.Is(err, jwt.ErrTokenNotValidYet), errors.Is(err, jwt.ErrTokenUsedBeforeIssued):
+			return nil, errors.New("token not active yet")
+		default:
 			return nil, errors.New("couldn't handle this token")
 		}
-
-		return nil, errors.New("couldn't handle this token")
 	}
 	if claims, ok := token.Claims.(*MyClaims); ok && token.Valid {
 		return claims, nil

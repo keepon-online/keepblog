@@ -325,7 +325,7 @@ package post
 import (
     "gitee.com/jieepre/go-site/global"
     "gitee.com/jieepre/go-site/internal/model"
-    "github.com/pkg/errors"
+    "errors"
 )
 
 // GetPost 前台获取文章（已发布、未删除）

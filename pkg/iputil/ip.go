@@ -5,7 +5,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"golang.org/x/text/encoding/simplifiedchinese"
@@ -24,14 +23,6 @@ func GetRealAddressByIP(ip string) string {
 		return "局域网"
 	}
 	return getLocation(ip)
-}
-
-func ipToByte(ipstr string) []byte {
-	parsed := net.ParseIP(strings.TrimSpace(ipstr)).To4()
-	if parsed == nil {
-		return nil
-	}
-	return []byte(parsed)
 }
 
 func isLocalIP(ip net.IP) bool {
@@ -60,7 +51,7 @@ func getLocation(ip string) string {
 	if err != nil {
 		return ""
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return ""

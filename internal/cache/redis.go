@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"gitee.com/jieepre/go-site/config"
-	"github.com/go-redis/redis/v8"
 	"github.com/gookit/slog"
+	"github.com/redis/go-redis/v9"
 )
 
 var (

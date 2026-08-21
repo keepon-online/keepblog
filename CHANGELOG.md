@@ -7,6 +7,13 @@
 
 ## [未发布]
 
+### 重构
+- 完成 service 层数据库依赖注入、版本化 Goose 迁移、归档查询 N+1 治理与阅读数原子自增。
+- 升级 Gin 至 1.11.0、go-redis 至 v9.6.1、golang-jwt 至 v5.2.2。
+- 移除 gogf/gf 与 pkg/errors，监控模块拆分并抽取共享 GORM 查询构建器。
+- 数据库错误使用真实 HTTP 状态码和结构化 ErrorResponse；成功响应信封保持兼容。
+
+
 ### 安全
 - 移除 JWT 签名密钥的代码内置默认值：必须在 `config.yaml` 的 `jwt.secret` 或环境变量 `JWT_SECRET` 提供，缺失时启动报错退出；Docker 首次部署自动生成随机密钥。
 - hashids salt 可通过 `hashids.salt` 配置覆盖（默认保持历史值，旧文章 URL 不受影响）。
