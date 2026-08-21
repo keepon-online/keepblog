@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"gitee.com/jieepre/go-site/internal/errors"
 	"gitee.com/jieepre/go-site/internal/middleware"
 	"gitee.com/jieepre/go-site/internal/monitor"
 	pkg "gitee.com/jieepre/go-site/internal/pkg/core"
 	"gitee.com/jieepre/go-site/internal/router"
 	"gitee.com/jieepre/go-site/internal/service"
 	webTemplates "gitee.com/jieepre/go-site/internal/web"
-	"gitee.com/jieepre/go-site/pkg/result"
 	"gitee.com/jieepre/go-site/static/console"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -38,7 +38,8 @@ func CreateRouters(service *service.AppService, healthChecker *monitor.HealthChe
 
 		// 如果是API路径，返回JSON格式的404
 		if strings.HasPrefix(path, "/api/") {
-			result.With(c, http.StatusNotFound, "接口不存在", nil)
+			_ = c.Error(errors.New(errors.ErrResourceNotFound, "接口不存在"))
+			c.AbortWithStatus(http.StatusNotFound)
 			return
 		}
 

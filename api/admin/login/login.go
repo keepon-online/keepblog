@@ -58,11 +58,7 @@ func (h *Handler) Logout(c *gin.Context) {
 	result.Ok(c, nil)
 }
 func (h *Handler) GetAsyncRoutes(c *gin.Context) {
-	routers := make([]response.Routes, 0)
-	c.JSON(200, gin.H{
-		"success": true,
-		"data":    routers,
-	})
+	result.Ok(c, make([]response.Routes, 0))
 }
 func (h *Handler) GetInfo(c *gin.Context) {
 	// 从 Token 获取用户名
