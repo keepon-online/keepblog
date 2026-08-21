@@ -17,7 +17,8 @@ defineOptions({
 });
 
 import { ref, onMounted, watch, onUnmounted, computed } from "vue";
-import * as echarts from "echarts";
+// 按需引入：全量 import "echarts" 会把整个 echarts 打进本组件的懒加载 chunk
+import echarts from "@/utils/echarts";
 import chinaJson from "./china.json";
 
 const props = defineProps<{
