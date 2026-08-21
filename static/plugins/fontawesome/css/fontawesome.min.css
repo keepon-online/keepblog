@@ -1,0 +1,54 @@
+/* Font Awesome 6 子集：仅包含 keepblog 模板与脚本实际使用的 35 个图标。
+ * 模板中的 fa- 类名保持不变；新增图标时需重新生成（scripts/subset-fontawesome.py）。 */
+@font-face{font-family:"Font Awesome 6 Free";font-style:normal;font-weight:900;font-display:block;src:url(../webfonts/fa-solid-900.woff2) format("woff2")}
+@font-face{font-family:"Font Awesome 6 Free";font-style:normal;font-weight:400;font-display:block;src:url(../webfonts/fa-regular-400.woff2) format("woff2")}
+@font-face{font-family:"Font Awesome 6 Brands";font-style:normal;font-weight:400;font-display:block;src:url(../webfonts/fa-brands-400.woff2) format("woff2")}
+.fa-fw{text-align:center;width:1.25em}
+.fa-shake{-webkit-animation-name:fa-shake;animation-name:fa-shake;-webkit-animation-duration:var(--fa-animation-duration,1s);animation-duration:var(--fa-animation-duration,1s);-webkit-animation-iteration-count:var(--fa-animation-iteration-count,infinite);animation-iteration-count:var(--fa-animation-iteration-count,infinite);-webkit-animation-timing-function:var(--fa-animation-timing,linear);animation-timing-function:var(--fa-animation-timing,linear)}
+.fa-shake,.fa-spin{-webkit-animation-delay:var(--fa-animation-delay,0);animation-delay:var(--fa-animation-delay,0);-webkit-animation-direction:var(--fa-animation-direction,normal);animation-direction:var(--fa-animation-direction,normal)}
+.fa-spin{-webkit-animation-name:fa-spin;animation-name:fa-spin;-webkit-animation-duration:var(--fa-animation-duration,2s);animation-duration:var(--fa-animation-duration,2s);-webkit-animation-iteration-count:var(--fa-animation-iteration-count,infinite);animation-iteration-count:var(--fa-animation-iteration-count,infinite);-webkit-animation-timing-function:var(--fa-animation-timing,linear);animation-timing-function:var(--fa-animation-timing,linear)}
+.fa-pulse,.fa-spin-pulse{-webkit-animation-name:fa-spin;animation-name:fa-spin;-webkit-animation-direction:var(--fa-animation-direction,normal);animation-direction:var(--fa-animation-direction,normal);-webkit-animation-duration:var(--fa-animation-duration,1s);animation-duration:var(--fa-animation-duration,1s);-webkit-animation-iteration-count:var(--fa-animation-iteration-count,infinite);animation-iteration-count:var(--fa-animation-iteration-count,infinite);-webkit-animation-timing-function:var(--fa-animation-timing,steps(8));animation-timing-function:var(--fa-animation-timing,steps(8))}
+.fa-angle-down:before{content:"\f107"}
+.fa-angle-double-down:before,.fa-angles-down:before{content:"\f103"}
+.fa-arrow-up:before{content:"\f062"}
+.fa-bars:before,.fa-navicon:before{content:"\f0c9"}
+.fa-bars-staggered:before,.fa-reorder:before,.fa-stream:before{content:"\f550"}
+.fa-archive:before,.fa-box-archive:before{content:"\f187"}
+.fa-bullhorn:before{content:"\f0a1"}
+.fa-calendar-alt:before,.fa-calendar-days:before{content:"\f073"}
+.fa-chart-line:before,.fa-line-chart:before{content:"\f201"}
+.fa-check:before{content:"\f00c"}
+.fa-adjust:before,.fa-circle-half-stroke:before{content:"\f042"}
+.fa-clock-four:before,.fa-clock:before{content:"\f017"}
+.fa-clock-rotate-left:before,.fa-history:before{content:"\f1da"}
+.fa-comments:before{content:"\f086"}
+.fa-envelope:before{content:"\f0e0"}
+.fa-eye:before{content:"\f06e"}
+.fa-file-word:before{content:"\f1c2"}
+.fa-folder-open:before{content:"\f07c"}
+.fa-cog:before,.fa-gear:before{content:"\f013"}
+.fa-heart:before{content:"\f004"}
+.fa-home-alt:before,.fa-home-lg-alt:before,.fa-home:before,.fa-house:before{content:"\f015"}
+.fa-inbox:before{content:"\f01c"}
+.fa-arrows-alt-h:before,.fa-left-right:before{content:"\f337"}
+.fa-chain:before,.fa-link:before{content:"\f0c1"}
+.fa-magnifying-glass:before,.fa-search:before{content:"\f002"}
+.fa-file-clipboard:before,.fa-paste:before{content:"\f0ea"}
+.fa-right-from-bracket:before,.fa-sign-out-alt:before{content:"\f2f5"}
+.fa-spinner:before{content:"\f110"}
+.fa-tag:before{content:"\f02b"}
+.fa-tags:before{content:"\f02c"}
+.fa-thumbs-up:before{content:"\f164"}
+.fa-thumb-tack:before,.fa-thumbtack:before{content:"\f08d"}
+.fa-close:before,.fa-multiply:before,.fa-remove:before,.fa-times:before,.fa-xmark:before{content:"\f00d"}
+.fa-brands,.fab{font-family:"Font Awesome 6 Brands";font-weight:400}
+.fa-git-alt:before{content:"\f841"}
+.fa-github:before{content:"\f09b"}
+.fa-regular,.far{font-family:"Font Awesome 6 Free";font-weight:400}
+.fa-solid,.fas{font-family:"Font Awesome 6 Free";font-weight:900}
+
+
+@-webkit-keyframes fa-shake{0%{-webkit-transform:rotate(-15deg);transform:rotate(-15deg)}4%{-webkit-transform:rotate(15deg);transform:rotate(15deg)}8%,24%{-webkit-transform:rotate(-18deg);transform:rotate(-18deg)}12%,28%{-webkit-transform:rotate(18deg);transform:rotate(18deg)}16%{-webkit-transform:rotate(-22deg);transform:rotate(-22deg)}20%{-webkit-transform:rotate(22deg);transform:rotate(22deg)}32%{-webkit-transform:rotate(-12deg);transform:rotate(-12deg)}36%{-webkit-transform:rotate(12deg);transform:rotate(12deg)}40%,to{-webkit-transform:rotate(0deg);transform:rotate(0deg)}}
+@-webkit-keyframes fa-spin{0%{-webkit-transform:rotate(0deg);transform:rotate(0deg)}to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}}
+@keyframes fa-shake{0%{-webkit-transform:rotate(-15deg);transform:rotate(-15deg)}4%{-webkit-transform:rotate(15deg);transform:rotate(15deg)}8%,24%{-webkit-transform:rotate(-18deg);transform:rotate(-18deg)}12%,28%{-webkit-transform:rotate(18deg);transform:rotate(18deg)}16%{-webkit-transform:rotate(-22deg);transform:rotate(-22deg)}20%{-webkit-transform:rotate(22deg);transform:rotate(22deg)}32%{-webkit-transform:rotate(-12deg);transform:rotate(-12deg)}36%{-webkit-transform:rotate(12deg);transform:rotate(12deg)}40%,to{-webkit-transform:rotate(0deg);transform:rotate(0deg)}}
+@keyframes fa-spin{0%{-webkit-transform:rotate(0deg);transform:rotate(0deg)}to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}}
