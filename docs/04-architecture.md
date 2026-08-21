@@ -299,7 +299,7 @@ type PostServiceInterface interface {
 }
 ```
 
-参考: `internal/service/interfaces.go:1`
+服务接口文件已移除；当前通过 `InitAppService(db *gorm.DB)` 进行显式依赖注入。
 
 ### 5. 中间件系统 (internal/middleware/)
 
@@ -556,41 +556,22 @@ func InitDB() {
 
 参考: `internal/core/db.go:1`
 
-### 自动迁移
+### 版本化数据库迁移
+
+数据库 schema 和索引由 Goose 管理，迁移文件嵌入二进制：
 
 ```go
-func InitResource() {
-    // 自动迁移表结构
-    global.DB.AutoMigrate(
-        &model.Post{},
-        &model.Category{},
-        &model.Tag{},
-        &model.PostTag{},
-        &model.Comment{},
-        &model.CommentReply{},
-        &model.FriendLink{},
-        &model.User{},
-        &model.About{},
-        &model.Music{},
-        &model.AccessLog{},
-        &model.LoginLog{},
-        &model.WebSite{},
-        &model.Notice{},
-    )
-
-    // 创建索引
-    createIndexes()
-
-    // 初始化数据
-    initData()
+if err := migrations.Run(global.GORM); err != nil {
+    return fmt.Errorf("run database migrations failed: %w", err)
 }
+core.InitResource() // 只负责种子数据
 ```
 
-参考: `internal/core/init.go:1`
+首次接入的旧库会执行一次兼容性 AutoMigrate 以补齐基线缺失字段，随后由
+`internal/core/migrations/sql/` 中的版本化 SQL 管理变更。迁移使用
+`IF NOT EXISTS`，重复启动幂等且不删除已有数据。
 
----
-
-## 性能优化
+参考：`internal/core/migrations/runner.go:Run`
 
 ### 1. 连接池
 
@@ -735,10 +716,9 @@ func RegisterNewRoutes(group *gin.RouterGroup, service *service.AppService) {
 
 ## 下一步
 
-- [数据模型](./05-data-models.md) - 查看数据库表结构
-- [API 设计](./06-api-design.md) - 浏览 API 接口文档
-- [中间件系统](./10-middleware.md) - 了解中间件详情
-- [服务架构](./11-service-layer.md) - 深入服务层设计
+- 数据库迁移：`internal/core/migrations/`
+- API 路由：`internal/router/`
+- 中间件：`internal/middleware/`
 
 ---
 

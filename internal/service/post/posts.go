@@ -451,50 +451,6 @@ func (service Service) GetPostsByCategoryId(id int64) ([]model.Post, error) {
 	return posts, nil
 }
 
-// GetPostsArchive 获取归档数据
-func (service Service) GetPostsArchive(num int64) ([]map[string]any, int64, error) {
-	var archives []struct {
-		Year  string
-		Month string
-		Count int
-	}
-	if err := service.db.Raw("SELECT strftime('%Y', create_time, 'unixepoch') AS year, strftime('%m', create_time, 'unixepoch') AS month, COUNT(*) AS count FROM post GROUP BY year, month ORDER BY year DESC, month DESC").Scan(&archives).Error; err != nil {
-		return nil, 0, errors.New("查询归档统计失败: " + err.Error())
-	}
-
-	// 生成归档数据
-	archiveData := make([]map[string]any, len(archives))
-	for i, archive := range archives {
-		// 查询归档时间段内的文章
-		var articles []model.ArchivePosts
-		if err := service.db.Table("post").
-			Where("strftime('%Y', create_time, 'unixepoch') = ? AND strftime('%m', create_time, 'unixepoch') = ?", archive.Year, archive.Month).
-			Order("create_time DESC").
-			Find(&articles).Error; err != nil {
-			return nil, 0, errors.New("查询归档文章失败: " + err.Error())
-		}
-
-		// 生成文章列表数据
-		articleData := make([]map[string]interface{}, len(articles))
-		for j, article := range articles {
-			articleData[j] = map[string]interface{}{
-				"title":      article.Title,
-				"created_at": article.PubTime,
-			}
-		}
-
-		// 生成归档数据
-		archiveData[i] = map[string]any{
-			"year":     archive.Year,
-			"month":    archive.Month,
-			"count":    archive.Count,
-			"articles": articleData,
-		}
-	}
-
-	return archiveData, 1, nil
-}
-
 // Search 搜索文章
 func (service Service) Search(keyword string) (posts []model.SearchPost, err error) {
 	return service.SearchPaged(keyword, 1, 20)

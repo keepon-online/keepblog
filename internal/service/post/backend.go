@@ -123,7 +123,7 @@ func (service Service) GetList(req request.PostRequest) (*page.Info, error) {
 		WithCategoryId(req.CategoryId)
 
 	// 关联分类表（使用 join 而不是 left join，因为后台需要显示分类）
-	qb.db = qb.db.Joins("JOIN category pc ON post.category_id = pc.category_id")
+	qb.DB = qb.DB.Joins("JOIN category pc ON post.category_id = pc.category_id")
 
 	if err := qb.Count(&total); err != nil {
 		return nil, errors.New("统计文章失败: " + err.Error())

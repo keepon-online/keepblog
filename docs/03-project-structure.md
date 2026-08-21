@@ -21,7 +21,9 @@ go-site/
 │   │   ├── login/                # 登录认证
 │   │   │   └── login.go
 │   │   ├── monitor/              # 系统监控
-│   │   │   └── monitor.go
+│   │   │   ├── types.go          # 监控 DTO
+│   │   │   ├── handlers.go       # HTTP 处理器
+│   │   │   └── collectors.go     # 系统信息采集
 │   │   ├── music/                # 音乐管理
 │   │   │   └── music.go
 │   │   ├── notice/               # 通知管理
@@ -65,8 +67,11 @@ go-site/
 │   │   └── server.go
 │   ├── core/                     # 核心初始化
 │   │   ├── db.go                 # 数据库初始化
-│   │   ├── init.go               # 资源初始化
-│   │   └── indexes.go            # 数据库索引
+│   │   ├── log.go                # 日志初始化
+│   │   ├── migrate.go            # 种子数据初始化
+│   │   ├── seed.go               # 嵌入式种子数据
+│   │   ├── timer.go              # 定时任务
+│   │   └── migrations/           # Goose 版本化迁移
 │   ├── errors/                   # 错误处理
 │   │   └── errors.go
 │   ├── logger/                   # 日志系统
@@ -144,8 +149,7 @@ go-site/
 │   │   │   └── tag.go
 │   │   ├── website/              # 网站服务
 │   │   │   └── website.go
-│   │   ├── service.go            # 服务聚合
-│   │   └── interfaces.go         # 服务接口
+│   │   └── service.go            # 服务聚合与依赖注入
 │   ├── websocket/                # WebSocket 支持
 │   │   ├── handler.go
 │   │   └── hub.go
@@ -342,11 +346,14 @@ type AppService struct {
 参考: `internal/middleware/`
 
 #### internal/core/ - 核心初始化
-- **db.go**: 数据库连接和配置
-- **init.go**: 资源初始化（表迁移、初始数据）
-- **indexes.go**: 数据库索引创建
+- **db.go**: SQLite 数据库连接和连接池配置
+- **log.go**: 日志初始化
+- **migrate.go**: 种子数据初始化
+- **seed.go**: 嵌入式文章、音乐种子数据与随机管理员密码
+- **timer.go**: 定时任务
+- **migrations/**: Goose 版本化 schema/index 迁移；启动时幂等执行
 
-参考: `internal/core/db.go:1`, `internal/core/init.go:1`
+参考: `internal/app/app.go:Initialize`, `internal/core/migrations/runner.go:Run`
 
 #### internal/router/ - 路由定义
 - **route.go**: 路由基础定义和接口
@@ -532,8 +539,8 @@ API 处理器
 ## 下一步
 
 - [系统架构](./04-architecture.md) - 了解整体架构设计
-- [数据模型](./05-data-models.md) - 查看数据库表结构
-- [API 设计](./06-api-design.md) - 浏览 API 接口文档
+- 迁移文件：`internal/core/migrations/sql/`
+- API 路由：`internal/router/`
 
 ---
 
