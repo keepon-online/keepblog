@@ -235,7 +235,6 @@ func InitAppService() *AppService {
 | **Docker** | 容器化部署 |
 | **Make** | 构建自动化 |
 | **Git** | 版本控制 |
-| **Drone CI** | 持续集成 |
 
 ---
 
