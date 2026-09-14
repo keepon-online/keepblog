@@ -4,7 +4,7 @@ http:
 # JWT 签发密钥（必填）。生产环境必须设置为随机值，可用：openssl rand -base64 32
 # 也可通过环境变量 JWT_SECRET 提供。
 jwt:
-  secret: ""
+  secret: "11111"
 
 # hashids 编码 salt（可选）。留空使用内置默认值；注意：更换 salt 会使
 # 已发布文章的 URL 全部失效，除非你知道自己在做什么，否则不要修改。
