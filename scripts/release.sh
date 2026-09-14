@@ -104,12 +104,19 @@ git push origin "$VERSION"
 echo "✅ 已推送 $VERSION"
 
 # ---------- 构建镜像 ----------
+IMAGE_NAME="jieepre/keepblog"
 if [ "$NO_BUILD" -eq 1 ]; then
-    echo "⏭️  --no-build，跳过镜像构建"
+    echo "⏭️  --no-build，跳过镜像构建与推送"
 else
     echo ""
     echo "🔨 构建镜像..."
     sh build.sh
+
+    echo ""
+    echo "⬆️  推送镜像到 Docker Hub..."
+    docker push "$IMAGE_NAME:$VERSION"
+    docker push "$IMAGE_NAME:latest"
+    echo "✅ 已推送 $IMAGE_NAME:$VERSION 和 $IMAGE_NAME:latest"
 fi
 
 echo ""

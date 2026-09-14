@@ -48,7 +48,8 @@ RUN go mod download
 # 复制源代码
 COPY . .
 
-# 用前端阶段产物覆盖 static/console（保留 static.go，供 embed）
+# 清掉仓库内提交的旧构建产物（保留 static.go），再用前端阶段产物覆盖，避免过期 hash 文件被 embed
+RUN find static/console -mindepth 1 -not -name "static.go" -delete
 COPY --from=frontend /fe/dist/. static/console/
 
 # 版本注入编译

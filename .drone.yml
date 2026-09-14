@@ -94,7 +94,7 @@ steps:
   - name: docker-push
     image: plugins/docker
     settings:
-      repo: jieepre/site
+      repo: jieepre/keepblog
       dockerfile: ./Dockerfile
       purge: true
       insecure: false

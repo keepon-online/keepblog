@@ -1,6 +1,12 @@
 .idea
+.zed
 .workflow
+.git
+bin
 logs
+data
+frontend/node_modules
+frontend/dist
+config.yaml
 *.exe
-go-site
 *.db

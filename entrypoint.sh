@@ -23,11 +23,17 @@ if [ ! -f "${CONFIG_DIR}/config.yaml" ]; then
 fi
 
 # 首次部署时自动生成随机 JWT 密钥，避免所有部署共享同一密钥。
-# 已有配置（含挂载卷里的）不会被修改；也可用环境变量 JWT_SECRET 覆盖。
-if ! grep -q '^jwt:' "${CONFIG_DIR}/config.yaml" && [ -z "${JWT_SECRET:-}" ]; then
+# 已有非空密钥（含挂载卷里的）不会被修改；设置了 JWT_SECRET 环境变量时跳过（环境变量优先）。
+if [ -z "${JWT_SECRET:-}" ]; then
     GENERATED_SECRET="$(head -c 48 /dev/urandom | base64 | tr -d '/+=\n' | head -c 43)"
-    printf '\njwt:\n  secret: "%s"\n' "${GENERATED_SECRET}" >> "${CONFIG_DIR}/config.yaml"
-    echo "已生成随机 JWT 密钥并写入配置文件"
+    # 示例配置自带空 secret 的 jwt 段，替换为生成的密钥
+    if grep -q '^  secret: ""' "${CONFIG_DIR}/config.yaml"; then
+        sed -i "s|^  secret: \"\"|  secret: \"${GENERATED_SECRET}\"|" "${CONFIG_DIR}/config.yaml"
+        echo "已生成随机 JWT 密钥并写入配置文件"
+    elif ! grep -q '^jwt:' "${CONFIG_DIR}/config.yaml"; then
+        printf '\njwt:\n  secret: "%s"\n' "${GENERATED_SECRET}" >> "${CONFIG_DIR}/config.yaml"
+        echo "已生成随机 JWT 密钥并追加到配置文件"
+    fi
 fi
 
 # 验证配置文件
