@@ -209,17 +209,18 @@ function initRouter() {
       });
     } else {
       return new Promise(resolve => {
-        getAsyncRoutes().then(({ data }) => {
-          handleAsyncRoutes(cloneDeep(data));
-          storageLocal().setItem(key, data);
+        // 后端统一信封为 { code, message, payload }，路由数据在 payload
+        getAsyncRoutes().then(({ payload }) => {
+          handleAsyncRoutes(cloneDeep(payload));
+          storageLocal().setItem(key, payload);
           resolve(router);
         });
       });
     }
   } else {
     return new Promise(resolve => {
-      getAsyncRoutes().then(({ data }) => {
-        handleAsyncRoutes(cloneDeep(data));
+      getAsyncRoutes().then(({ payload }) => {
+        handleAsyncRoutes(cloneDeep(payload));
         resolve(router);
       });
     });

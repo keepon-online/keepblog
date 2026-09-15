@@ -7,6 +7,12 @@
 
 ## [未发布]
 
+## [v8] - 2026-09-15
+
+### 修复
+- 后台登录成功后无法进入控制台：v6 将 `GetAsyncRoutes` 响应统一为 `{code, message, payload}` 信封后，前端 `router/utils.ts` 仍按旧字段解构 `{ data }`，得到 `undefined` 导致路由初始化 Promise 永远挂起。现改用 `payload`。
+- `config-example.yaml` 的 `jwt.secret` 恢复为空占位：测试值会被打包进镜像默认配置，未显式配置 `JWT_SECRET` 的部署将以公开弱密钥运行（entrypoint 只自动替换空 secret）。
+
 ### 变更
 - 移除 Drone CI（`.drone.yml`）：CI 镜像推送长期失效（最后成功推送停留在 2025-12），发布流程统一为 `scripts/release.sh`（tag 驱动 + 本地构建推送镜像）。
 
