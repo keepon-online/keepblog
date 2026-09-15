@@ -7,6 +7,14 @@
 
 ## [未发布]
 
+## [v9] - 2026-09-15
+
+### 新增
+- GitHub Actions（私有镜像仓库 `keepon-online/keepblog`）：push master 自动跑 `go vet` + `go test`；打 `v*` tag 自动构建多阶段镜像并推送 Docker Hub（`jieepre/keepblog`），支持 GHA 层缓存。
+
+### 变更
+- `release.sh` 不再本地构建镜像：打 tag 后同步推送 Gitee 与 GitHub 双远端，镜像构建推送全部交给 Actions，本地无需 Docker 构建环境。
+
 ## [v8] - 2026-09-15
 
 ### 修复

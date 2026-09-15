@@ -3,12 +3,12 @@
 # KeepBlog 发版脚本（git tag 驱动）
 #
 # 用法：
-#   sh scripts/release.sh v5           # 发版 v5：校验 → 打 annotated tag → push → 构建
-#   sh scripts/release.sh v5 --no-build # 只打 tag 和 push，不构建镜像
+#   sh scripts/release.sh v5           # 发版 v5：校验 → 打 annotated tag → push（Gitee + GitHub）
 #   sh scripts/release.sh              # 不带参数：提示下一个版本号
+#   镜像由 GitHub Actions 在 tag push 后自动构建并推送 Docker Hub
 #
 # 版本号约定：v + 数字（v1, v2, ... v5）
-# 打 tag 后 build.sh 输出干净版本号（如 v5），tag 之后的开发提交会带 -N-g<hash> 后缀
+# 打 tag 后 Actions 构建注入干净版本号（如 v5），tag 之后的开发提交会带 -N-g<hash> 后缀
 
 set -e
 
@@ -16,7 +16,6 @@ cd "$(git rev-parse --show-toplevel)"
 
 # ---------- 参数解析 ----------
 VERSION=""
-NO_BUILD=0
 if [ $# -eq 0 ]; then
     # 无参数：提示下一个建议版本号
     LATEST=$(git tag -l 'v*' | tr -d 'v' | sort -n | tail -1)
@@ -26,13 +25,12 @@ if [ $# -eq 0 ]; then
         echo "当前最新 tag: v$LATEST，建议下一个版本: v$((LATEST + 1))"
     fi
     echo ""
-    echo "用法: sh scripts/release.sh vN [--no-build]"
+    echo "用法: sh scripts/release.sh vN"
     exit 0
 fi
 
 for arg in "$@"; do
     case "$arg" in
-        --no-build) NO_BUILD=1 ;;
         v*)         VERSION="$arg" ;;
         *)          echo "❌ 无效参数: $arg"; exit 1 ;;
     esac
@@ -103,21 +101,15 @@ echo "⬆️  推送 tag 到 origin..."
 git push origin "$VERSION"
 echo "✅ 已推送 $VERSION"
 
-# ---------- 构建镜像 ----------
-IMAGE_NAME="jieepre/keepblog"
-if [ "$NO_BUILD" -eq 1 ]; then
-    echo "⏭️  --no-build，跳过镜像构建与推送"
+# 同步主分支与 tag 到 GitHub 镜像仓库，由 Actions 构建并推送 Docker 镜像
+if git remote | grep -q '^github$'; then
+    echo "⬆️  同步到 GitHub 镜像仓库（Actions 将构建镜像并推送 Docker Hub）..."
+    git push github "$BRANCH" "$VERSION"
+    echo "✅ 构建进度: https://github.com/keepon-online/keepblog/actions"
 else
-    echo ""
-    echo "🔨 构建镜像..."
-    sh build.sh
-
-    echo ""
-    echo "⬆️  推送镜像到 Docker Hub..."
-    docker push "$IMAGE_NAME:$VERSION"
-    docker push "$IMAGE_NAME:latest"
-    echo "✅ 已推送 $IMAGE_NAME:$VERSION 和 $IMAGE_NAME:latest"
+    echo "⚠️  未配置 github 远端，跳过镜像构建"
+    echo "   配置: git remote add github https://github.com/keepon-online/keepblog.git"
 fi
 
 echo ""
-echo "🎉 发版完成: $VERSION"
+echo "🎉 发版完成: $VERSION（镜像由 GitHub Actions 构建推送，本地无需构建）"
