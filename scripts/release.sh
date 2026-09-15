@@ -102,9 +102,11 @@ git push origin "$VERSION"
 echo "✅ 已推送 $VERSION"
 
 # 同步主分支与 tag 到 GitHub 镜像仓库，由 Actions 构建并推送 Docker 镜像
+# 注意：branch 与 tag 必须分两次推送，合并成一条 push 命令时 GitHub 可能只为其中一个 ref 生成事件
 if git remote | grep -q '^github$'; then
     echo "⬆️  同步到 GitHub 镜像仓库（Actions 将构建镜像并推送 Docker Hub）..."
-    git push github "$BRANCH" "$VERSION"
+    git push github "$BRANCH"
+    git push github "$VERSION"
     echo "✅ 构建进度: https://github.com/keepon-online/keepblog/actions"
 else
     echo "⚠️  未配置 github 远端，跳过镜像构建"
