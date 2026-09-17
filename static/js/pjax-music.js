@@ -66,12 +66,8 @@
                     }, 500);
                 }
 
-                // 恢复播放状态
-                if (state.isPlaying) {
-                    setTimeout(() => {
-                        window.ap.play();
-                    }, 600);
-                }
+                // 不在这里直接 play()：页面加载时没有用户手势，浏览器必以
+                // NotAllowedError 拒绝；起播交给 enableAutoplay 在首次手势时进行
             } catch (e) {
                 console.warn('[MusicState] 恢复状态失败:', e);
             }
@@ -450,9 +446,8 @@
                 // 恢复之前的播放状态
                 MusicState.restore();
 
-                // 自动播放：浏览器禁止带声音的页面加载自动播放。
-                // 仅对首次访问（无保存状态）的访客静音自动播放，避免打扰已主动暂停的老用户。
-                // 用户首次交互（点击/滚动/按键）时取消静音恢复音量。
+                // 自动播放：浏览器禁止页面加载时无手势播放，
+                // 改为首次用户手势时起播，见 enableAutoplay
                 this.enableAutoplay();
 
                 console.log('[MusicPlayer] 播放器初始化完成');
@@ -496,8 +491,10 @@
 
         /**
          * 浏览器已明确禁止“无交互自动播放”，因此这里不再依赖页面加载时 autoplay。
-         * 统一改为：首次明确用户交互（点击/触摸/按键/滚轮）时，在同步调用栈里直接播放。
-         * 这条路径比异步 canplay/retry 更稳定，也更符合浏览器策略。
+         * 统一改为：首次明确用户交互（点击/触摸/按键）时，在同步调用栈里直接播放。
+         * 注意：只有 pointerdown / click / touchend / keydown 这类事件构成“用户激活”，
+         * wheel / scroll 不算——挂上它们会在滚动时触发 play() 并被浏览器以
+         * NotAllowedError 拒绝，还白白消耗掉一次性监听。
          */
         enableAutoplay() {
             if (!window.ap || !window.ap.audio) return;
@@ -515,35 +512,28 @@
                     return;
                 }
 
-                // 在用户手势同步栈里直接恢复音量并播放
+                // 该事件未构成用户激活（如 Escape 键、程序派发的事件）时，
+                // 保留监听等下一次真正的手势，避免白白消耗掉这次起播机会
+                if (navigator.userActivation && !navigator.userActivation.hasBeenActive) {
+                    return;
+                }
+
+                // 在用户手势同步栈里直接恢复音量并播放。
+                // 不调 audio.load()：load 会把播放进度重置回 0，
+                // 且 preload 已完成资源加载
                 audio.defaultMuted = false;
                 audio.muted = false;
                 audio.volume = targetVolume;
 
-                try {
-                    // 先确保资源进入可播放状态
-                    audio.load();
-                } catch (_) {}
-
-                try {
-                    if (typeof window.ap.play === 'function') {
-                        window.ap.play();
-                    }
-                } catch (_) {}
-
-                const p = audio.play();
-                if (p && typeof p.catch === 'function') {
-                    p.catch(() => {
-                        // 若连真实用户手势里都失败，就不再重试，避免无意义报错循环
-                    });
-                }
+                window.ap.play();
 
                 removeListeners();
             };
 
-            // pointerdown / click / touchstart / keydown / wheel 比 scroll 更容易被浏览器认定为手势。
-            const events = ['pointerdown', 'click', 'touchstart', 'keydown', 'wheel', 'scroll'];
-            events.forEach(ev => document.addEventListener(ev, activate, { capture: true, once: true }));
+            // 只挂浏览器认定为“用户手势”的事件；不带 once，
+            // 起播未成功时还能等下一次手势
+            const events = ['pointerdown', 'click', 'touchend', 'keydown'];
+            events.forEach(ev => document.addEventListener(ev, activate, { capture: true }));
         }
     };
 
