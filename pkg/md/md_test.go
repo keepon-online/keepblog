@@ -48,6 +48,19 @@ func TestRenderEmpty(t *testing.T) {
 	}
 }
 
+func TestStatsCompatibility(t *testing.T) {
+	r := Render([]byte("# Hello 世界 123\n\nHello"))
+	if r.Stats == nil {
+		t.Fatal("Stats nil")
+	}
+	if r.Stats.Words != 4 || r.Stats.Chars != 17 || r.Stats.NoSpaces != 15 {
+		t.Errorf("unexpected stats: %+v", r.Stats)
+	}
+	if r.Stats.Frequency["hello"] != 2 || r.Stats.Frequency["世界"] != 1 || r.Stats.Frequency["123"] != 1 {
+		t.Errorf("unexpected frequency: %#v", r.Stats.Frequency)
+	}
+}
+
 func TestToHTML(t *testing.T) {
 	if got := ToHTML([]byte(sampleMD)); !strings.Contains(got, "<h1") {
 		t.Errorf("ToHTML missing heading, got: %s", got)

@@ -7,7 +7,6 @@ import (
 
 	formathtml "github.com/alecthomas/chroma/formatters/html"
 	"github.com/gookit/slog"
-	stats "github.com/mdigger/goldmark-stats"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting"
 	"github.com/yuin/goldmark/extension"
@@ -56,9 +55,9 @@ func initEngines() {
 
 // Result 是一次 Markdown 解析产出的集合，避免对同一份内容多次解析。
 type Result struct {
-	HTML  string      // 渲染后的正文 HTML
-	TOC   string      // 侧边栏目录（<ol>...</ol>），无标题时为空
-	Stats *stats.Info // 字数/阅读时长统计，content 为空时为 nil
+	HTML  string // 渲染后的正文 HTML
+	TOC   string // 侧边栏目录（<ol>...</ol>），无标题时为空
+	Stats *Info  // 字数/阅读时长统计，content 为空时为 nil
 }
 
 // Render 一次解析 content，同时产出正文 HTML、侧边栏目录和字数统计。
@@ -80,7 +79,7 @@ func Render(content []byte) *Result {
 
 	// 目录与统计共享同一次解析。
 	doc := markdown.Parser().Parse(text.NewReader(content))
-	r.Stats = stats.New(doc, content)
+	r.Stats = NewStats(doc, content)
 
 	if tree, err := toc.Inspect(doc, content); err != nil {
 		slog.Errorf("md toc inspect fail: %s", err.Error())
@@ -130,7 +129,7 @@ func Goldmark2htmlToc(content []byte) string {
 // Goldmarkstats 返回字数/阅读时长统计。
 //
 // Deprecated: 改用 Render，可一次解析同时拿到 HTML/TOC/Stats。
-func Goldmarkstats(content []byte) *stats.Info {
+func Goldmarkstats(content []byte) *Info {
 	if len(content) == 0 {
 		return nil
 	}

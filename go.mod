@@ -14,7 +14,6 @@ require (
 	github.com/gookit/slog v0.6.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/lionsoul2014/ip2region/binding/golang v0.0.0-20231013030745-3066d243cd04
-	github.com/mdigger/goldmark-stats v0.0.0-20191227115725-9826a267d573
 	github.com/minio/minio-go/v7 v7.0.63
 	github.com/mssola/user_agent v0.6.0
 	github.com/pressly/goose/v3 v3.24.3
