@@ -362,11 +362,6 @@
          * 重新加载需要重新执行的脚本
          */
         reloadScripts() {
-            // 重新初始化代码高亮
-            if (typeof Prism !== 'undefined') {
-                Prism.highlightAll();
-            }
-
             // 重新初始化 busuanzi 统计
             if (typeof bszCaller !== 'undefined') {
                 bszCaller.fetch();

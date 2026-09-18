@@ -16,17 +16,6 @@ var GLOBAL_CONFIG = {
     },
     translate: undefined,
     noticeOutdate: undefined,
-    highlight: {
-        "plugin": "highlighjs",
-        "highlightCopy": true,
-        "highlightLang": true,
-        "highlightHeightLimit": true
-    },
-    copy: {
-        success: '复制成功',
-        error: '复制错误',
-        noSupport: '浏览器不支持'
-    },
     relativeDate: {
         homepage: false,
         post: false
