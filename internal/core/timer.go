@@ -10,6 +10,7 @@ import (
 	"gitee.com/jieepre/keepblog/internal/model"
 	inpkg "gitee.com/jieepre/keepblog/internal/pkg"
 	postService "gitee.com/jieepre/keepblog/internal/service/post"
+	"gitee.com/jieepre/keepblog/pkg/area"
 	"github.com/go-co-op/gocron"
 	"github.com/gookit/slog"
 )
@@ -21,6 +22,7 @@ func Timer() *gocron.Scheduler {
 	s := gocron.NewScheduler(time.Local)
 	_, _ = s.Every(1).Day().At("21:00").Do(task)
 	_, _ = s.Every(1).Day().At("23:30").Do(updateCoverTask)
+	_, _ = s.Every(1).Day().At("03:00").Do(updateIPDBTask)
 	s.StartAsync()
 	return s
 }
@@ -44,6 +46,13 @@ func task() {
 
 }
 
+func updateIPDBTask() {
+	if err := area.UpdateIPDB(); err != nil {
+		slog.Warnf("定时更新 IP 数据库失败: %v", err)
+		return
+	}
+	slog.Infof("定时更新 IP 数据库成功")
+}
 func updateCoverTask() {
 	slog.Infof("定时开始运行")
 	var content []model.Post
