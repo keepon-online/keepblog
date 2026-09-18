@@ -3,12 +3,12 @@
 # KeepBlog 发版脚本（git tag 驱动）
 #
 # 用法：
-#   sh scripts/release.sh v5           # 发版 v5：校验 → 打 annotated tag → push（Gitee + GitHub）
-#   sh scripts/release.sh              # 不带参数：提示下一个版本号
+#   sh scripts/release.sh v2.1.2    # 发版 v2.1.2：校验 → 打 annotated tag → push（Gitee + GitHub）
+#   sh scripts/release.sh           # 不带参数：提示下一个版本号
 #   镜像由 GitHub Actions 在 tag push 后自动构建并推送 Docker Hub
 #
-# 版本号约定：v + 数字（v1, v2, ... v5）
-# 打 tag 后 Actions 构建注入干净版本号（如 v5），tag 之后的开发提交会带 -N-g<hash> 后缀
+# 版本号约定：v + 语义化版本 vX.Y.Z（补丁修复递增 Z，新增功能递增 Y，破坏性变更递增 X）
+# 打 tag 后 Actions 构建注入干净版本号（如 v2.1.2），tag 之后的开发提交会带 -N-g<hash> 后缀
 
 set -e
 
@@ -18,14 +18,21 @@ cd "$(git rev-parse --show-toplevel)"
 VERSION=""
 if [ $# -eq 0 ]; then
     # 无参数：提示下一个建议版本号
-    LATEST=$(git tag -l 'v*' | tr -d 'v' | sort -n | tail -1)
+    LATEST=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sed 's/^v//' | sort -V | tail -1)
     if [ -z "$LATEST" ]; then
-        echo "当前无版本 tag，建议从 v1 开始"
+        LEGACY=$(git tag -l 'v[0-9]*' | sort -V | tail -1)
+        echo "尚无语义化版本 tag（旧式递增 tag 最高: ${LEGACY:-无}），请按 SemVer 选择版本号"
     else
-        echo "当前最新 tag: v$LATEST，建议下一个版本: v$((LATEST + 1))"
+        MAJOR=$(echo "$LATEST" | cut -d. -f1)
+        MINOR=$(echo "$LATEST" | cut -d. -f2)
+        PATCH=$(echo "$LATEST" | cut -d. -f3)
+        echo "当前最新版本: v$LATEST，下一版本按变更幅度选择:"
+        echo "  补丁修复:   v$MAJOR.$MINOR.$((PATCH + 1))"
+        echo "  新增功能:   v$MAJOR.$((MINOR + 1)).0"
+        echo "  破坏性变更: v$((MAJOR + 1)).0.0"
     fi
     echo ""
-    echo "用法: sh scripts/release.sh vN"
+    echo "用法: sh scripts/release.sh vX.Y.Z"
     exit 0
 fi
 
@@ -37,7 +44,7 @@ for arg in "$@"; do
 done
 
 if [ -z "$VERSION" ]; then
-    echo "❌ 必须指定版本号，例如: sh scripts/release.sh v5"
+    echo "❌ 必须指定版本号，例如: sh scripts/release.sh v2.1.2"
     exit 1
 fi
 
@@ -53,9 +60,9 @@ fi
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 echo "📌 当前分支: $BRANCH"
 
-# 3. 版本号格式校验：v + 数字
-if ! echo "$VERSION" | grep -Eq '^v[0-9]+$'; then
-    echo "❌ 版本号格式错误: $VERSION（应为 v + 数字，如 v5）"
+# 3. 版本号格式校验：v + 语义化版本 vX.Y.Z
+if ! echo "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+    echo "❌ 版本号格式错误: $VERSION（应为 v + 语义化版本，如 v2.1.2）"
     exit 1
 fi
 
