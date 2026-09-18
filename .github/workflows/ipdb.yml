@@ -9,7 +9,7 @@ on:
       - '.github/workflows/ipdb.yml'
 
 permissions:
-  contents: read
+  contents: write  # 发布 ipdb Release 需要写权限（bench+smoke 全部通过后才执行）
 
 env:
   IP2REGION_REF: 096d68ea770676286fc1d05ff9918b6d3e9679cb
@@ -83,3 +83,43 @@ jobs:
             .tmp/SHA256SUMS
             .tmp/metadata.json
           retention-days: 90
+
+      # ---------- 发布：归档 Release（不可变）+ 滚动 Release（ipdb-latest） ----------
+      # 运行时每日更新只从 ipdb-latest 下载并做 SHA-256 校验；
+      # 回滚时把 config 的 ipdb.updateUrl 指向某个归档 Release 的资产直链即可。
+
+      - name: 生成发布说明
+        run: |
+          cd .tmp
+          {
+            echo "## IP 数据库产物"
+            echo
+            echo "- 源仓库: https://github.com/lionsoul2014/ip2region"
+            echo "- 源提交: \`${IP2REGION_REF}\`"
+            echo "- 生成时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "- SHA-256: \`$(cut -d ' ' -f1 SHA256SUMS)\`"
+            echo "- 大小: $(stat -c '%s' ip2region_v4.xdb) bytes"
+            echo
+            echo "校验: xdb_maker bench 一致性通过 + 项目 smoke test 通过。"
+            echo "运行时通过 \`ipdb-latest\` Release 自动更新；此归档可用作回滚。"
+          } > release-notes.md
+
+      - name: 发布归档 Release（ipdb-v*，不可变）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="ipdb-v$(date -u +%Y%m%d)-r${{ github.run_number }}"
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes-file .tmp/release-notes.md \
+            .tmp/ip2region_v4.xdb .tmp/SHA256SUMS .tmp/metadata.json
+
+      - name: 重建滚动 Release（ipdb-latest）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete ipdb-latest --yes --cleanup-tag || true
+          gh release create ipdb-latest \
+            --title "ipdb-latest（滚动更新）" \
+            --notes-file .tmp/release-notes.md \
+            .tmp/ip2region_v4.xdb .tmp/SHA256SUMS .tmp/metadata.json

@@ -28,6 +28,7 @@ type Configs struct {
 	Redis   *redis   `yaml:"redis"`
 	Jwt     *jwt     `yaml:"jwt"`
 	Hashids *hashids `yaml:"hashids"`
+	Ipdb    *ipdb    `yaml:"ipdb"`
 }
 
 // jwt 签发配置
@@ -38,6 +39,14 @@ type jwt struct {
 // hashids 编码配置
 type hashids struct {
 	Salt string `yaml:"salt"`
+}
+
+// ipdb IP 归属库更新配置
+type ipdb struct {
+	// UpdateUrl 指向 xdb 资产的完整下载 URL（SHA256SUMS 从同级目录推导）。
+	// 留空使用默认的 GitHub Release 滚动发布；国内服务器可指向自建镜像，
+	// 回滚时可指向某个 ipdb-v* 归档 Release 的资产直链。
+	UpdateUrl string `yaml:"updateUrl"`
 }
 
 // 百度收录
@@ -105,6 +114,7 @@ func Load() error {
 	_ = viper.BindEnv("http.port", "KEEPBLOG_HTTP_PORT")
 	_ = viper.BindEnv("jwt.secret", "JWT_SECRET", "KEEPBLOG_JWT_SECRET")
 	_ = viper.BindEnv("hashids.salt", "KEEPBLOG_HASHIDS_SALT")
+	_ = viper.BindEnv("ipdb.updateUrl", "KEEPBLOG_IPDB_UPDATE_URL")
 	_ = viper.BindEnv("redis.host", "KEEPBLOG_REDIS_HOST")
 	_ = viper.BindEnv("redis.port", "KEEPBLOG_REDIS_PORT")
 	_ = viper.BindEnv("redis.password", "KEEPBLOG_REDIS_PASSWORD")
@@ -197,6 +207,7 @@ func setDefaults() {
 	// JWT / Hashids 默认配置
 	viper.SetDefault("jwt.secret", "")
 	viper.SetDefault("hashids.salt", "")
+	viper.SetDefault("ipdb.updateUrl", "")
 }
 
 // ValidateConfig 验证配置

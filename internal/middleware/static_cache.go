@@ -44,7 +44,7 @@ func StaticCacheMiddleware() gin.HandlerFunc {
 // 静态资源总量仅数 MB，启动时一次计算耗时可忽略。
 func staticEtag() string {
 	h := sha256.New()
-	fs.WalkDir(static.Static, ".", func(path string, d fs.DirEntry, err error) error {
+	_ = fs.WalkDir(static.Static, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

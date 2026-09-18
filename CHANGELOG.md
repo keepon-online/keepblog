@@ -10,6 +10,11 @@
 
 ## [未发布]
 
+### 变更
+- **IP 数据库更新闭环**：运行时每日更新只从自管 GitHub Release（`ipdb-latest`，SHA-256 校验）下载，不再跟踪上游 master；官方直链仅作冷启动兜底。CI 每周构建校验后自动发布归档与滚动 Release。
+- 新增 `ipdb.updateUrl` 配置：指向完整 xdb URL（国内镜像或 `ipdb-v*` 归档回滚直链），支持热重载；环境变量 `KEEPBLOG_IPDB_UPDATE_URL`。
+- `data/ip2region.xdb`（约 11MB）移出 git 追踪并加入 `.gitignore`，由冷启动下载维护；已有部署的 data 卷不受影响。
+
 ## [2.1.3] - 2026-09-18
 
 ### 新增

@@ -65,7 +65,7 @@ func (t WordTuple) String() string {
 func NewStats(node ast.Node, source []byte) *Info {
 	var words, chars, noSpaces int
 	frequency := make(map[string]int, 10000)
-	ast.Walk(node, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+	_ = ast.Walk(node, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
 		if entering && (node.Kind() == ast.KindText || node.Kind() == ast.KindString) {
 			text := node.Text(source)
 			chars += utf8.RuneCount(text)

@@ -11,6 +11,12 @@ jwt:
 hashids:
   salt: ""
 
+# IP 归属库更新源（可选）。留空 = GitHub Release ipdb-latest（默认）。
+# 国内服务器可指向自建镜像；回滚时指向 ipdb-v* 归档 Release 的资产直链。
+# 镜像目录需同时提供 ip2region_v4.xdb 与 SHA256SUMS。
+ipdb:
+  updateUrl: ""
+
 # 百度定时推送 方便收录
 baidu:
   push: false
