@@ -10,6 +10,9 @@
 
 ## [未发布]
 
+### 新增
+- IP 查询样本基线统计（ipdb 数据源评估阶段一启动）：命中/未命中/无库/内网/云 CDN 出口计数与国家·省份·城市·ISP 字段空置率，每日 03:10 输出 JSON 快照到日志（`ipdb_stats` 前缀）；纯内存原子计数，不保存任何原始 IP。
+
 ### 变更
 - **IP 数据库更新闭环**：运行时每日更新只从自管 GitHub Release（`ipdb-latest`，SHA-256 校验）下载，不再跟踪上游 master；官方直链仅作冷启动兜底。CI 每周构建校验后自动发布归档与滚动 Release。
 - 新增 `ipdb.updateUrl` 配置：指向完整 xdb URL（国内镜像或 `ipdb-v*` 归档回滚直链），支持热重载；环境变量 `KEEPBLOG_IPDB_UPDATE_URL`。

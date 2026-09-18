@@ -264,17 +264,24 @@ func updateFrom(xdbURL, sumURL string) error {
 
 func Area(intIP uint32) string {
 	if _, err := initSearcher(); err != nil {
+		recordNoDB()
 		return ""
 	}
 	searcherMu.RLock()
-	defer searcherMu.RUnlock()
 	if searcher == nil {
+		searcherMu.RUnlock()
+		recordNoDB()
 		return ""
 	}
 	result, err := searcher.Search(intIP)
+	searcherMu.RUnlock()
+
+	// 阶段一基线统计：纯内存原子计数，不保存原始 IP
 	if err != nil {
+		recordQuery(intIP, "")
 		return ""
 	}
+	recordQuery(intIP, result)
 	return result
 }
 

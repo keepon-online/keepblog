@@ -15,14 +15,15 @@ import (
 	"github.com/gookit/slog"
 )
 
-// Timer 启动定时任务（百度推送 21:00、封面更新 23:30），
-// 返回调度器供应用优雅退出时停止。
+// Timer 启动定时任务（百度推送 21:00、封面更新 23:30、IP 库更新 03:00、
+// IP 查询基线统计快照 03:10），返回调度器供应用优雅退出时停止。
 func Timer() *gocron.Scheduler {
 	slog.Info("定时任务启动")
 	s := gocron.NewScheduler(time.Local)
 	_, _ = s.Every(1).Day().At("21:00").Do(task)
 	_, _ = s.Every(1).Day().At("23:30").Do(updateCoverTask)
 	_, _ = s.Every(1).Day().At("03:00").Do(updateIPDBTask)
+	_, _ = s.Every(1).Day().At("03:10").Do(area.LogStatsSnapshot)
 	s.StartAsync()
 	return s
 }
