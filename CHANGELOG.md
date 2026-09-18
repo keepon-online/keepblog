@@ -10,6 +10,12 @@
 
 ## [未发布]
 
+## [2.1.2] - 2026-09-18
+
+### 变更
+- 发版版本号由递增数字（v1…v10）改用标准语义化版本 `vX.Y.Z`，CHANGELOG 历史条目按变更幅度同步映射（对应关系见文件头注记），`release.sh` 校验与提示同步更新。
+- 评估确认代码高亮自始由后端 goldmark+chroma 服务端实现，据此清理前端死代码：删除从未被模板加载的 `static/plugins/prismjs/` 整目录、5 个未引用的 canvas 特效，以及 main.js 中 Hexo 时代的 `addHighlightTool` 死分支及其专用配置（`highlight`/`copy`/`isHighlightShrink`），消除依赖扫描对 prismjs≤1.29 的 CVE-2024-53382 误报。
+
 ## [2.1.1] - 2026-09-17
 
 ### 修复
