@@ -1,0 +1,85 @@
+name: ipdb
+
+on:
+  schedule:
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/ipdb.yml'
+
+permissions:
+  contents: read
+
+env:
+  IP2REGION_REF: 096d68ea770676286fc1d05ff9918b6d3e9679cb
+
+jobs:
+  build:
+    name: 构建并校验 IP 数据库
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 项目
+        uses: actions/checkout@v4
+
+      - name: Checkout ip2region v3.9.0
+        uses: actions/checkout@v4
+        with:
+          repository: lionsoul2014/ip2region
+          ref: ${{ env.IP2REGION_REF }}
+          path: .tmp/ip2region
+          fetch-depth: 1
+
+      - name: 设置 Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: 构建 xdb_maker
+        working-directory: .tmp/ip2region/maker/golang
+        run: go build -trimpath -o xdb_maker .
+
+      - name: 生成 IPv4 xdb
+        working-directory: .tmp/ip2region/maker/golang
+        run: |
+          ./xdb_maker gen \
+            --src=../../data/ipv4_source.txt \
+            --dst="$GITHUB_WORKSPACE/.tmp/ip2region_v4.xdb" \
+            --version=ipv4
+
+      - name: 校验 xdb
+        working-directory: .tmp/ip2region/maker/golang
+        run: |
+          ./xdb_maker bench \
+            --db="$GITHUB_WORKSPACE/.tmp/ip2region_v4.xdb" \
+            --src=../../data/ipv4_source.txt \
+            --version=ipv4
+          cd "$GITHUB_WORKSPACE"
+          go run ./scripts/verify-ipdb.go .tmp/ip2region_v4.xdb
+
+      - name: 生成元数据
+        run: |
+          cd .tmp
+          sha256sum ip2region_v4.xdb > SHA256SUMS
+          size=$(stat -c '%s' ip2region_v4.xdb)
+          sha256=$(cut -d ' ' -f 1 SHA256SUMS)
+          jq -n \
+            --arg source_repo "https://github.com/lionsoul2014/ip2region" \
+            --arg source_commit "${{ env.IP2REGION_REF }}" \
+            --arg source_file "data/ipv4_source.txt" \
+            --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg sha256 "$sha256" \
+            --argjson size "$size" \
+            '{source_repository:$source_repo,source_commit:$source_commit,source_file:$source_file,generated_at:$generated_at,generator:"xdb_maker",sha256:$sha256,size_bytes:$size}' \
+            > metadata.json
+
+      - name: 上传 IP 数据库产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ip2region-v4-${{ github.run_number }}
+          path: |
+            .tmp/ip2region_v4.xdb
+            .tmp/SHA256SUMS
+            .tmp/metadata.json
+          retention-days: 90
