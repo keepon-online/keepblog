@@ -19,16 +19,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterWebRouter(ctx *core.Context) {
+// RegisterWebRouter 注册前台路由。
+// group 是挂有限流/统计/页面缓存中间件的前台分组，页面路由必须注册在
+// 它的子分组上才会继承中间件；静态资源、Feed 与音乐 API 因各自的缓存
+// 策略不同，仍直接注册在 Engine 上。
+func RegisterWebRouter(ctx *core.Context, group *gin.RouterGroup) {
 	staticRouter(ctx)
 	feedRouter(ctx)
-	aboutRouter(ctx)
-	tagWebRouter(ctx)
-	linkRouter(ctx)
-	archivesRouter(ctx)
-	categoriesRouter(ctx)
-	postsRouter(ctx)
-	homeRouter(ctx)
+	aboutRouter(ctx, group)
+	tagWebRouter(ctx, group)
+	linkRouter(ctx, group)
+	archivesRouter(ctx, group)
+	categoriesRouter(ctx, group)
+	postsRouter(ctx, group)
+	homeRouter(ctx, group)
 	musicWebRouter(ctx)
 }
 
@@ -51,7 +55,7 @@ func staticRouter(ctx *core.Context) {
 
 // feedRouter 注册 RSS / sitemap / robots 订阅与索引路由。
 // 这些内容来自 DB（站点信息 + 已发布文章），需动态生成，因此不挂在 staticGroup。
-// 注意：webGroup 的 CacheMiddleware 不会被子 group 继承，这里显式给每条路由加缓存。
+// Feed 注册在 Engine 上（不经过 webGroup），因此显式为每条路由配置缓存。
 func feedRouter(ctx *core.Context) {
 	handler := post.Handler{Context: ctx}
 	group := ctx.Engine.Group("/")
@@ -78,13 +82,13 @@ func feedRouter(ctx *core.Context) {
 	RegisterRouter(group, routes)
 }
 
-func homeRouter(ctx *core.Context) {
+func homeRouter(ctx *core.Context, group *gin.RouterGroup) {
 	handler := home.Handler{Context: ctx}
 	routeGroup := RouteGroup{
 		Name:   "首页",
 		Prefix: "/",
 	}
-	group := ctx.Engine.Group(routeGroup.Prefix)
+	group = group.Group(routeGroup.Prefix)
 	routes := []Route{
 		{
 			Method:     http.MethodGet,
@@ -112,13 +116,13 @@ func homeRouter(ctx *core.Context) {
 	RegisterRouter(group, routes)
 }
 
-func aboutRouter(ctx *core.Context) {
+func aboutRouter(ctx *core.Context, group *gin.RouterGroup) {
 	handler := about.Handler{Context: ctx}
 	routeGroup := RouteGroup{
 		Name:   "关于",
 		Prefix: "/",
 	}
-	group := ctx.Engine.Group(routeGroup.Prefix)
+	group = group.Group(routeGroup.Prefix)
 	routes := []Route{
 		{
 			Method:     http.MethodGet,
@@ -130,13 +134,13 @@ func aboutRouter(ctx *core.Context) {
 	RegisterRouter(group, routes)
 }
 
-func tagWebRouter(ctx *core.Context) {
+func tagWebRouter(ctx *core.Context, group *gin.RouterGroup) {
 	handler := tags.Handler{Context: ctx}
 	routeGroup := RouteGroup{
 		Name:   "标签",
 		Prefix: "/",
 	}
-	group := ctx.Engine.Group(routeGroup.Prefix)
+	group = group.Group(routeGroup.Prefix)
 	routes := []Route{
 		{
 			Method:     http.MethodGet,
@@ -158,13 +162,13 @@ func tagWebRouter(ctx *core.Context) {
 	RegisterRouter(group, routes)
 }
 
-func linkRouter(ctx *core.Context) {
+func linkRouter(ctx *core.Context, group *gin.RouterGroup) {
 	handler := link.Handler{Context: ctx}
 	routeGroup := RouteGroup{
 		Name:   "友情链接",
 		Prefix: "/",
 	}
-	group := ctx.Engine.Group(routeGroup.Prefix)
+	group = group.Group(routeGroup.Prefix)
 	routes := []Route{
 		{
 			Method:     http.MethodGet,
@@ -176,13 +180,13 @@ func linkRouter(ctx *core.Context) {
 	RegisterRouter(group, routes)
 }
 
-func archivesRouter(ctx *core.Context) {
+func archivesRouter(ctx *core.Context, group *gin.RouterGroup) {
 	handler := archive.Handler{Context: ctx}
 	routeGroup := RouteGroup{
 		Name:   "归档",
 		Prefix: "/",
 	}
-	group := ctx.Engine.Group(routeGroup.Prefix)
+	group = group.Group(routeGroup.Prefix)
 	routes := []Route{
 		{
 			Method:     http.MethodGet,
@@ -209,13 +213,13 @@ func archivesRouter(ctx *core.Context) {
 	RegisterRouter(group, routes)
 }
 
-func categoriesRouter(ctx *core.Context) {
+func categoriesRouter(ctx *core.Context, group *gin.RouterGroup) {
 	handler := category.Handler{Context: ctx}
 	routeGroup := RouteGroup{
 		Name:   "分类",
 		Prefix: "/",
 	}
-	group := ctx.Engine.Group(routeGroup.Prefix)
+	group = group.Group(routeGroup.Prefix)
 	routes := []Route{
 		{
 			Method:     http.MethodGet,
@@ -237,13 +241,13 @@ func categoriesRouter(ctx *core.Context) {
 	RegisterRouter(group, routes)
 }
 
-func postsRouter(ctx *core.Context) {
+func postsRouter(ctx *core.Context, group *gin.RouterGroup) {
 	handler := post.Handler{Context: ctx}
 	routeGroup := RouteGroup{
 		Name:   "查看文章",
 		Prefix: "/",
 	}
-	group := ctx.Engine.Group(routeGroup.Prefix)
+	group = group.Group(routeGroup.Prefix)
 	routes := []Route{
 		{
 			Method:     http.MethodGet,
@@ -255,6 +259,7 @@ func postsRouter(ctx *core.Context) {
 	RegisterRouter(group, routes)
 }
 
+// musicWebRouter 音乐列表是公开 JSON API,不走页面缓存,注册在 Engine 上。
 func musicWebRouter(ctx *core.Context) {
 	handler := music.Handler{Context: ctx}
 	routeGroup := RouteGroup{

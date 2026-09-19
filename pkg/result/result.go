@@ -30,13 +30,15 @@ func Ok(c *gin.Context, data any) {
 // 调用方若需要特定错误码，应改用 Fail（见 internal/errors）。
 func Error(c *gin.Context, message string) {
 	_ = c.Error(errors.BadRequest(message))
-	c.AbortWithStatus(http.StatusBadRequest)
+	// 只记录错误并中断,响应由 ErrorHandler 中间件统一渲染;
+	// 此处 AbortWithStatus 会提前写响应头,导致 ErrorHandler 跳过渲染输出空 body
+	c.Abort()
 }
 
 // Fail 返回带特定错误码的错误响应。语义敏感的调用点应使用此函数。
 func Fail(c *gin.Context, appErr *errors.AppError) {
 	_ = c.Error(appErr)
-	c.AbortWithStatus(appErr.HTTPStatus())
+	c.Abort()
 }
 
 // With 返回自定义状态码的响应。迁移期间保留，逐步替换为 Fail 或直接 Ok。

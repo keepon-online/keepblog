@@ -54,6 +54,9 @@ func CreateRouters(service *service.AppService, healthChecker *monitor.HealthChe
 	engine.GET("/metrics", metrics.MetricsHandler)
 
 	// 前台路由组（使用特定中间件）
+	// 注意：分组中间件只对"通过该分组注册"的路由生效。必须把 group 传给
+	// RegisterWebRouter，由页面路由在其子分组上注册；此前路由各自在 Engine 上
+	// 新建分组，导致本组的限流/统计/页面缓存从未生效过。
 	webGroup := engine.Group("/")
 	{
 		// 前台专用中间件
@@ -71,19 +74,22 @@ func CreateRouters(service *service.AppService, healthChecker *monitor.HealthChe
 			Service: service,
 		}
 
-		// 注册前台路由
-		router.RegisterWebRouter(webCtx)
+		// 注册前台路由（页面路由挂在 webGroup 上继承中间件；
+		// 静态资源/Feed/音乐 API 由 RegisterWebRouter 内部按各自缓存策略注册在 Engine 上）
+		router.RegisterWebRouter(webCtx, webGroup)
 	}
 
 	// 后台管理路由组（使用特定中间件）
-	adminGroup := engine.Group("/api")
+	// base 为空串以保持 admin.go 中的绝对前缀（/api/v1/...）不变。
+	adminGroup := engine.Group("")
 	{
 		// 后台专用中间件
-		//adminGroup.Use(middleware.Cors())
 		adminGroup.Use(middleware.ErrorHandler())
 		adminGroup.Use(monitor.MetricsMiddleware(metrics))
 		adminGroup.Use(middleware.APIRateLimit(100, time.Minute)) // 每分钟100次请求
 		adminGroup.Use(middleware.LoginRateLimit())
+		// 鉴权在分组级统一生效（JwtVerify 自带 login/refreshToken 等白名单），
+		// 路由级不再重复挂载
 		adminGroup.Use(middleware.JwtVerify())
 
 		// 创建后台上下文
@@ -93,7 +99,7 @@ func CreateRouters(service *service.AppService, healthChecker *monitor.HealthChe
 		}
 
 		// 注册后台路由
-		router.RegisterAdminRouter(adminCtx)
+		router.RegisterAdminRouter(adminCtx, adminGroup)
 	}
 
 	return engine

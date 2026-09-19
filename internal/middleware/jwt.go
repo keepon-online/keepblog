@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"net/http"
 	"path"
 	"strings"
 	"time"
@@ -68,14 +67,14 @@ func JwtVerify() gin.HandlerFunc {
 		authorization := c.Request.Header.Get("Authorization")
 		if authorization == "" {
 			_ = c.Error(errors.New(errors.ErrUnauthorized, "未提供认证信息"))
-			c.AbortWithStatus(http.StatusUnauthorized)
+			c.Abort()
 			return
 		}
 
 		// 检查Bearer格式
 		if !strings.HasPrefix(authorization, "Bearer ") {
 			_ = c.Error(errors.New(errors.ErrUnauthorized, "Token格式错误"))
-			c.AbortWithStatus(http.StatusUnauthorized)
+			c.Abort()
 			return
 		}
 
@@ -83,7 +82,7 @@ func JwtVerify() gin.HandlerFunc {
 		tokenStr := strings.TrimPrefix(authorization, "Bearer ")
 		if tokenStr == "" {
 			_ = c.Error(errors.New(errors.ErrUnauthorized, "Token不能为空"))
-			c.AbortWithStatus(http.StatusUnauthorized)
+			c.Abort()
 			return
 		}
 
@@ -91,14 +90,14 @@ func JwtVerify() gin.HandlerFunc {
 		claims, err := jwttoken.ParseToken(tokenStr)
 		if err != nil {
 			_ = c.Error(errors.New(errors.ErrTokenExpired, err.Error()))
-			c.AbortWithStatus(http.StatusUnauthorized)
+			c.Abort()
 			return
 		}
 
 		// 检查 Token 是否在黑名单中（已注销）
 		if jwttoken.IsTokenBlacklisted(tokenStr) {
 			_ = c.Error(errors.New(errors.ErrUnauthorized, "Token已失效，请重新登录"))
-			c.AbortWithStatus(http.StatusUnauthorized)
+			c.Abort()
 			return
 		}
 
