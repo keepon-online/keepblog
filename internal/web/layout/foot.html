@@ -95,8 +95,10 @@
                 .then(function (res) { return res.json() })
                 .then(function (data) {
                     var opts = Object.assign({}, playerConfig);
-                    if (data.code === 200 && data.data && data.data.length > 0) {
-                        opts.audio = data.data.map(function (item) {
+                    var resp = data;
+                    // 统一信封的数据字段是 payload,取到非空列表才覆盖内置兜底
+                    if (resp && resp.code === 200 && resp.payload && resp.payload.length > 0) {
+                        opts.audio = resp.payload.map(function (item) {
                             return {
                                 name: item.name || '未知歌曲',
                                 artist: item.artist || '未知艺术家',
