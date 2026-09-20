@@ -15,55 +15,70 @@
 ;(function () {
     var SELECTOR = '#article-container pre';
 
-    // 注入按钮样式（一次性，自包含，不污染 index.css）
-    if (!document.getElementById('code-copy-style')) {
-        var style = document.createElement('style');
-        style.id = 'code-copy-style';
-        style.textContent = [
-            '#article-container pre { position: relative; }',
-            '.code-copy-btn {',
-            '  position: absolute; top: 6px; right: 6px;',
-            '  display: flex; align-items: center; justify-content: center;',
-            '  width: 28px; height: 28px; padding: 0;',
-            '  border: none; border-radius: 4px;',
-            '  background: rgba(255,255,255,0.12);',
-            '  color: #fff; cursor: pointer; opacity: 0;',
-            '  transition: opacity .2s, background .2s;',
-            '  font-size: 13px; line-height: 1; z-index: 2;',
-            '}',
-            '#article-container pre:hover .code-copy-btn,',
-            '.code-copy-btn:focus-visible { opacity: 1; }',
-            '.code-copy-btn:hover { background: rgba(255,255,255,0.25); }',
-            '.code-copy-btn--done { opacity: 1; color: #4ade80; }',
-            // 浅色背景的代码块（非 monokai）按钮也要可见
-            '#article-container pre:not([style*="background-color"]) .code-copy-btn,',
-            '#article-container pre[style*="#ffffff"] .code-copy-btn {',
-            '  background: rgba(0,0,0,0.06); color: #555;',
-            '}',
-            '#article-container pre:not([style*="background-color"]) .code-copy-btn:hover,',
-            '#article-container pre[style*="#ffffff"] .code-copy-btn:hover {',
-            '  background: rgba(0,0,0,0.12);',
-            '}'
-        ].join('\n');
-        document.head.appendChild(style);
-    }
-
     function initCodeCopy() {
         var pres = document.querySelectorAll(SELECTOR);
         if (!pres || !pres.length) return;
 
         pres.forEach(function (pre) {
-            // 跳过已处理、或嵌套在另一个 pre 内的（防御性，一般不会出现）
+            // 跳过已处理、或嵌套在另一个 pre 内的、或位于 figure.highlight 内的
             if (pre.dataset.codecopy === '1') return;
             if (pre.parentElement && pre.parentElement.closest(SELECTOR)) return;
+            if (pre.closest('figure.highlight')) {
+                pre.dataset.codecopy = '1';
+                return;
+            }
             pre.dataset.codecopy = '1';
 
-            // 若 pre 本身是 static 定位，按钮绝对定位会锚到更上层；先确保定位上下文
-            var computed = getComputedStyle(pre);
-            if (computed.position === 'static') {
-                pre.style.position = 'relative';
+            // 若未包裹，创建 code-block-wrap 容器
+            var parent = pre.parentElement;
+            var wrap;
+            if (parent && parent.classList.contains('code-block-wrap')) {
+                wrap = parent;
+            } else {
+                wrap = document.createElement('div');
+                wrap.className = 'code-block-wrap';
+                parent.insertBefore(wrap, pre);
+                wrap.appendChild(pre);
             }
 
+            // 识别代码块语言
+            var codeEl = pre.querySelector('code');
+            var lang = '';
+            var dataLang = (codeEl && codeEl.getAttribute('data-lang')) || pre.getAttribute('data-lang');
+            if (dataLang) {
+                lang = dataLang.trim();
+            } else {
+                var langClass = (codeEl && codeEl.className) || pre.className || '';
+                var match = langClass.match(/language-([a-zA-Z0-9_+-]+)/);
+                if (match && match[1]) {
+                    lang = match[1];
+                }
+            }
+
+            // 创建或获取 Mac 顶栏
+            var tools = wrap.querySelector('.code-block-tools');
+            if (!tools) {
+                tools = document.createElement('div');
+                tools.className = 'code-block-tools';
+
+                // Mac 三色圆点
+                var dots = document.createElement('div');
+                dots.className = 'code-mac-dots';
+                dots.innerHTML = '<span></span><span></span><span></span>';
+                tools.appendChild(dots);
+
+                // 语言标签（若有）
+                if (lang) {
+                    var langSpan = document.createElement('span');
+                    langSpan.className = 'code-lang-label';
+                    langSpan.textContent = lang.toUpperCase();
+                    tools.appendChild(langSpan);
+                }
+
+                wrap.insertBefore(tools, pre);
+            }
+
+            // 复制按钮
             var btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'code-copy-btn';
@@ -72,14 +87,13 @@
             btn.innerHTML = '<i class="fas fa-paste"></i>';
 
             btn.addEventListener('click', function () {
-                // 优先取纯文本，剔除 chroma 行号锚点（<a> 内的数字）残留
                 var text = extractCodeText(pre);
                 copyText(text).then(function (ok) {
                     flash(btn, ok ? 'fas fa-check' : 'fas fa-times');
                 });
             });
 
-            pre.appendChild(btn);
+            tools.appendChild(btn);
         });
     }
 
@@ -87,7 +101,7 @@
     // 再取 textContent。用 DOM 操作而非正则，避免行号格式（" 1"/"1"/"01"等）误判。
     function extractCodeText(pre) {
         var clone = pre.cloneNode(true);
-        // 移除复制按钮自身（避免按钮文字混入）
+        // 移除内部按钮（防御性）
         var btns = clone.querySelectorAll('.code-copy-btn');
         btns.forEach(function (b) { b.remove(); });
         // chroma 行号 span 带 user-select:none，且通常含 <a> 锚点；逐个检查 inline style

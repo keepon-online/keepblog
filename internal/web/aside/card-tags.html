@@ -27,21 +27,30 @@
 }
 .tag-sphere-item {
   position: absolute;
-  padding: 3px 8px;
+  padding: 4px 10px;
   font-size: 12px;
   font-weight: 500;
   text-decoration: none;
   white-space: nowrap;
-  border-radius: 3px;
+  border-radius: 12px;
   cursor: pointer;
   will-change: transform, opacity, font-size;
   pointer-events: auto;
+  transition: background 0.25s ease, box-shadow 0.25s ease;
 }
 .tag-sphere-item:hover {
-  text-decoration: underline;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1e3a8a !important;
+  box-shadow: 0 4px 12px rgba(43, 108, 176, 0.25);
 }
 [data-theme="dark"] .tag-sphere-item {
   filter: brightness(1.2);
+}
+[data-theme="dark"] .tag-sphere-item:hover {
+  background: #1e293b !important;
+  color: #60a5fa !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(96, 165, 250, 0.4);
 }
 </style>
 
@@ -62,10 +71,10 @@
   const centerX = width / 2;
   const centerY = height / 2;
   
-  // 配色方案
+  // 配色方案（现代和谐色盘）
   const colors = [
-    '#3498db', '#e74c3c', '#2ecc71', '#9b59b6', '#f39c12',
-    '#1abc9c', '#e67e22', '#34495e', '#16a085', '#c0392b'
+    '#3b82f6', '#06b6d4', '#10b981', '#8b5cf6', '#f59e0b',
+    '#ec4899', '#6366f1', '#14b8a6', '#0ea5e9', '#38bdf8'
   ];
   
   // 初始化标签位置（球面坐标）

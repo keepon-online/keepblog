@@ -43,25 +43,27 @@
                     </div>
                     {{end }}
                     <div class="recent-post-info">
-                        <a class="article-title" href="/post/{{$v.PostSlug}}" title="{{$v.Title}}"> {{$v.Title}}</a>
+                        <a class="article-title" href="/post/{{$v.PostSlug}}" title="{{$v.Title}}">{{$v.Title}}</a>
                         <div class="article-meta-wrap">
                             {{if eq $v.Top 1}}
-                            <span class="article-meta">
-                                <i class="fas fa-thumbtack article-meta__icon sticky"></i>
-                                <span class="sticky">置頂</span>
-                                <span class="article-meta__separator">|</span>
+                            <span class="article-meta-chip top">
+                                <i class="fas fa-thumbtack"></i><span>置顶</span>
                             </span>
                             {{end}}
-                            <span class="post-meta-date"><i class="far fa-calendar-alt"></i>
-                                <span class="article-meta-label">发表于</span>
-                                <time datetime="{{$v.PubTime | time }}" title="发表于 {{$v.PubTime | time }}">{{$v.PubTime
-                                    | time }}</time></span>
-                            <span class="article-meta"><span class="article-meta-separator">|</span>
-                                <i class="fas fa-inbox"></i><a class="article-meta__categories"
-                                    href="/categories/{{$v.CategoryName}}">{{$v.CategoryName}}</a></span>
-                            <span class="article-meta tags"><span class="article-meta-separator">|</span><i
-                                    class="fas fa-tag"></i>
-                                <a class="article-meta__tags" href="/tags/{{$v.TagName}}">{{$v.TagName}}</a></span>
+                            <span class="article-meta-chip date">
+                                <i class="far fa-calendar-alt"></i>
+                                <time datetime="{{$v.PubTime | time }}" title="发表于 {{$v.PubTime | time }}">{{$v.PubTime | time }}</time>
+                            </span>
+                            {{if $v.CategoryName}}
+                            <a class="article-meta-chip category" href="/categories/{{$v.CategoryName}}" title="分类：{{$v.CategoryName}}">
+                                <i class="fas fa-folder-open"></i><span>{{$v.CategoryName}}</span>
+                            </a>
+                            {{end}}
+                            {{if $v.TagName}}
+                            <a class="article-meta-chip tag" href="/tags/{{$v.TagName}}" title="标签：{{$v.TagName}}">
+                                <i class="fas fa-tag"></i><span>{{$v.TagName}}</span>
+                            </a>
+                            {{end}}
                         </div>
                         <div class="content">
                             {{$v.ContentAbstract}}

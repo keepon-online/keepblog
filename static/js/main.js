@@ -644,7 +644,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // 运行时间实时更新
         updateRuntimeDisplay()
+
+        // 页面阅读进度条更新
+        updateScrollProgress()
     }
+
+    // 页面阅读进度条
+    const updateScrollProgress = () => {
+        const progressBar = document.getElementById('page-scroll-progress')
+        if (!progressBar) return
+        const totalHeight = document.documentElement.scrollHeight - window.innerHeight
+        const currentTop = window.scrollY || document.documentElement.scrollTop
+        const pct = totalHeight > 0 ? (currentTop / totalHeight) * 100 : 0
+        progressBar.style.width = Math.min(100, Math.max(0, pct)) + '%'
+    }
+    window.addEventListener('scroll', updateScrollProgress, { passive: true })
 
     // 更新运行时间显示
     const updateRuntimeDisplay = () => {
