@@ -8,6 +8,23 @@
 > 2026-09 起发版 tag 改用语义化版本号（形如 `v2.1.2`）。此前递增数字 tag 的对应关系：
 > v6=2.0.0、v7=2.0.1、v8=2.0.2、v9=2.1.0、v10=2.1.1。
 
+## [未发布]
+
+### 新增
+- SEO 基础设施批次（技术 SEO）：
+  - 全站输出 `<link rel="canonical">`：文章页、标签/分类/归档详情页（含翻页页指向自身）、关于/友链页、首页及 `/page/N`，由各页面 handler 注入，公共拼接逻辑收口在 `internal/pkg.CanonicalURL`；
+  - 文章页新增 BlogPosting 结构化数据（JSON-LD：headline/description/image/datePublished/dateModified/author/wordCount）与 `article:published_time`、`article:modified_time`、`twitter:title`、`twitter:description` 元信息；
+  - 列表页 title 差异化：标签/分类详情页输出 `标签：X | 站名`、归档年月页输出 `2024年07月 归档 | 站名`、首页翻页输出 `第 N 页 | 站名`；标签/分类/归档详情页的 meta description 改为带文章数的页面级描述（`pagedesc`），文章页 description 改用文章摘要而非全站描述；
+  - sitemap 扩容：文章条数上限由 50 放开到全量（5 万上限），并纳入标签/分类/归档/关于/友链聚合页；首页 lastmod 改取最新一篇文章时间，不再每次生成都写"今天"；
+  - robots.txt 屏蔽 `/api/`、`/console`、`/search/`、`/daily` 等对搜索无价值的路径，节省抓取预算；
+  - 首页站点标题由空打字机 span 改为 `h1` 内静态输出站点名（Typed.js 加载后照常替换为一言），无 JS 环境与爬虫可读到有效 H1；
+  - 正文图片（goldmark 渲染）统一补 `loading="lazy"` 与 `decoding="async"`，改善 LCP；
+  - 新增模板冒烟测试：全部模板随应用同款函数解析，并渲染 head.html 验证 canonical/差异化 title/JSON-LD 合法性。
+
+### 修复
+- 消除软 404：文章 hashids 解析失败或文章不存在时由 200 改为真实 404 状态码；各列表页 handler 的服务端错误由 200 渲染 error.html 改为 500；NoRoute 404 页补传站点数据（此前传 nil 导致页面标题为空）。
+- 百度定时推送的切片缺陷：`make([]string, len(content))` 先填满空串再 append，推送 body 前面有整排空行白白消耗配额，改为容量语义 `make([]string, 0, len(content))`。
+
 ## [2.3.0] - 2026-09-20
 
 ### 新增
