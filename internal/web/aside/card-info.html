@@ -1,35 +1,49 @@
 <div class="card-widget card-info">
-    <div class="is-center">
+    <div class="card-info-header-bg"></div>
+    <div class="card-info-avatar is-center">
         <div class="avatar-img">
             <img alt="avatar" src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png" />
+            <span class="avatar-status" title="保持在线"></span>
         </div>
         <div class="author-info__name">{{.site.Title}}</div>
-        <div class="author-info__description"></div>
+        {{if .site.Description}}
+        <div class="author-info__description">{{.site.Description}}</div>
+        {{end}}
     </div>
-    <div class="card-info-data site-data is-center"><a href="/archives/">
-            <div class="headline">文章</div>
+    <div class="card-info-data is-center">
+        <a class="card-info-data-item" href="/archives/" title="查看全部文章">
             <div class="length-num">{{ .cardInfo.Post}}</div>
-        </a><a href="/tags/">
-            <div class="headline">标签</div>
+            <div class="headline">文章</div>
+        </a>
+        <a class="card-info-data-item" href="/tags/" title="查看全部标签">
             <div class="length-num">{{ .cardInfo.Tag}}</div>
-        </a><a href="/categories/">
-            <div class="headline">分类</div>
+            <div class="headline">标签</div>
+        </a>
+        <a class="card-info-data-item" href="/categories/" title="查看全部分类">
             <div class="length-num">{{ .cardInfo.Category}}</div>
-        </a></div>
+            <div class="headline">分类</div>
+        </a>
+    </div>
+    {{if .site.Github}}
     <a href="{{.site.Github}}" id="card-info-btn" rel="noopener" target="_blank">
-        <i class="fab fa-github"></i><span>Follow Me</span></a>
+        <i class="fab fa-github"></i><span>Follow Me</span>
+    </a>
+    {{end}}
     <div class="card-info-social-icons is-center">
         {{if .site.Github}}
-        <a class="social-icon" href="{{.site.Github}}" target="_blank" title="Github">
-            <i class="fab fa-github"></i></a>
+        <a class="social-icon" href="{{.site.Github}}" target="_blank" title="GitHub">
+            <i class="fab fa-github"></i>
+        </a>
         {{end}}
         {{if .site.Gitee}}
         <a class="social-icon" href="{{.site.Gitee}}" target="_blank" title="Gitee">
-            <i class="fab fa-git-alt"></i></a>
+            <i class="fab fa-git-alt"></i>
+        </a>
         {{end}}
         {{if .site.Email}}
         <a class="social-icon" href="mailto:{{.site.Email}}" target="_blank" title="Email">
-            <i class="fas fa-envelope"></i></a>
+            <i class="fas fa-envelope"></i>
+        </a>
         {{end}}
     </div>
 </div>
