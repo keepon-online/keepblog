@@ -21,3 +21,5 @@ data/*.tmp
 frontend/node_modules/
 frontend/dist/
 frontend/.eslintcache
+# Zed 编辑器项目配置
+.zed
