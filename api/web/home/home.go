@@ -23,6 +23,12 @@ type Handler struct {
 func (h *Handler) Home(c *gin.Context) {
 	pageNum := c.Param("page")
 	num, _ := strconv.ParseInt(pageNum, 10, 64)
+	// /page/1 与首页是同一内容，301 归一到 /（分页链接已不再生成该 URL，
+	// 此处兜底已被收录或被外链引用的老地址）。
+	if num == 1 {
+		c.Redirect(http.StatusMovedPermanently, "/")
+		return
+	}
 	coverPosts, _, err := h.Service.PostService.GetCoverPosts(int(num))
 	if err != nil {
 		slog.Errorf("首页文章错误: %s", err.Error())

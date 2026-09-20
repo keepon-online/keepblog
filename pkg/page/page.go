@@ -1,9 +1,10 @@
 package page
 
 import (
-	"fmt"
-
 	"errors"
+	"fmt"
+	"strings"
+
 	"gorm.io/gorm"
 )
 
@@ -83,90 +84,26 @@ func Paginate[T any](page *Page[T]) func(db *gorm.DB) *gorm.DB {
 }
 
 func HandleIndex(totalRecords, page int, temp string) (string, error) {
-	if page == 0 {
-		page = 1
+	return HandleIndexWithPageSize(totalRecords, page, 10, temp)
+}
+
+// pageBase 返回列表第 1 页的路径：temp 形如 "page"（首页）、
+// "tags/go/page"、"categories/java/page"、"archives/page"，
+// 第 1 页统一指向列表基路径而非 /page/1——与各页面 canonical 一致，
+// 避免同一内容出现两套 URL。
+func pageBase(temp string) string {
+	if temp == "page" {
+		return "/"
 	}
+	return "/" + strings.TrimSuffix(temp, "/page")
+}
 
-	// 每页显示的记录数
-	pageSize := 10
-
-	// 计算总页数
-	totalPages := totalRecords / pageSize
-	if totalRecords%pageSize != 0 {
-		totalPages++
+// pageURL 返回第 page 页的链接。
+func pageURL(temp string, page int) string {
+	if page <= 1 {
+		return pageBase(temp)
 	}
-
-	if page > totalPages {
-
-		return "", errors.New("invalid page num")
-	}
-
-	// 构造分页数据
-	var pages []int
-	for i := 1; i <= totalPages; i++ {
-		pages = append(pages, i)
-	}
-
-	// 构造分页 HTML
-	var paginationHTML string
-	if totalPages > 1 {
-		paginationHTML += `<div><ul class="pagination">`
-
-		// 上一页
-		if page > 1 {
-			paginationHTML += fmt.Sprintf(`<li><a class="extend prev" href="/%s/%d" data-pjax-content="true"><i class="fas fa-chevron-left fa-fw"></i></a></li>`, temp, page-1)
-		} else {
-			paginationHTML += `<li class="disabled" style="pointer-events: none;cursor: not-allowed;" ><a href="#" style="cursor: not-allowed;pointer-events:none"><i class="fas fa-chevron-left fa-fw"></i></a></li>`
-		}
-
-		// 页码
-		var start, end int
-		if totalPages <= 7 {
-			start, end = 1, totalPages
-		} else {
-			if page <= 4 {
-				start, end = 1, 7
-			} else if page >= totalPages-3 {
-				start, end = totalPages-6, totalPages
-			} else {
-				start, end = page-3, page+3
-			}
-		}
-
-		if start > 1 {
-			paginationHTML += fmt.Sprintf(`<li><a href="/%s/%d" data-pjax-content="true">1</a></li>`, temp, 1)
-			if start > 2 {
-				paginationHTML += `<li class="disabled"><a  style="pointer-events: none;cursor: not-allowed;" >...</a></li>`
-			}
-		}
-
-		for _, p := range pages[start-1 : end] {
-			if p == page {
-				paginationHTML += fmt.Sprintf(`<li class="page-number current"><a href="/%s/%d" data-pjax-content="true">%d</a></li>`, temp, p, p)
-			} else {
-				paginationHTML += fmt.Sprintf(`<li><a href="/%s/%d" data-pjax-content="true">%d</a></li>`, temp, p, p)
-			}
-		}
-
-		if end < totalPages {
-			if end < totalPages-1 {
-				paginationHTML += `<li class="disabled"><a  style="pointer-events: none;cursor: not-allowed;" >...</a></li>`
-			}
-			paginationHTML += fmt.Sprintf(`<li><a href="/%s/%d" data-pjax-content="true">%d</a></li>`, temp, totalPages, totalPages)
-		}
-
-		// 下一页
-		if page < totalPages {
-			paginationHTML += fmt.Sprintf(`<li><a class="extend next" href="/%s/%d" data-pjax-content="true"><i class="fas fa-chevron-right fa-fw"></i></a></li>`, temp, page+1)
-		} else {
-			paginationHTML += `<li class="disabled" style="pointer-events: none;cursor: not-allowed;"><a href="#" style="cursor: not-allowed;pointer-events:none"><i class="fas fa-chevron-right fa-fw"></i></a></li>`
-		}
-
-		paginationHTML += `</ul></div>`
-	}
-
-	return paginationHTML, nil
-
+	return fmt.Sprintf("/%s/%d", temp, page)
 }
 
 // HandleIndexWithPageSize 支持自定义 pageSize 的分页
@@ -199,11 +136,12 @@ func HandleIndexWithPageSize(totalRecords, page, pageSize int, temp string) (str
 	if totalPages > 1 {
 		paginationHTML += `<div><ul class="pagination">`
 
-		// 上一页
+		// 上一页。禁用态不输出 href（含 href="#" 会被当作指向自身的
+		// 可抓取链接，爬虫与 PJAX 都会无谓地请求一次）。
 		if page > 1 {
-			paginationHTML += fmt.Sprintf(`<li><a class="extend prev" href="/%s/%d" data-pjax-content="true"><i class="fas fa-chevron-left fa-fw"></i></a></li>`, temp, page-1)
+			paginationHTML += fmt.Sprintf(`<li><a class="extend prev" href="%s" data-pjax-content="true"><i class="fas fa-chevron-left fa-fw"></i></a></li>`, pageURL(temp, page-1))
 		} else {
-			paginationHTML += `<li class="disabled" style="pointer-events: none;cursor: not-allowed;" ><a href="#" style="cursor: not-allowed;pointer-events:none"><i class="fas fa-chevron-left fa-fw"></i></a></li>`
+			paginationHTML += `<li class="disabled" style="pointer-events: none;cursor: not-allowed;" ><a style="cursor: not-allowed;pointer-events:none"><i class="fas fa-chevron-left fa-fw"></i></a></li>`
 		}
 
 		// 页码
@@ -221,36 +159,38 @@ func HandleIndexWithPageSize(totalRecords, page, pageSize int, temp string) (str
 		}
 
 		if start > 1 {
-			paginationHTML += fmt.Sprintf(`<li><a href="/%s/%d" data-pjax-content="true">1</a></li>`, temp, 1)
+			paginationHTML += fmt.Sprintf(`<li><a href="%s" data-pjax-content="true">1</a></li>`, pageBase(temp))
 			if start > 2 {
-				paginationHTML += `<li class="disabled"><a  style="pointer-events: none;cursor: not-allowed;" >...</a></li>`
+				paginationHTML += `<li class="space disabled"><a style="pointer-events: none;cursor: not-allowed;">...</a></li>`
 			}
 		}
 
 		for _, p := range pages[start-1 : end] {
 			if p == page {
-				paginationHTML += fmt.Sprintf(`<li class="page-number current"><a href="/%s/%d" data-pjax-content="true">%d</a></li>`, temp, p, p)
+				// 当前页不输出 href：页面不应链接到自身。
+				paginationHTML += fmt.Sprintf(`<li class="page-number current"><a aria-current="page">%d</a></li>`, p)
 			} else {
-				paginationHTML += fmt.Sprintf(`<li><a href="/%s/%d" data-pjax-content="true">%d</a></li>`, temp, p, p)
+				paginationHTML += fmt.Sprintf(`<li><a href="%s" data-pjax-content="true">%d</a></li>`, pageURL(temp, p), p)
 			}
 		}
 
 		if end < totalPages {
 			if end < totalPages-1 {
-				paginationHTML += `<li class="disabled"><a  style="pointer-events: none;cursor: not-allowed;" >...</a></li>`
+				paginationHTML += `<li class="space disabled"><a style="pointer-events: none;cursor: not-allowed;">...</a></li>`
 			}
-			paginationHTML += fmt.Sprintf(`<li><a href="/%s/%d" data-pjax-content="true">%d</a></li>`, temp, totalPages, totalPages)
+			paginationHTML += fmt.Sprintf(`<li><a href="%s" data-pjax-content="true">%d</a></li>`, pageURL(temp, totalPages), totalPages)
 		}
 
 		// 下一页
 		if page < totalPages {
-			paginationHTML += fmt.Sprintf(`<li><a class="extend next" href="/%s/%d" data-pjax-content="true"><i class="fas fa-chevron-right fa-fw"></i></a></li>`, temp, page+1)
+			paginationHTML += fmt.Sprintf(`<li><a class="extend next" href="%s" data-pjax-content="true"><i class="fas fa-chevron-right fa-fw"></i></a></li>`, pageURL(temp, page+1))
 		} else {
-			paginationHTML += `<li class="disabled" style="pointer-events: none;cursor: not-allowed;"><a href="#" style="cursor: not-allowed;pointer-events:none"><i class="fas fa-chevron-right fa-fw"></i></a></li>`
+			paginationHTML += `<li class="disabled" style="pointer-events: none;cursor: not-allowed;"><a style="cursor: not-allowed;pointer-events:none"><i class="fas fa-chevron-right fa-fw"></i></a></li>`
 		}
 
 		paginationHTML += `</ul></div>`
 	}
 
 	return paginationHTML, nil
+
 }
