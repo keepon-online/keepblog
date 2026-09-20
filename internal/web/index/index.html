@@ -79,55 +79,69 @@
         </main>
         {{template "layout/footer.html" .}}
     </div>
-    <script src="/plugins/typed.js/lib/typed.min.js"></script>
     <script>
-        // IIFE 包裹：PJAX 切换时可能重新执行此脚本，裸 const 会重复声明崩溃。
+        // 首页打字机(原生实现)。
+        // 此前使用 typed.js:库本身经官方 CDN 比对无误、最小页面可用,
+        // 但在本页多脚本环境下初始化后不推进(真 Chrome 复现),故弃用。
+        // PJAX 只替换 #body-wrap/#page-header,本脚本在容器外不会重新执行,
+        // 因此监听 pjax:complete 对切回首页时的新 .typing 元素重新初始化。
         ;(function () {
-            // 打字机：一言 API 取句，失败/超时回退静态站名。
-            // PJAX 只替换 #body-wrap/#page-header，本脚本在容器外不会重新执行，
-            // 因此监听 pjax:complete 对切回首页时的新 .typing 元素重新初始化。
-            var FALLBACK = ['{{.site.Title}}'];
-            var typingEl = null;
+            var API = 'https://api.btstu.cn/yan/api.php?charset=utf-8&encode=json';
+            var FALLBACK = '{{.site.Title}}';
+            var timer = null;
 
-            function initTyping() {
+            function typewriter(el, text) {
+                var pos = 0, deleting = false;
+                (function step() {
+                    if (!document.body.contains(el)) return; // 页面已被 PJAX 切走
+                    if (!deleting) {
+                        pos++;
+                        el.textContent = text.slice(0, pos);
+                        if (pos >= text.length) {
+                            deleting = true;
+                            timer = setTimeout(step, 2000); // 打完整句停留
+                            return;
+                        }
+                        timer = setTimeout(step, 150 + Math.random() * 100);
+                    } else {
+                        pos--;
+                        el.textContent = text.slice(0, pos);
+                        if (pos <= 0) { deleting = false; }
+                        timer = setTimeout(step, 60);
+                    }
+                })();
+            }
+
+            function begin() {
                 var el = document.querySelector('.typing');
-                // 元素不存在（非首页）或已初始化（pjax:complete 重复触发）时跳过
-                if (!el || el.dataset.typedInit) return;
-                el.dataset.typedInit = '1';
-                typingEl = el;
+                if (!el || el.dataset.twInit) return;
+                el.dataset.twInit = '1';
+                if (timer) clearTimeout(timer);
 
                 var xhr = new XMLHttpRequest();
-                xhr.open('GET', 'https://api.btstu.cn/yan/api.php?charset=utf-8&encode=json', true);
+                xhr.open('GET', API, true);
                 xhr.responseType = 'json';
                 xhr.timeout = 5000;
                 xhr.onload = function () {
+                    if (!document.body.contains(el)) return;
                     var ok = (this.status === 200 || this.status === 304)
                         && this.response && this.response.text;
-                    start(ok ? [this.response.text] : FALLBACK, ok);
+                    if (ok) {
+                        el.textContent = '';
+                        typewriter(el, this.response.text);
+                    } else {
+                        el.textContent = FALLBACK; // 回退:静态站名
+                    }
                 };
-                xhr.onerror = function () { start(FALLBACK, false); };
-                xhr.ontimeout = function () { start(FALLBACK, false); };
+                xhr.onerror = function () {
+                    if (document.body.contains(el)) el.textContent = FALLBACK;
+                };
+                xhr.ontimeout = xhr.onerror;
                 xhr.send();
             }
 
-            function start(strings, loop) {
-                // 异步响应到达时页面可能已被 PJAX 切走
-                if (!typingEl || !document.body.contains(typingEl)) return;
-                if (typeof Typed === 'undefined') {
-                    typingEl.textContent = strings[0];
-                    return;
-                }
-                new Typed(typingEl, {
-                    strings: strings,
-                    loop: loop,          // 回退站名时静态展示，不再循环打删
-                    startDelay: 300,
-                    typeSpeed: 150,
-                    backSpeed: 50
-                });
-            }
-
-            initTyping();
-            document.addEventListener('pjax:complete', initTyping);
+            begin();
+            document.addEventListener('pjax:complete', begin);
         })();
     </script>
     {{template "layout/foot.html" .}}
