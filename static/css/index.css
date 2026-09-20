@@ -229,6 +229,42 @@ hr:before,
   -webkit-font-smoothing: antialiased;
 }
 
+.fa-solid,
+.fas {
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  -webkit-font-smoothing: antialiased;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  line-height: 1;
+}
+
+.fa-regular,
+.far {
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  line-height: 1;
+}
+
+.fa-brands,
+.fab {
+  font-family: 'Font Awesome 6 Brands';
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  line-height: 1;
+}
+
 .cardHover,
 .error404 #error-wrap .error-content,
 .layout>div:first-child:not(.recent-posts),
@@ -251,9 +287,32 @@ hr:before,
 .layout>div:first-child:not(.recent-posts):hover,
 #recent-posts>.recent-post-item:hover,
 #aside-content .card-widget:hover,
-.layout>.recent-posts .pagination>*:not(.space):hover {
+.layout>.recent-posts .pagination>*:not(.space):not(.current):not(.disabled):hover {
   -webkit-box-shadow: var(--card-hover-box-shadow);
   box-shadow: var(--card-hover-box-shadow);
+}
+
+/* 分页省略号：去卡片底与阴影、内容半透明 */
+.layout>.recent-posts .pagination>li.space,
+.layout>.recent-posts .pagination>li.disabled.space {
+  background: transparent;
+  box-shadow: none;
+}
+
+.layout>.recent-posts .pagination>li.space>a,
+.layout>.recent-posts .pagination>li.disabled.space>a {
+  opacity: 0.45;
+}
+
+/* 分页越界箭头：保持卡片轮廓与对齐，弱化透明度并去除阴影，避免孤立悬浮 */
+.layout>.recent-posts .pagination>li.disabled:not(.space) {
+  background: var(--card-bg);
+  box-shadow: none;
+  opacity: 0.35;
+}
+
+.layout>.recent-posts .pagination>li.disabled:not(.space)>a {
+  opacity: 0.6;
 }
 
 .imgHover,
@@ -4695,13 +4754,35 @@ h1.page-title+.tag-cloud-list {
 }
 
 #pagination .pagination {
-  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 24px 0 10px;
+  padding: 0;
+  list-style: none;
   text-align: center;
 }
 
 #pagination .page-number.current {
   background: #00c4b6;
-  color: var(--white);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 196, 182, 0.4);
+  cursor: default;
+}
+
+#pagination .page-number.current>a {
+  color: #ffffff !important;
+  font-weight: 600;
+  cursor: default;
+}
+
+#pagination .page-number.current:hover {
+  background: #00c4b6;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 196, 182, 0.4);
+  transform: none;
 }
 
 #pagination .pagination-info {
@@ -4765,17 +4846,92 @@ h1.page-title+.tag-cloud-list {
   background: #000;
 }
 
-.layout>.recent-posts .pagination>* {
-  display: inline-block;
-  margin: 0 6px;
+.layout>.recent-posts .pagination>*,
+#pagination .pagination>li {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
   width: 2.5em;
   height: 2.5em;
-  line-height: 2.5em;
+  line-height: 1;
+  vertical-align: middle;
 }
 
-.layout>.recent-posts .pagination>*:not(.space):hover {
+#pagination .pagination>li>a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--font-color);
+  font-size: 0.95em;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.25s ease;
+}
+
+.layout>.recent-posts .pagination>*:not(.space):not(.current):not(.disabled):hover,
+#pagination .pagination>li:not(.space):not(.current):not(.disabled):hover {
   background: var(--btn-hover-color);
   color: var(--btn-color);
+  transform: translateY(-2px);
+}
+
+.layout>.recent-posts .pagination>*:not(.space):not(.current):not(.disabled):hover>a,
+#pagination .pagination>li:not(.space):not(.current):not(.disabled):hover>a {
+  color: var(--btn-color);
+}
+
+#pagination .pagination>li.disabled:not(.space) {
+  background: var(--card-bg);
+  box-shadow: none;
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none;
+}
+
+#pagination .pagination>li.disabled:not(.space)>a {
+  color: var(--font-color);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+#pagination .pagination>li.space,
+#pagination .pagination>li.disabled.space {
+  background: transparent !important;
+  box-shadow: none !important;
+  cursor: default;
+  pointer-events: none;
+  transform: none;
+}
+
+#pagination .pagination>li.space>a,
+#pagination .pagination>li.disabled.space>a {
+  color: var(--font-color);
+  opacity: 0.45;
+  cursor: default;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+@media screen and (max-width: 768px) {
+  #pagination .pagination {
+    gap: 6px;
+    margin: 16px 0 6px;
+  }
+
+  .layout>.recent-posts .pagination>*,
+  #pagination .pagination>li {
+    width: 2.2em;
+    height: 2.2em;
+    border-radius: 6px;
+  }
+
+  #pagination .pagination>li>a {
+    font-size: 0.9em;
+  }
 }
 
 .layout>div:not(.recent-posts) .pagination .page-number {

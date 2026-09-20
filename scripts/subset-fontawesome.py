@@ -19,13 +19,29 @@ from fontTools.subset import Subsetter, Options, load_font, save_font
 SRC = pathlib.Path("static/plugins/@fortawesome/fontawesome-free")  # 全量包(临时)
 OUT = pathlib.Path("static/plugins/fontawesome")
 
-# 全站模板(internal/web)与脚本(static/js)实际使用的图标,按风格分组
+# 全站实际使用的图标，按风格分组。手工维护，但 main() 会自动扫描
+# internal/web、static/js、pkg、api 中的 fa- 类名做交叉校验——分页条等
+# 服务端拼 HTML 的代码在 Go 文件里，只扫模板会漏（chevron 就这样漏过）。
 solid = """adjust angle-double-down angle-down archive arrow-up arrows-alt-h bars
-bullhorn chart-line check cog comments envelope folder-open heart history home
-inbox link paste search sign-out-alt spinner stream tag tags thumbs-up thumbtack
-times""".split()
+bullhorn chart-line check chevron-left chevron-right cog comments envelope
+folder-open heart history home inbox link paste search sign-out-alt spinner
+stream tag tags thumbs-up thumbtack times""".split()
 regular = "calendar-alt clock eye file-word".split()
 brands = "git-alt github".split()
+
+
+def scan_used_icons() -> set[str]:
+    """扫描全站源码里的 fa-xxx 图标类名（模板/JS/Go 拼串）。"""
+    import re as _re
+    roots = ["internal/web", "static/js", "pkg", "api"]
+    used: set[str] = set()
+    for root in roots:
+        for p in pathlib.Path(root).rglob("*"):
+            if p.suffix not in (".html", ".js", ".go") or not p.is_file():
+                continue
+            for m in _re.finditer(r"\bfa[bsr]? fa-([a-z0-9-]+)", p.read_text(errors="ignore")):
+                used.add(m.group(1))
+    return used
 
 
 def name_to_codepoint(css: str) -> dict[str, str]:
@@ -77,6 +93,16 @@ def main() -> None:
     if missing:
         raise SystemExit(f"CSS 中找不到码点: {missing}")
 
+    # 交叉校验：源码扫描到的图标若不在子集列表里，说明列表漏维护
+    #（风格归属按 all.min.css 的码点存在性归组，此处仅提示名字）。
+    used = scan_used_icons()
+    unlisted = sorted(used - all_icons)
+    if unlisted:
+        raise SystemExit(
+            f"源码中使用了但子集列表缺少的图标: {unlisted}，"
+            f"请加进 subset-fontawesome.py 对应风格分组后重跑"
+        )
+
     (OUT / "webfonts").mkdir(parents=True, exist_ok=True)
     (OUT / "css").mkdir(parents=True, exist_ok=True)
     print("生成子集字体:")
@@ -90,13 +116,23 @@ def main() -> None:
     picked, seen = [], set()
     for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
         sels = [x.strip() for x in sel.strip().split(",")]
-        hit = sels[0] in base_first or any(
+        hit = any(s in base_first for s in sels) or any(
             (m := re.match(r"\.fa-([a-z0-9-]+):before$", s)) and m.group(1) in all_icons
             for s in sels
         )
         if hit and (key := sel.strip() + body[:40]) not in seen:
             seen.add(key)
             picked.append((sel.strip(), body))
+
+    # 兜底确保核心字体族与字重声明完整
+    core_rules = [
+        (".fa-brands,.fab", 'font-family:"Font Awesome 6 Brands";font-weight:400'),
+        (".fa-regular,.far", 'font-family:"Font Awesome 6 Free";font-weight:400'),
+        (".fa-solid,.fas", 'font-family:"Font Awesome 6 Free";font-weight:900'),
+    ]
+    for sel, body in core_rules:
+        if not any(p[0] == sel and "font-family" in p[1] for p in picked):
+            picked.append((sel, body))
 
     keyframes = []
     for pat in (r"@-webkit-keyframes fa-(spin|pulse|shake)\b", r"@keyframes fa-(spin|pulse|shake)\b"):
