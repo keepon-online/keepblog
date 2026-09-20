@@ -16,7 +16,8 @@ services:
     container_name: artalk
     restart: unless-stopped
     ports:
-      - "127.0.0.1:23366:23366"   # 建议只监听本机，由反代暴露 HTTPS
+      - "23366:23366"   # 必须 0.0.0.0：本站反代是容器化 nginx，经宿主机 IP 回源，
+                        # 127.0.0.1 绑定它够不着（502）
     volumes:
       - ./data:/data              # SQLite 与配置持久化
     environment:
