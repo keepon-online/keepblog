@@ -35,7 +35,7 @@
 - 百度定时推送的切片缺陷：`make([]string, len(content))` 先填满空串再 append，推送 body 前面有整排空行白白消耗配额，改为容量语义 `make([]string, 0, len(content))`。
 - 移动端 viewport 移除 `maximum-scale=1.0, user-scalable=no` 缩放禁用（Lighthouse 移动可访问性扣分项）。
 
-## [未发布]
+## [2.4.1] - 2026-09-20
 
 ### 变更
 - **文章页相关推荐卡片视觉与交互全面优化**：
