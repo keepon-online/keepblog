@@ -20,10 +20,14 @@
   - 首页站点标题由空打字机 span 改为 `h1` 内静态输出站点名（Typed.js 加载后照常替换为一言），无 JS 环境与爬虫可读到有效 H1；
   - 正文图片（goldmark 渲染）统一补 `loading="lazy"` 与 `decoding="async"`，改善 LCP；
   - 新增模板冒烟测试：全部模板随应用同款函数解析，并渲染 head.html 验证 canonical/差异化 title/JSON-LD 合法性。
+- **IndexNow 主动收录推送**（Bing/Yandex 等兼容搜索引擎）：`indexnow` 配置段（enable/key/endpoint，见 config-example.yaml），每日 21:00 与百度推送共用一次文章查询推送全部已发布文章；自动在 `/{key}.txt` 提供协议要求的密钥文件；站点域名取 `web_site.url`。
+- **Google/Bing 站长平台验证字段**：`web_site` 表新增 `google_site`/`bing_site` 列（启动迁移幂等补列），前台输出 `google-site-verification` 与 `msvalidate.01` meta，后台"备案统计"设置页新增对应输入项；接入 Google Search Console / Bing Webmaster 的前置条件就此齐备。
+- **空摘要自动兜底**：文章 `summary` 为空时，文章页 meta description/og/JSON-LD 与 RSS description 改用正文纯文本前 120 字（新增 `md.Excerpt`：解析 AST 取文本，跳过代码块与行内代码，按 rune 截断）——此前空摘要文章的搜索描述完全为空。
 
 ### 修复
 - 消除软 404：文章 hashids 解析失败或文章不存在时由 200 改为真实 404 状态码；各列表页 handler 的服务端错误由 200 渲染 error.html 改为 500；NoRoute 404 页补传站点数据（此前传 nil 导致页面标题为空）。
 - 百度定时推送的切片缺陷：`make([]string, len(content))` 先填满空串再 append，推送 body 前面有整排空行白白消耗配额，改为容量语义 `make([]string, 0, len(content))`。
+- 移动端 viewport 移除 `maximum-scale=1.0, user-scalable=no` 缩放禁用（Lighthouse 移动可访问性扣分项）。
 
 ## [2.3.0] - 2026-09-20
 
