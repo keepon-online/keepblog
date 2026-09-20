@@ -20,9 +20,17 @@ window.addEventListener('load', () => {
     const $searchMask = document.getElementById('search-mask');
     const $searchDialog = document.querySelector('#local-search .search-dialog');
     const $input = document.querySelector('#local-search-input input');
+    const $clearBtn = document.querySelector('#local-search .search-box-clear');
     const $resultContent = document.getElementById('local-search-results');
     const $loadingStatus = document.getElementById('loading-status');
     const $statsWrap = document.getElementById('local-search-stats-wrap');
+
+    // 动态更新输入框清空按钮
+    const updateClearBtn = () => {
+        if ($clearBtn) {
+            $clearBtn.style.display = $input && $input.value.trim() ? 'flex' : 'none';
+        }
+    };
 
     // 获取搜索历史
     const getSearchHistory = () => {
@@ -43,36 +51,46 @@ window.addEventListener('load', () => {
         localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
     };
 
-    // 显示搜索历史
+    // 显示搜索历史 (现代流式胶囊 Tags)
     const showSearchHistory = () => {
         const history = getSearchHistory();
         if (history.length === 0) {
-            $resultContent.innerHTML = '<div class="search-hint">输入关键词开始搜索</div>';
+            $resultContent.innerHTML = `
+                <div class="search-hint">
+                    <i class="fas fa-search search-hint-icon"></i>
+                    <div class="search-hint-title">输入关键词搜索全站内容</div>
+                    <div class="search-hint-sub">支持标题与正文关键词实时检索，支持键盘上下方向键导航</div>
+                </div>`;
             $statsWrap.style.display = 'none';
             return;
         }
 
         let html = '<div class="search-history">';
-        html += '<div class="search-history-title"><i class="fas fa-history"></i> 搜索历史</div>';
+        html += `<div class="search-history-header">
+            <span class="search-history-title"><i class="fas fa-history"></i> 搜索历史</span>
+            <button type="button" class="search-history-clear-all" title="清空全部历史"><i class="fas fa-times"></i> 清空</button>
+        </div>`;
+        html += '<div class="search-history-tags">';
         history.forEach(keyword => {
-            html += `<div class="search-history-item" data-keyword="${keyword}">
-                <span>${keyword}</span>
-                <i class="fas fa-times search-history-delete" data-keyword="${keyword}"></i>
+            html += `<div class="search-history-chip" data-keyword="${keyword}">
+                <span class="search-history-text">${keyword}</span>
+                <i class="fas fa-times search-history-delete" data-keyword="${keyword}" title="删除此条"></i>
             </div>`;
         });
-        html += '</div>';
+        html += '</div></div>';
         $resultContent.innerHTML = html;
         $statsWrap.style.display = 'none';
 
-        // 绑定历史点击事件
-        document.querySelectorAll('.search-history-item span').forEach(item => {
+        // 绑定历史标签点击检索
+        document.querySelectorAll('.search-history-chip .search-history-text').forEach(item => {
             item.addEventListener('click', () => {
                 $input.value = item.textContent;
+                updateClearBtn();
                 performSearch(item.textContent);
             });
         });
 
-        // 绑定删除历史事件
+        // 绑定删除单个历史
         document.querySelectorAll('.search-history-delete').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -82,12 +100,19 @@ window.addEventListener('load', () => {
                 showSearchHistory();
             });
         });
+
+        // 绑定清空全部历史
+        document.querySelector('.search-history-clear-all')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            localStorage.removeItem(HISTORY_KEY);
+            showSearchHistory();
+        });
     };
 
     // 显示加载状态
     const showLoading = () => {
         $loadingStatus.innerHTML = '<i class="fas fa-spinner fa-pulse"></i>';
-        $resultContent.innerHTML = '<div class="search-loading"><i class="fas fa-spinner fa-pulse"></i> 搜索中...</div>';
+        $resultContent.innerHTML = '<div class="search-loading"><i class="fas fa-spinner fa-pulse"></i> <span>正在检索文章...</span></div>';
     };
 
     // 隐藏加载状态
@@ -135,9 +160,13 @@ window.addEventListener('load', () => {
         currentIndex = -1;
 
         if (dataObj.length === 0) {
-            const emptyMsg = GLOBAL_CONFIG.localSearch?.languages?.hits_empty?.replace(/\$\{query}/, $input.value.trim())
-                || `没有找到与 "${$input.value.trim()}" 相关的文章`;
-            $resultContent.innerHTML = `<div id="local-search__hits-empty">${emptyMsg}</div>`;
+            const query = $input.value.trim();
+            $resultContent.innerHTML = `
+                <div id="local-search__hits-empty">
+                    <i class="fas fa-search search-empty-icon"></i>
+                    <div class="search-empty-title">未找到与 "${query}" 相关的文章</div>
+                    <div class="search-empty-sub">请尝试缩短搜索词或使用更通用的关键词检索</div>
+                </div>`;
             $statsWrap.style.display = 'none';
             return;
         }
@@ -165,7 +194,10 @@ window.addEventListener('load', () => {
             });
 
             html += `<div class="local-search__hit-item" data-index="${index}">
-                <a href="${dataUrl}" class="search-result-title">${displayTitle}</a>
+                <a href="${dataUrl}" class="search-result-title">
+                    <i class="fas fa-file-alt search-result-icon"></i>
+                    <span class="search-result-title-text">${displayTitle}</span>
+                </a>
                 ${summary ? `<p class="search-result-summary">${summary}</p>` : ''}
             </div>`;
         });
@@ -179,8 +211,11 @@ window.addEventListener('load', () => {
         }
 
         // 更新统计
-        $statsWrap.style.display = 'block';
-        $statsWrap.querySelector('.search-result-stats').textContent = `共找到 ${dataObj.length} 篇文章`;
+        $statsWrap.style.display = 'flex';
+        const statsEl = $statsWrap.querySelector('.search-result-stats');
+        if (statsEl) {
+            statsEl.textContent = `共找到 ${dataObj.length} 篇文章`;
+        }
     };
 
     // 键盘导航
@@ -240,6 +275,7 @@ window.addEventListener('load', () => {
 
         // 清空并显示历史
         $input.value = '';
+        updateClearBtn();
         showSearchHistory();
 
         setTimeout(() => {
@@ -279,8 +315,17 @@ window.addEventListener('load', () => {
         document.querySelector('#local-search .search-close-button')?.addEventListener('click', closeSearch);
         $searchMask?.addEventListener('click', closeSearch);
 
+        // 清空输入框按钮点击
+        $clearBtn?.addEventListener('click', () => {
+            $input.value = '';
+            updateClearBtn();
+            $input.focus();
+            showSearchHistory();
+        });
+
         // 输入事件 - 实时搜索
         $input?.addEventListener('input', (e) => {
+            updateClearBtn();
             const value = e.target.value.trim();
             if (value) {
                 debouncedSearch(value);

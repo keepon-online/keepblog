@@ -11,23 +11,30 @@
 </div>
 <div id="local-search">
     <div class="search-dialog" style="display: none; animation: 0.5s ease 0s 1 normal none running titleScale;">
-        <nav class="search-nav"><span class="search-dialog-title">搜寻</span>
+        <nav class="search-nav">
+            <span class="search-dialog-title"><i class="fas fa-search"></i> 搜索文章</span>
             <span id="loading-status"></span>
-            <button class="search-close-button"><i class="fas fa-times"></i></button>
+            <button class="search-close-button" type="button" title="关闭 (ESC)"><i class="fas fa-times"></i></button>
         </nav>
         <div class="search-wrap" style="display: block;">
             <div id="local-search-input">
                 <div class="local-search-box">
-                    <input class="local-search-box--input" placeholder="搜寻文章" type="text">
+                    <i class="fas fa-search search-box-icon"></i>
+                    <input class="local-search-box--input" placeholder="输入关键词搜索全站文章..." type="text" autocomplete="off" spellcheck="false">
+                    <button class="search-box-clear" type="button" title="清空" style="display: none;"><i class="fas fa-times"></i></button>
                 </div>
             </div>
-            <hr>
+            <div class="search-divider"></div>
             <div class="no-result" id="local-search-results">
 
             </div>
-            <div id="local-search-stats-wrap">
-                <hr>
-                <div class="search-result-stats">共找到 14 篇文章</div>
+            <div id="local-search-stats-wrap" class="search-dialog-footer">
+                <div class="search-shortcuts">
+                    <span class="search-shortcut-item"><kbd>↑</kbd><kbd>↓</kbd> 导航</span>
+                    <span class="search-shortcut-item"><kbd>↵</kbd> 选择</span>
+                    <span class="search-shortcut-item"><kbd>ESC</kbd> 关闭</span>
+                </div>
+                <div class="search-result-stats"></div>
             </div>
         </div>
     </div>

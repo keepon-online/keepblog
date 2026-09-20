@@ -24,8 +24,8 @@ OUT = pathlib.Path("static/plugins/fontawesome")
 # 服务端拼 HTML 的代码在 Go 文件里，只扫模板会漏（chevron 就这样漏过）。
 solid = """adjust angle-double-down angle-down archive arrow-up arrows-alt-h bars
 bullhorn chart-line check chevron-left chevron-right cog comments envelope
-folder-open heart history home inbox link paste search sign-out-alt spinner
-stream tag tags thumbs-up thumbtack times""".split()
+folder-open heart history home inbox keyboard link paste search search-minus
+sign-out-alt spinner stream tag tags thumbtack times times-circle trash-alt""".split()
 regular = "calendar-alt clock eye file-word".split()
 brands = "git-alt github".split()
 
