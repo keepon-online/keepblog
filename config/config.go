@@ -21,14 +21,15 @@ var (
 )
 
 type Configs struct {
-	Http    *http    `yaml:"http"`
-	Minio   *minio   `yaml:"minio"`
-	Baidu   *baidu   `yaml:"baidu"`
-	Gitalk  *gitalk  `yaml:"gitalk"`
-	Redis   *redis   `yaml:"redis"`
-	Jwt     *jwt     `yaml:"jwt"`
-	Hashids *hashids `yaml:"hashids"`
-	Ipdb    *ipdb    `yaml:"ipdb"`
+	Http     *http     `yaml:"http"`
+	Minio    *minio    `yaml:"minio"`
+	Baidu    *baidu    `yaml:"baidu"`
+	IndexNow *indexnow `yaml:"indexnow"`
+	Gitalk   *gitalk   `yaml:"gitalk"`
+	Redis    *redis    `yaml:"redis"`
+	Jwt      *jwt      `yaml:"jwt"`
+	Hashids  *hashids  `yaml:"hashids"`
+	Ipdb     *ipdb     `yaml:"ipdb"`
 }
 
 // jwt 签发配置
@@ -54,6 +55,14 @@ type baidu struct {
 	Push  bool   `yaml:"push"`
 	Url   string `yaml:"url"`
 	Token string `yaml:"token"`
+}
+
+// IndexNow 主动收录推送（Bing/Yandex/Naver 等兼容搜索引擎）
+type indexnow struct {
+	Enable bool   `yaml:"enable"`
+	Key    string `yaml:"key"`
+	// Endpoint 留空用官方共享入口 https://api.indexnow.org/indexnow
+	Endpoint string `yaml:"endpoint"`
 }
 
 // 服务绑定地址
@@ -187,6 +196,11 @@ func setDefaults() {
 	viper.SetDefault("baidu.push", false)
 	viper.SetDefault("baidu.url", "")
 	viper.SetDefault("baidu.token", "")
+
+	// IndexNow 默认配置
+	viper.SetDefault("indexnow.enable", false)
+	viper.SetDefault("indexnow.key", "")
+	viper.SetDefault("indexnow.endpoint", "https://api.indexnow.org/indexnow")
 
 	// Minio 默认配置
 	viper.SetDefault("minio.serverUrl", "")

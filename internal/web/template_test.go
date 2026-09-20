@@ -32,6 +32,9 @@ func siteFixture() *system.WebSite {
 		Description: "站点描述",
 		Keywords:    "关键词",
 		URL:         "https://example.com",
+		BaiduSite:   "baidu-code",
+		GoogleSite:  "google-code",
+		BingSite:    "bing-code",
 	}
 }
 
@@ -114,5 +117,27 @@ func TestHeadListMeta(t *testing.T) {
 	}
 	if !strings.Contains(out, "https://example.com/tags/Go") {
 		t.Errorf("missing canonical url")
+	}
+}
+
+// TestHeadVerificationMetas 三家站长平台的验证 meta 都应在配置非空时输出。
+func TestHeadVerificationMetas(t *testing.T) {
+	tpl := parseTemplates(t)
+	var b bytes.Buffer
+	if err := tpl.ExecuteTemplate(&b, "layout/head.html", map[string]any{"site": siteFixture()}); err != nil {
+		t.Fatalf("render head: %v", err)
+	}
+	out := b.String()
+
+	for _, want := range []string{
+		`name="baidu-site-verification"`,
+		`content="google-code"`,
+		`name="google-site-verification"`,
+		`content="bing-code"`,
+		`name="msvalidate.01"`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %s, got:\n%s", want, out)
+		}
 	}
 }

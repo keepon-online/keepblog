@@ -48,6 +48,10 @@ func Run(db *gorm.DB) error {
 	if _, err := provider.Up(ctx); err != nil {
 		return fmt.Errorf("apply migrations: %w", err)
 	}
+
+	if err := ensureSearchVerificationColumns(db); err != nil {
+		return fmt.Errorf("ensure search verification columns: %w", err)
+	}
 	return nil
 }
 
@@ -69,4 +73,29 @@ func bootstrapLegacySchema(db *gorm.DB) error {
 		&system.LoginLog{},
 		&system.Notice{},
 	)
+}
+
+// ensureSearchVerificationColumns 给 web_site 补 Google/Bing 站长平台验证列
+// （2026-09 加入）。不走 goose 迁移文件：SQLite 的 ADD COLUMN 没有
+// IF NOT EXISTS，而版本 0 引导路径的 AutoMigrate 已按模型建出这两列，
+// SQL 迁移在全新库上必然撞重复列。此处幂等补列，已有列时为两次轻量
+// pragma 查询，成本可忽略。
+func ensureSearchVerificationColumns(db *gorm.DB) error {
+	for _, col := range []string{"google_site", "bing_site"} {
+		var exists int64
+		if err := db.Raw(
+			"SELECT COUNT(1) FROM pragma_table_info('web_site') WHERE name = ?", col,
+		).Scan(&exists).Error; err != nil {
+			return err
+		}
+		if exists > 0 {
+			continue
+		}
+		if err := db.Exec(
+			fmt.Sprintf("ALTER TABLE web_site ADD COLUMN %s TEXT DEFAULT ''", col),
+		).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }

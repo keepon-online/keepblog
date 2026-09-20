@@ -13,6 +13,7 @@ import (
 	"gitee.com/jieepre/keepblog/api/web/music"
 	"gitee.com/jieepre/keepblog/api/web/post"
 	"gitee.com/jieepre/keepblog/api/web/tags"
+	"gitee.com/jieepre/keepblog/config"
 	"gitee.com/jieepre/keepblog/internal/middleware"
 	"gitee.com/jieepre/keepblog/internal/pkg/core"
 	"gitee.com/jieepre/keepblog/static"
@@ -26,6 +27,7 @@ import (
 func RegisterWebRouter(ctx *core.Context, group *gin.RouterGroup) {
 	staticRouter(ctx)
 	feedRouter(ctx)
+	indexNowKeyRouter(ctx)
 	aboutRouter(ctx, group)
 	tagWebRouter(ctx, group)
 	linkRouter(ctx, group)
@@ -80,6 +82,19 @@ func feedRouter(ctx *core.Context) {
 		},
 	}
 	RegisterRouter(group, routes)
+}
+
+// indexNowKeyRouter 输出 IndexNow 密钥文件。协议要求搜索引擎能够访问
+// https://host/{key}.txt 且内容为 key 本身，用于验证推送方拥有站点。
+// 路径是固定字面量（key 来自配置），与既有静态路由无冲突。
+func indexNowKeyRouter(ctx *core.Context) {
+	in := config.Get().IndexNow
+	if in == nil || !in.Enable || in.Key == "" {
+		return
+	}
+	ctx.Engine.GET("/"+in.Key+".txt", func(c *gin.Context) {
+		c.String(http.StatusOK, in.Key)
+	})
 }
 
 func homeRouter(ctx *core.Context, group *gin.RouterGroup) {

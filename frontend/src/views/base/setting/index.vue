@@ -241,6 +241,46 @@
                   <div class="form-tip">百度统计用于识别网站的唯一标识</div>
                 </el-form-item>
               </el-col>
+
+              <el-col :xs="24" :sm="24" :md="12" :lg="12">
+                <el-form-item label="Google验证码" prop="googleSite">
+                  <el-input
+                    v-model="WebsiteForm.googleSite"
+                    placeholder="例如: 1a2B3c4D5e6F7g8H9i0jKlMnOpQrStUvWxYz"
+                    clearable
+                  >
+                    <template #suffix>
+                      <el-tooltip
+                        content="Google Search Console 的站点所有权校验码"
+                        placement="top"
+                      >
+                        <el-icon class="help-icon"><InfoFilled /></el-icon>
+                      </el-tooltip>
+                    </template>
+                  </el-input>
+                  <div class="form-tip">用于 Google Search Console 验证网站所有权</div>
+                </el-form-item>
+              </el-col>
+
+              <el-col :xs="24" :sm="24" :md="12" :lg="12">
+                <el-form-item label="Bing验证码" prop="bingSite">
+                  <el-input
+                    v-model="WebsiteForm.bingSite"
+                    placeholder="例如: 0A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D"
+                    clearable
+                  >
+                    <template #suffix>
+                      <el-tooltip
+                        content="Bing Webmaster 的站点所有权校验码"
+                        placement="top"
+                      >
+                        <el-icon class="help-icon"><InfoFilled /></el-icon>
+                      </el-tooltip>
+                    </template>
+                  </el-input>
+                  <div class="form-tip">用于 Bing Webmaster 验证网站所有权</div>
+                </el-form-item>
+              </el-col>
             </el-row>
           </el-form>
         </el-tab-pane>
@@ -365,6 +405,8 @@ const WebsiteForm = ref({
   description: "",
   stat: "",
   site: "",
+  googleSite: "",
+  bingSite: "",
   icp: "",
   copyright: "",
   keywords: "",
@@ -401,6 +443,8 @@ const submitWebsiteForm = async () => {
       description: WebsiteForm.value.description,
       stat: WebsiteForm.value.stat,
       site: WebsiteForm.value.site,
+      googleSite: WebsiteForm.value.googleSite,
+      bingSite: WebsiteForm.value.bingSite,
       icp: WebsiteForm.value.icp,
       copyright: WebsiteForm.value.copyright,
       keywords: WebsiteForm.value.keywords,

@@ -130,6 +130,37 @@ func CountWords(content []byte) int {
 	return NewStats(doc, content).NoSpaces
 }
 
+// Excerpt 从 Markdown 提取纯文本摘要：跳过代码块与行内代码，
+// 收集正文文本后按 rune 截取 limit 字（中文按字数截断）。
+// 用作文章 summary 为空时的 meta description / RSS description 兜底。
+func Excerpt(content []byte, limit int) string {
+	if len(content) == 0 || limit <= 0 {
+		return ""
+	}
+	initEngines()
+	doc := markdown.Parser().Parse(text.NewReader(content))
+
+	var sb strings.Builder
+	_ = gast.Walk(doc, func(n gast.Node, entering bool) (gast.WalkStatus, error) {
+		if !entering {
+			return gast.WalkContinue, nil
+		}
+		switch n.Kind() {
+		case gast.KindCodeBlock, gast.KindFencedCodeBlock, gast.KindCodeSpan:
+			return gast.WalkSkipChildren, nil
+		case gast.KindText, gast.KindString:
+			sb.Write(n.Text(content))
+		}
+		return gast.WalkContinue, nil
+	})
+
+	runes := []rune(strings.TrimSpace(sb.String()))
+	if len(runes) > limit {
+		runes = runes[:limit]
+	}
+	return string(runes)
+}
+
 // ToHTML 仅渲染正文 HTML，不计算目录与统计。适用于只需正文的页面（如关于页）。
 func ToHTML(content []byte) string {
 	if len(content) == 0 {

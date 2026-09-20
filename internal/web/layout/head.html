@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta content="IE=edge" http-equiv="X-UA-Compatible">
-    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta content="{{.site.Title}}" name="author">
     <meta content="{{.site.Title}}" name="copyright">
     <meta content="telephone=no" name="format-detection">
@@ -64,6 +64,12 @@
     {{end}}
     {{if  .site.BaiduSite}}
     <meta content="{{ .site.BaiduSite }}" name="baidu-site-verification" />
+    {{end}}
+    {{if .site.GoogleSite}}
+    <meta content="{{.site.GoogleSite}}" name="google-site-verification">
+    {{end}}
+    {{if .site.BingSite}}
+    <meta content="{{.site.BingSite}}" name="msvalidate.01">
     {{end}}
     <link href="/favicon.ico" rel="shortcut icon">
     <link href="/css/index.css" rel="stylesheet">

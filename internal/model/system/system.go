@@ -78,6 +78,8 @@ type WebSite struct {
 	Copyright     string `json:"copyright"`     //版权
 	BaiduStat     string `json:"stat"`          //百度统计
 	BaiduSite     string `json:"site"`          //百度收录
+	GoogleSite    string `json:"googleSite"`    //Google Search Console 站点验证
+	BingSite      string `json:"bingSite"`      //Bing Webmaster 站点验证
 	Github        string `json:"github"`        //GitHub
 	Gitee         string `json:"gitee"`         //码云
 	Email         string `json:"email"`         //联系邮箱

@@ -119,12 +119,13 @@ func (service Service) GetLatestPosts() ([]model.LatestPosts, error) {
 }
 
 // GetPublishedPostsForFeed 取已发布文章列表（用于 RSS/sitemap），按发布时间倒序。
-// 返回 model.Post 的部分字段（title/post_slug/summary/cover_image/pub_time/last_modified_time）。
+// 返回 model.Post 的部分字段（title/post_slug/summary/cover_image/post_content/pub_time/last_modified_time）；
+// post_content 供 RSS 在 summary 为空时生成纯文本兜底摘要。
 func (service Service) GetPublishedPostsForFeed(limit int) ([]model.Post, error) {
 	var posts []model.Post
 
 	err := NewQueryBuilder(service.db).
-		Select("post.title, post.post_slug, post.summary, post.cover_image, post.pub_time, post.last_modified_time").
+		Select("post.title, post.post_slug, post.summary, post.cover_image, post.post_content, post.pub_time, post.last_modified_time").
 		WithPublished().
 		WithNotDeleted().
 		Order("post.pub_time DESC").

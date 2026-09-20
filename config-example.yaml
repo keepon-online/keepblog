@@ -23,6 +23,14 @@ baidu:
   url: https://www.example.com
   token: "your-baidu-push-token"
 
+# IndexNow 主动收录推送（Bing/Yandex 等兼容搜索引擎）
+# key 为 16-128 位十六进制/字母数字串，可用 openssl rand -hex 16 生成；
+# 开启后本站自动在 /{key}.txt 提供密钥文件（协议要求），站点域名取 web_site.url。
+indexnow:
+  enable: false
+  key: ""
+  # endpoint: https://api.indexnow.org/indexnow  # 留空即用官方共享入口
+
 # Redis配置
 redis:
   host: localhost

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/pkg/md"
 	"github.com/gin-gonic/gin"
 )
 
@@ -68,10 +69,15 @@ func (h *Handler) Feed(c *gin.Context) {
 	items := make([]rssItem, 0, len(posts))
 	for _, p := range posts {
 		link := baseURL + "/post/" + p.PostSlug
+		// 摘要为空时以正文纯文本兜底，避免订阅器里出现空描述。
+		description := p.Summary
+		if description == "" {
+			description = md.Excerpt([]byte(p.PostContent), 120)
+		}
 		items = append(items, rssItem{
 			Title:       p.Title,
 			Link:        link,
-			Description: p.Summary,
+			Description: description,
 			PubDate:     time.Unix(int64(p.PubTime), 0).Format(time.RFC1123Z),
 			GUID:        link,
 		})

@@ -104,3 +104,30 @@ func TestLazyImages(t *testing.T) {
 		t.Errorf("img alt lost, got: %s", r.HTML)
 	}
 }
+
+func TestExcerpt(t *testing.T) {
+	src := "# 标题\n\n第一段正文内容，用于摘要提取。\n\n```go\nfunc main() {}\n```\n\n第二段：`行内代码`不应出现。\n"
+	got := Excerpt([]byte(src), 100)
+	if !strings.Contains(got, "第一段正文内容") || !strings.Contains(got, "第二段") {
+		t.Errorf("正文文本丢失, got: %q", got)
+	}
+	if strings.Contains(got, "func main") {
+		t.Errorf("代码块内容混入摘要, got: %q", got)
+	}
+	if strings.Contains(got, "行内代码") {
+		t.Errorf("行内代码混入摘要, got: %q", got)
+	}
+	if strings.Contains(got, "#") {
+		t.Errorf("标题标记混入摘要, got: %q", got)
+	}
+
+	// rune 截断：中文按字数（而非字节数）截取
+	got = Excerpt([]byte(src), 6)
+	if got != "标题第一段正" {
+		t.Errorf("截断结果 = %q", got)
+	}
+
+	if Excerpt(nil, 10) != "" || Excerpt([]byte("abc"), 0) != "" {
+		t.Errorf("空输入/零长度应返回空串")
+	}
+}

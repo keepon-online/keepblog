@@ -39,6 +39,11 @@ func (h *Handler) Post(c *gin.Context) {
 		h.renderNotFound(c)
 		return
 	}
+	// 摘要为空时以正文纯文本兜底：meta description / og / JSON-LD / RSS
+	// 都依赖它，空摘要等于把搜索摘要完全交给搜索引擎自行截取。
+	if posts.Summary == "" {
+		posts.Summary = md.Excerpt([]byte(posts.PostContent), 120)
+	}
 	site, err := h.Service.WebSiteService.GetWebSite()
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "error.html", nil)
