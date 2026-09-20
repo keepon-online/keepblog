@@ -83,21 +83,51 @@
     <script>
         // IIFE 包裹：PJAX 切换时可能重新执行此脚本，裸 const 会重复声明崩溃。
         ;(function () {
-            var xhr = new XMLHttpRequest();
-            xhr.open("Get", 'https://api.btstu.cn/yan/api.php?charset=utf-8&encode=json', true)
-            xhr.responseType = 'json';
-            xhr.onload = function (e) {
-                if (this.status === 200 || this.status === 304) {
-                    new Typed(document.querySelector('.typing'), {
-                        strings: [this.response.text],
-                        loop: true,
-                        startDelay: 300,
-                        typeSpeed: 150,
-                        backSpeed: 50
-                    })
+            // 打字机：一言 API 取句，失败/超时回退静态站名。
+            // PJAX 只替换 #body-wrap/#page-header，本脚本在容器外不会重新执行，
+            // 因此监听 pjax:complete 对切回首页时的新 .typing 元素重新初始化。
+            var FALLBACK = ['{{.site.Title}}'];
+            var typingEl = null;
+
+            function initTyping() {
+                var el = document.querySelector('.typing');
+                // 元素不存在（非首页）或已初始化（pjax:complete 重复触发）时跳过
+                if (!el || el.dataset.typedInit) return;
+                el.dataset.typedInit = '1';
+                typingEl = el;
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', 'https://api.btstu.cn/yan/api.php?charset=utf-8&encode=json', true);
+                xhr.responseType = 'json';
+                xhr.timeout = 5000;
+                xhr.onload = function () {
+                    var ok = (this.status === 200 || this.status === 304)
+                        && this.response && this.response.text;
+                    start(ok ? [this.response.text] : FALLBACK, ok);
+                };
+                xhr.onerror = function () { start(FALLBACK, false); };
+                xhr.ontimeout = function () { start(FALLBACK, false); };
+                xhr.send();
+            }
+
+            function start(strings, loop) {
+                // 异步响应到达时页面可能已被 PJAX 切走
+                if (!typingEl || !document.body.contains(typingEl)) return;
+                if (typeof Typed === 'undefined') {
+                    typingEl.textContent = strings[0];
+                    return;
                 }
-            };
-            xhr.send()
+                new Typed(typingEl, {
+                    strings: strings,
+                    loop: loop,          // 回退站名时静态展示，不再循环打删
+                    startDelay: 300,
+                    typeSpeed: 150,
+                    backSpeed: 50
+                });
+            }
+
+            initTyping();
+            document.addEventListener('pjax:complete', initTyping);
         })();
     </script>
     {{template "layout/foot.html" .}}
