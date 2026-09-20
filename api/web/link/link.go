@@ -1,6 +1,7 @@
 package link
 
 import (
+	inpkg "gitee.com/jieepre/keepblog/internal/pkg"
 	"gitee.com/jieepre/keepblog/internal/pkg/core"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -15,7 +16,7 @@ func (h *Handler) Links(c *gin.Context) {
 	links, _ := h.Service.LinkService.GetLinks()
 	site, err := h.Service.WebSiteService.GetWebSite()
 	if err != nil {
-		c.HTML(http.StatusOK, "error.html", nil)
+		c.HTML(http.StatusInternalServerError, "error.html", nil)
 		return
 	}
 	c.HTML(http.StatusOK, "link.html", gin.H{
@@ -28,5 +29,6 @@ func (h *Handler) Links(c *gin.Context) {
 		"sidebarArchives": sidebarInfo.SidebarArchives,
 		"webInfo":         sidebarInfo.WebInfo,
 		"title":           "友链",
+		"canonical":       inpkg.CanonicalURL(site.URL, "/link"),
 	})
 }

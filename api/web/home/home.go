@@ -1,10 +1,12 @@
 package home
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 	"strconv"
 
+	inpkg "gitee.com/jieepre/keepblog/internal/pkg"
 	"gitee.com/jieepre/keepblog/internal/pkg/core"
 	"gitee.com/jieepre/keepblog/pkg"
 	"gitee.com/jieepre/keepblog/pkg/daily"
@@ -37,7 +39,7 @@ func (h *Handler) Home(c *gin.Context) {
 	site, err := h.Service.WebSiteService.GetWebSite()
 	if err != nil {
 		slog.Errorf("首页错误: %s", err.Error())
-		c.HTML(http.StatusOK, "error.html", nil)
+		c.HTML(http.StatusInternalServerError, "error.html", nil)
 		return
 	}
 	//传到模板中需要转换成template.HTML类型，否则html代码会被转义
@@ -48,7 +50,10 @@ func (h *Handler) Home(c *gin.Context) {
 		return
 	}
 	pagination := template.HTML(paginationTpl)
-	c.HTML(http.StatusOK, "index.html", gin.H{
+
+	// 首页第 1 页保留站点标题；翻页页给出"第 N 页"避免与首页同标题。
+	// canonical 指向页面自身（而非首页），配合分页内容差异避免重复收录判定。
+	data := gin.H{
 		"coverPosts":      coverPosts,
 		"site":            site,
 		"pages":           pagination,
@@ -59,8 +64,13 @@ func (h *Handler) Home(c *gin.Context) {
 		"sidebarArchives": sidebarInfo.SidebarArchives,
 		"webInfo":         sidebarInfo.WebInfo,
 		"wallpaperURL":    pkg.GetBingImage(),
-		"title":           "首页",
-	})
+		"canonical":       inpkg.CanonicalURL(site.URL, "/"),
+	}
+	if num > 1 {
+		data["title"] = fmt.Sprintf("第 %d 页", num)
+		data["canonical"] = inpkg.CanonicalURL(site.URL, fmt.Sprintf("/page/%d", num))
+	}
+	c.HTML(http.StatusOK, "index.html", data)
 }
 
 func (h *Handler) Search(c *gin.Context) {

@@ -1,10 +1,12 @@
 package archive
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 	"strconv"
 
+	inpkg "gitee.com/jieepre/keepblog/internal/pkg"
 	"gitee.com/jieepre/keepblog/internal/pkg/core"
 	"gitee.com/jieepre/keepblog/pkg/page"
 	"github.com/gin-gonic/gin"
@@ -29,7 +31,7 @@ func (h Handler) Archives(c *gin.Context) {
 	// 使用分页方法获取归档数据
 	archivePosts, totalGroups, totalPosts, err := h.Service.PostService.GetArchivePostsPaged(int(pageNum), pageSize)
 	if err != nil {
-		c.HTML(http.StatusOK, "error.html", nil)
+		c.HTML(http.StatusInternalServerError, "error.html", nil)
 		return
 	}
 
@@ -43,10 +45,16 @@ func (h Handler) Archives(c *gin.Context) {
 	index, _ := page.HandleIndexWithPageSize(totalGroups, int(pageNum), pageSize, "archives/page")
 	site, err := h.Service.WebSiteService.GetWebSite()
 	if err != nil {
-		c.HTML(http.StatusOK, "error.html", nil)
+		c.HTML(http.StatusInternalServerError, "error.html", nil)
 		return
 	}
 	pagination := template.HTML(index)
+	// 归档翻页页 canonical 指向自身。
+	archivePath := "/archives"
+	if pageNum > 1 {
+		archivePath = fmt.Sprintf("/archives/page/%d", pageNum)
+	}
+
 	c.HTML(http.StatusOK, "archives.html", gin.H{
 		"archives":        archivePosts,
 		"site":            site,
@@ -61,6 +69,7 @@ func (h Handler) Archives(c *gin.Context) {
 		"totalPosts":      totalPosts,
 		"currentPage":     pageNum,
 		"totalPages":      totalPages,
+		"canonical":       inpkg.CanonicalURL(site.URL, archivePath),
 	})
 }
 
@@ -85,14 +94,18 @@ func (h Handler) ArchivesInfo(c *gin.Context) {
 
 	site, err := h.Service.WebSiteService.GetWebSite()
 	if err != nil {
-		c.HTML(http.StatusOK, "error.html", nil)
+		c.HTML(http.StatusInternalServerError, "error.html", nil)
 		return
 	}
 
 	// 格式化标题
 	title := "归档"
+	archivePath := "/archives"
+	pagedesc := ""
 	if year != "" && month != "" {
 		title = year + "年" + month + "月 归档"
+		archivePath = "/archives/" + year + "/" + month
+		pagedesc = fmt.Sprintf("%s年%s月发布的全部文章，共 %d 篇。", year, month, totalPosts)
 	}
 
 	c.HTML(http.StatusOK, "archives.html", gin.H{
@@ -110,5 +123,7 @@ func (h Handler) ArchivesInfo(c *gin.Context) {
 		"totalPages":      1,
 		"filterYear":      year,
 		"filterMonth":     month,
+		"canonical":       inpkg.CanonicalURL(site.URL, archivePath),
+		"pagedesc":        pagedesc,
 	})
 }

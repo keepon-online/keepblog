@@ -3,6 +3,7 @@ package about
 import (
 	"net/http"
 
+	inpkg "gitee.com/jieepre/keepblog/internal/pkg"
 	"gitee.com/jieepre/keepblog/internal/pkg/core"
 	"gitee.com/jieepre/keepblog/pkg/md"
 	"github.com/gin-gonic/gin"
@@ -17,7 +18,7 @@ func (h Handler) About(c *gin.Context) {
 	about, _ := h.Service.AboutService.Info()
 	site, err := h.Service.WebSiteService.GetWebSite()
 	if err != nil {
-		c.HTML(http.StatusOK, "error.html", nil)
+		c.HTML(http.StatusInternalServerError, "error.html", nil)
 		return
 	}
 
@@ -32,5 +33,6 @@ func (h Handler) About(c *gin.Context) {
 		"sidebarArchives": sidebarInfo.SidebarArchives,
 		"webInfo":         sidebarInfo.WebInfo,
 		"title":           "关于",
+		"canonical":       inpkg.CanonicalURL(site.URL, "/about"),
 	})
 }

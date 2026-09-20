@@ -4,9 +4,9 @@
 <header class="full_page" id="page-header" style="background-image: url('{{.wallpaperURL}}')">
     {{template "layout/nav.html" .}}
     <div id="site-info">
-        <div id="site-title">
-            <span class="typing" style="color:#eee;"></span>
-        </div>
+        <h1 id="site-title">
+            <span class="typing" style="color:#eee;">{{.site.Title}}</span>
+        </h1>
         <div id="site_social_icons">
             {{if .site.Github}}
             <a class="social-icon" href="{{.site.Github}}" target="_blank" title="Github">

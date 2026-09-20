@@ -91,3 +91,16 @@ func TestCountWords(t *testing.T) {
 		})
 	}
 }
+
+func TestLazyImages(t *testing.T) {
+	r := Render([]byte("![示例图](/images/a.png)\n\n正文段落。\n"))
+	if !strings.Contains(r.HTML, `loading="lazy"`) {
+		t.Errorf("img missing loading=lazy, got: %s", r.HTML)
+	}
+	if !strings.Contains(r.HTML, `decoding="async"`) {
+		t.Errorf("img missing decoding=async, got: %s", r.HTML)
+	}
+	if !strings.Contains(r.HTML, `alt="示例图"`) {
+		t.Errorf("img alt lost, got: %s", r.HTML)
+	}
+}

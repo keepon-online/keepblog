@@ -9,10 +9,12 @@ import (
 	"github.com/gookit/slog"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting"
+	gast "github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 	"go.abhg.dev/goldmark/toc"
 )
 
@@ -27,6 +29,24 @@ var (
 	once     sync.Once
 )
 
+// lazyImages 为正文图片补 loading="lazy" decoding="async"。
+// 正文图绝大多数在首屏之外，懒加载可减少初始请求、改善 LCP；
+// 若首图恰在首屏，浏览器对首屏内的 lazy 图仍会立即加载，无副作用。
+type lazyImages struct{}
+
+func (lazyImages) Transform(node *gast.Document, _ text.Reader, _ parser.Context) {
+	_ = gast.Walk(node, func(n gast.Node, entering bool) (gast.WalkStatus, error) {
+		// Walk 对每个节点进出各回调一次，只在进入时处理避免重复设置。
+		if entering {
+			if img, ok := n.(*gast.Image); ok {
+				img.SetAttributeString("loading", []byte("lazy"))
+				img.SetAttributeString("decoding", []byte("async"))
+			}
+		}
+		return gast.WalkContinue, nil
+	})
+}
+
 // initEngines 懒初始化 goldmark 实例。
 func initEngines() {
 	once.Do(func() {
@@ -35,6 +55,9 @@ func initEngines() {
 				parser.WithAutoHeadingID(),
 				parser.WithAttribute(),
 				parser.WithHeadingAttribute(),
+				parser.WithASTTransformers(
+					util.Prioritized(lazyImages{}, 100),
+				),
 			),
 			goldmark.WithRendererOptions(html.WithHardWraps()),
 			goldmark.WithExtensions(

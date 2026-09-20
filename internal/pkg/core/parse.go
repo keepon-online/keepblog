@@ -26,6 +26,10 @@ func TemplateFunc() template.FuncMap {
 		"time": func(t uint64) string {
 			return time.Unix(int64(t), 0).Format(time.DateOnly)
 		},
+		// isotime 输出 RFC3339 时间，用于 og:article 时间与 JSON-LD 的机器可读时间。
+		"isotime": func(t uint64) string {
+			return time.Unix(int64(t), 0).Format(time.RFC3339)
+		},
 		"archiveTime": func(t string) string {
 			// 兼容 "2026-07"（归档列表页 map key）与 "2026/07"（侧边栏）两种分隔符。
 			parse, err := time.ParseInLocation("2006/01", strings.ReplaceAll(t, "-", "/"), time.Local)

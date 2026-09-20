@@ -10,6 +10,12 @@ import (
 	"strings"
 )
 
+// CanonicalURL 拼接站内绝对 URL：base 去掉尾部斜杠后接 path（path 以 / 开头）。
+// 供各页面 handler 生成 canonical / og:url 使用。
+func CanonicalURL(base, path string) string {
+	return strings.TrimRight(base, "/") + path
+}
+
 func PushSite(urls []string, api string) *system.PushSite {
 	ch := &http.Client{}
 	var site system.PushSite

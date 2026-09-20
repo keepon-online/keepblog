@@ -34,7 +34,9 @@ func task() {
 		slog.Infof("定时开始运行")
 		var content []model.Post
 		global.GORM.Table(model.TPostsTable).Where("is_deleted=0 and is_published=1").Find(&content)
-		urls := make([]string, len(content))
+		// 注意容量切片：make([]string, len(content)) 会先填满 len 个空串再 append，
+		// 推送 body 前面会出现整排空行，白白消耗百度推送配额。
+		urls := make([]string, 0, len(content))
 		for _, post := range content {
 			urls = append(urls, fmt.Sprintf("%s/post/%s", baidu.Url, post.PostSlug))
 		}

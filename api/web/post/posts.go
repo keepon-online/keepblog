@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"gitee.com/jieepre/keepblog/config"
+	"gitee.com/jieepre/keepblog/internal/model/system"
+	inpkg "gitee.com/jieepre/keepblog/internal/pkg"
 	"gitee.com/jieepre/keepblog/internal/pkg/core"
 	"gitee.com/jieepre/keepblog/pkg/hash"
 	"gitee.com/jieepre/keepblog/pkg/md"
@@ -15,21 +17,31 @@ type Handler struct {
 	*core.Context
 }
 
+// renderNotFound 输出真正的 404（此前用 200 渲染 404 页构成软 404，会被
+// 搜索引擎当作有效页面收录）。站点信息尽力获取，仅用于补齐页面标题。
+func (h *Handler) renderNotFound(c *gin.Context) {
+	site, _ := h.Service.WebSiteService.GetWebSite()
+	if site == nil {
+		site = &system.WebSite{}
+	}
+	c.HTML(http.StatusNotFound, "404.html", gin.H{"site": site})
+}
+
 func (h *Handler) Post(c *gin.Context) {
 	id := c.Param("hashids")
 	postIds, err := hash.New().HashidsDecode(id)
-	if err != nil {
-		c.HTML(http.StatusOK, "404.html", nil)
+	if err != nil || len(postIds) == 0 {
+		h.renderNotFound(c)
 		return
 	}
 	posts, _ := h.Service.PostService.GetPost(postIds[0])
 	if posts == nil {
-		c.HTML(http.StatusOK, "500.html", nil)
+		h.renderNotFound(c)
 		return
 	}
 	site, err := h.Service.WebSiteService.GetWebSite()
 	if err != nil {
-		c.HTML(http.StatusOK, "404.html", nil)
+		c.HTML(http.StatusInternalServerError, "error.html", nil)
 		return
 	}
 	sidebarInfo := h.Service.SidebarService.Sidebar()
@@ -48,6 +60,7 @@ func (h *Handler) Post(c *gin.Context) {
 		"gitalk":          config.Get().Gitalk,
 		"gitalkAdmin":     string(gitalkAdminJSON),
 		"site":            site,
+		"canonical":       inpkg.CanonicalURL(site.URL, "/post/"+posts.PostSlug),
 		"tags":            sidebarInfo.Tag,
 		"categories":      sidebarInfo.Category,
 		"latestPosts":     sidebarInfo.LatestPosts,

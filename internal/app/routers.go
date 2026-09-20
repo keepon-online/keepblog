@@ -8,6 +8,7 @@ import (
 
 	"gitee.com/jieepre/keepblog/internal/errors"
 	"gitee.com/jieepre/keepblog/internal/middleware"
+	"gitee.com/jieepre/keepblog/internal/model/system"
 	"gitee.com/jieepre/keepblog/internal/monitor"
 	pkg "gitee.com/jieepre/keepblog/internal/pkg/core"
 	"gitee.com/jieepre/keepblog/internal/router"
@@ -43,8 +44,13 @@ func CreateRouters(service *service.AppService, healthChecker *monitor.HealthChe
 			return
 		}
 
-		// 否则返回HTML格式的404页面
-		c.HTML(http.StatusNotFound, "404.html", nil)
+		// 否则返回HTML格式的404页面。带上站点信息补齐标题（此前传 nil，
+		// 404 页的 title/导航站点名渲染为空）。
+		site, _ := service.WebSiteService.GetWebSite()
+		if site == nil {
+			site = &system.WebSite{}
+		}
+		c.HTML(http.StatusNotFound, "404.html", gin.H{"site": site})
 	})
 
 	// 健康检查和监控端点

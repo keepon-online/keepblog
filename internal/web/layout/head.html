@@ -17,18 +17,51 @@
     <meta content="{{.posts.CoverImage}}" property="og:image">
     {{end}}
     <meta content="{{if .posts.CoverImage}}summary_large_image{{else}}summary{{end}}" name="twitter:card">
+    <meta content="{{.posts.Title}}" name="twitter:title">
+    <meta content="{{.posts.Summary}}" name="twitter:description">
     <meta content="{{.posts.Title}}" property="article:author">
+    <meta content="{{.posts.CreateTime|isotime}}" property="article:published_time">
+    <meta content="{{.posts.LastModifiedTime|isotime}}" property="article:modified_time">
+    {{else if .title}}
+    <title>{{.title}} | {{.site.Title}}</title>
+    <meta content="website" property="og:type">
+    <meta content="{{if .canonical}}{{.canonical}}{{else}}{{.site.URL}}{{end}}" property="og:url">
+    <meta content="{{.title}} | {{.site.Title}}" property="og:title">
+    <meta content="{{if .pagedesc}}{{.pagedesc}}{{else}}{{.site.Description}}{{end}}" property="og:description">
+    <meta content="summary" name="twitter:card">
     {{else}}
     <title>{{.site.Title}}</title>
     <meta content="website" property="og:type">
-    <meta content="{{.site.URL}}" property="og:url">
+    <meta content="{{if .canonical}}{{.canonical}}{{else}}{{.site.URL}}{{end}}" property="og:url">
     <meta content="{{.site.Title}}" property="og:title">
+    <meta content="{{.site.Description}}" property="og:description">
     <meta content="summary" name="twitter:card">
     {{end}}
+    {{if .canonical}}
+    <link href="{{.canonical}}" rel="canonical">
+    {{end}}
     <meta content="{{.site.Keywords}}" name="keywords">
-    <meta content="{{.site.Description}}" name="description">
+    <meta content="{{if .posts}}{{.posts.Summary}}{{else if .pagedesc}}{{.pagedesc}}{{else}}{{.site.Description}}{{end}}"
+          name="description">
     <meta content="{{.site.Title}}" property="og:site_name">
     <meta content="zh_CN" property="og:locale">
+    {{if .posts}}
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            "mainEntityOfPage": {"@type": "WebPage", "@id": "{{.site.URL}}/post/{{.posts.PostSlug}}"},
+            "headline": "{{.posts.Title}}",
+            "description": "{{.posts.Summary}}",
+            {{if .posts.CoverImage}}"image": ["{{.posts.CoverImage}}"],{{end}}
+            "datePublished": "{{.posts.CreateTime|isotime}}",
+            "dateModified": "{{.posts.LastModifiedTime|isotime}}",
+            "author": {"@type": "Person", "name": "{{.posts.Author}}"},
+            "publisher": {"@type": "Organization", "name": "{{.site.Title}}"},
+            "wordCount": {{.posts.WordCount}}
+        }
+    </script>
+    {{end}}
     {{if  .site.BaiduSite}}
     <meta content="{{ .site.BaiduSite }}" name="baidu-site-verification" />
     {{end}}
