@@ -39,7 +39,14 @@
 
             try {
                 const saved = localStorage.getItem(this.STORAGE_KEY);
-                if (!saved) return;
+                if (!saved) {
+                    // 无历史记录时，若启用随机播放模式，随机切换起播曲目
+                    if (window.ap.options && window.ap.options.order === 'random' && window.ap.list && window.ap.list.audios.length > 1) {
+                        const randomIndex = Math.floor(Math.random() * window.ap.list.audios.length);
+                        window.ap.list.switch(randomIndex);
+                    }
+                    return;
+                }
 
                 const state = JSON.parse(saved);
 
