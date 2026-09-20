@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html data-theme="light" lang="zh-CN">
 {{template "layout/head.html" .}}
-<link href="https://unpkg.com/gitalk/dist/gitalk.css" rel="stylesheet">
 <header class="post-bg" id="page-header"
         style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')">
     {{template "layout/nav.html" .}}
@@ -100,18 +99,81 @@
                 {{end}}
             </nav>
             <hr>
-            {{if .gitalk.Enable}}
+            <script>
+                // 在 PJAX 替换区内：每次换到文章页都重设标志（此前脚本在替换区外，
+                // 且被评论开关连带门控，评论关闭时标志不会设置）
+                GLOBAL_CONFIG_SITE.isToc = true;
+                GLOBAL_CONFIG_SITE.isPost = true;
+            </script>
+            {{if .artalk.Enable}}
             <div id="post-comment">
                 <div class="comment-head">
                     <div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div>
                 </div>
                 <div class="comment-wrap">
-                    <div>
-                        <div id="gitalk-container">
-                        </div>
-                    </div>
+                    <div id="artalk-container"></div>
                 </div>
             </div>
+            <!-- 懒加载初始化脚本放在 body-wrap 内（PJAX 换页会重新执行）：
+                 滚动到评论区附近才加载 Artalk 资源并初始化，不阻塞文章首屏。
+                 注意全程用 var/IIFE，PJAX 重复执行不能因重复声明崩溃。 -->
+            <script>
+                ;(function () {
+                    var container = document.getElementById('artalk-container');
+                    if (!container) return
+                    var server = '{{.artalk.Server}}'
+                    var site = '{{.artalk.Site}}'
+                    var pageTitle = '{{.posts.Title}}'
+
+                    function boot() {
+                        if (!document.getElementById('artalk-css')) {
+                            var link = document.createElement('link')
+                            link.id = 'artalk-css'
+                            link.rel = 'stylesheet'
+                            link.href = server + '/dist/Artalk.css'
+                            document.head.appendChild(link)
+                        }
+                        // 脚本全局只加载一次；PJAX 换页后 Promise 复用缓存
+                        window.__artalkLoad = window.__artalkLoad || new Promise(function (resolve, reject) {
+                            var s = document.createElement('script')
+                            s.src = server + '/dist/Artalk.js'
+                            s.async = true
+                            s.onload = resolve
+                            s.onerror = reject
+                            document.head.appendChild(s)
+                        })
+                        window.__artalkLoad.then(function () {
+                            // init 前重新查找容器：PJAX 期间可能已被换成新节点
+                            var el = document.getElementById('artalk-container')
+                            if (!el) return
+                            if (window.__artalkInstance) {
+                                try { window.__artalkInstance.destroy() } catch (e) { /* 旧实例已随 DOM 移除 */ }
+                            }
+                            window.__artalkInstance = Artalk.init({
+                                el: el,
+                                pageKey: location.pathname,
+                                pageTitle: pageTitle,
+                                server: server,
+                                site: site
+                            })
+                        }).catch(function (err) {
+                            console.warn('[Artalk] 评论加载失败:', err)
+                        })
+                    }
+
+                    if ('IntersectionObserver' in window) {
+                        var io = new IntersectionObserver(function (entries) {
+                            if (entries.some(function (en) { return en.isIntersecting })) {
+                                io.disconnect()
+                                boot()
+                            }
+                        }, { rootMargin: '300px' })
+                        io.observe(container)
+                    } else {
+                        boot()
+                    }
+                })()
+            </script>
             {{ end }}
         </div>
         <div class="aside-content" id="aside-content">
@@ -125,26 +187,6 @@
     </main>
     {{template "layout/footer.html" .}}
 </div>
-{{if .gitalk.Enable}}
-<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
-<script>
-    GLOBAL_CONFIG_SITE.isToc = true;
-    GLOBAL_CONFIG_SITE.isPost = true;
-    let gitalk = new Gitalk({
-        clientID: '{{.gitalk.ClientID}}',
-        clientSecret: '{{.gitalk.ClientSecret}}',
-        repo: '{{.gitalk.Repo}}',
-        owner: '{{.gitalk.Owner}}',
-        admin: JSON.parse('{{.gitalkAdmin}}'),
-        language:"zh-CN",
-        title:"{{.posts.Title}}",
-        id: location.pathname,      // Ensure uniqueness and length less than 50
-        distractionFreeMode: false  // Facebook-like distraction free mode
-    })
-
-    gitalk.render('gitalk-container')
-</script>
-{{ end }}
 {{template "layout/foot.html" .}}
 </body>
 </html>

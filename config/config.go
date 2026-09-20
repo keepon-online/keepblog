@@ -25,7 +25,7 @@ type Configs struct {
 	Minio    *minio    `yaml:"minio"`
 	Baidu    *baidu    `yaml:"baidu"`
 	IndexNow *indexnow `yaml:"indexnow"`
-	Gitalk   *gitalk   `yaml:"gitalk"`
+	Artalk   *artalk   `yaml:"artalk"`
 	Redis    *redis    `yaml:"redis"`
 	Jwt      *jwt      `yaml:"jwt"`
 	Hashids  *hashids  `yaml:"hashids"`
@@ -80,13 +80,13 @@ type minio struct {
 	BucketName      string `yaml:"bucketName"`
 }
 
-type gitalk struct {
-	Enable       bool     `yaml:"enable"`
-	ClientID     string   `yaml:"clientID"`
-	ClientSecret string   `yaml:"clientSecret"`
-	Repo         string   `yaml:"repo"`
-	Owner        string   `yaml:"owner"`
-	Admin        []string `yaml:"admin"`
+// artalk 自托管评论系统（https://artalk.js.org）。
+// Server 是 Artalk 后端地址（前端资源也从它加载，不依赖公共 CDN），
+// Site 是站名，需与 Artalk 控制中心里创建的站点名一致。
+type artalk struct {
+	Enable bool   `yaml:"enable"`
+	Server string `yaml:"server"`
+	Site   string `yaml:"site"`
 }
 
 // redis配置
@@ -210,13 +210,10 @@ func setDefaults() {
 	viper.SetDefault("minio.useSSL", false)
 	viper.SetDefault("minio.bucketName", "keepblog")
 
-	// Gitalk 默认配置
-	viper.SetDefault("gitalk.enable", false)
-	viper.SetDefault("gitalk.clientID", "")
-	viper.SetDefault("gitalk.clientSecret", "")
-	viper.SetDefault("gitalk.repo", "")
-	viper.SetDefault("gitalk.owner", "")
-	viper.SetDefault("gitalk.admin", []string{})
+	// Artalk 默认配置
+	viper.SetDefault("artalk.enable", false)
+	viper.SetDefault("artalk.server", "")
+	viper.SetDefault("artalk.site", "")
 
 	// JWT / Hashids 默认配置
 	viper.SetDefault("jwt.secret", "")

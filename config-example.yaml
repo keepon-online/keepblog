@@ -47,11 +47,10 @@ minio:
   useSSL: false
   bucketName: keepblog
 
-gitalk:
+# Artalk 自托管评论系统（部署见 docs/artalk-deploy.md）
+# server 填 Artalk 后端地址（前端 JS/CSS 也从它加载，不依赖公共 CDN）；
+# site 填站名，需与 Artalk 控制中心创建的站点名一致
+artalk:
   enable: false
-  clientID: "your-github-oauth-client-id"
-  clientSecret: "your-github-oauth-client-secret"
-  repo: "blog-comments"
-  owner: "your-github-username"
-  admin:
-    - "your-github-username"
+  server: "https://comment.example.com"
+  site: "小助理"
