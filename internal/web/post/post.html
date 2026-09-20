@@ -2,31 +2,41 @@
 <html data-theme="light" lang="zh-CN">
 {{template "layout/head.html" .}}
 <header class="post-bg" id="page-header"
-        style="background-image: url('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')">
+        {{if .posts.CoverImage}}style="background-image: url('{{.posts.CoverImage}}')"{{end}}>
     {{template "layout/nav.html" .}}
     <div id="post-info">
         <h1 class="post-title">{{.posts.Title}}</h1>
         <div id="post-meta">
-            <div class="meta-firstline"><span class="post-meta-date"><i
-                    class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time
-                    class="post-meta-date-created" datetime="{{.posts.CreateTime|time}}"
-                    title="发表于 {{.posts.CreateTime |time}}"> {{.posts.CreateTime|time}}</time><span
-                    class="post-meta-separator">|</span><i
-                    class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time
-                    class="post-meta-date-updated" datetime="{{.posts.LastModifiedTime|time}}"
-                    title="更新于 {{.posts.LastModifiedTime|time}}"> {{.posts.LastModifiedTime|time}}</time></span><span
-                    class="post-meta-categories"><span class="post-meta-separator">|</span><i
-                    class="fas fa-inbox fa-fw post-meta-icon"></i><a
-                    class="post-meta-categories" href="/categories/{{.posts.CategoryName}}">{{.posts.CategoryName}}</a></span>
+            <div class="meta-firstline">
+                <span class="post-meta-date">
+                    <i class="far fa-calendar-alt fa-fw post-meta-icon"></i>
+                    <span class="post-meta-label">发表于</span>
+                    <time class="post-meta-date-created" datetime="{{.posts.CreateTime|time}}" title="发表于 {{.posts.CreateTime |time}}">{{.posts.CreateTime|time}}</time>
+                    <span class="post-meta-separator">|</span>
+                    <i class="fas fa-history fa-fw post-meta-icon"></i>
+                    <span class="post-meta-label">更新于</span>
+                    <time class="post-meta-date-updated" datetime="{{.posts.LastModifiedTime|time}}" title="更新于 {{.posts.LastModifiedTime|time}}">{{.posts.LastModifiedTime|time}}</time>
+                </span>
+                {{if .posts.CategoryName}}
+                <span class="post-meta-categories">
+                    <i class="fas fa-inbox fa-fw post-meta-icon"></i>
+                    <a href="/categories/{{.posts.CategoryName}}">{{.posts.CategoryName}}</a>
+                </span>
+                {{end}}
             </div>
-            <div class="meta-secondline"><span class="post-meta-separator">|</span><span
-                    class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span
-                    class="post-meta-label">字数总计:</span><span class="word-count">{{.posts.WordCount}}</span><span
-                    class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span
-                    class="post-meta-label">阅读时长:</span><span>{{.posts.WordCount | readtime}} 分钟</span></span><span
-                    class="post-meta-separator">|</span>
-                <span class="post-meta-pv-cv" data-flag-title="{{.posts.Title}}" id="">
-                <i class="far fa-eye fa-fw post-meta-icon"></i>
+            <div class="meta-secondline">
+                <span class="post-meta-wordcount">
+                    <i class="far fa-file-word fa-fw post-meta-icon"></i>
+                    <span class="post-meta-label">字数:</span><span class="word-count">{{.posts.WordCount}}</span>
+                </span>
+                <span class="post-meta-separator">|</span>
+                <span class="post-meta-readtime">
+                    <i class="far fa-clock fa-fw post-meta-icon"></i>
+                    <span class="post-meta-label">阅读时长:</span><span>{{.posts.WordCount | readtime}} 分钟</span>
+                </span>
+                <span class="post-meta-separator">|</span>
+                <span class="post-meta-pv-cv" data-flag-title="{{.posts.Title}}">
+                    <i class="far fa-eye fa-fw post-meta-icon"></i>
                     <span class="post-meta-label">阅读量:</span><span>{{.posts.ReadCount}}</span>
                 </span>
             </div>
