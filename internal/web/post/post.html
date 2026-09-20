@@ -66,7 +66,7 @@
                         <a href="/post/{{.PostSlug}}" title="{{.Title}}" data-pjax-content="true">
                             {{if .CoverImage}}<img src="{{.CoverImage}}" alt="cover">{{end}}
                             <span class="content">
-                                <span class="date">{{.PubTime|time}}</span>
+                                <span class="date"><i class="far fa-calendar-alt fa-fw"></i>{{.PubTime|time}}</span>
                                 <span class="title">{{.Title}}</span>
                             </span>
                         </a>

@@ -344,8 +344,7 @@ hr:before,
 
 .postImgHover:hover img,
 #pagination .prev-post:hover img,
-#pagination .next-post:hover img,
-.relatedPosts>.relatedPosts-list>div:hover img {
+#pagination .next-post:hover img {
   opacity: 0.8;
   -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=80)";
   filter: alpha(opacity=80);
@@ -358,8 +357,7 @@ hr:before,
 
 .postImgHover img,
 #pagination .prev-post img,
-#pagination .next-post img,
-.relatedPosts>.relatedPosts-list>div img {
+#pagination .next-post img {
   position: absolute;
   width: 100%;
   height: 100%;
@@ -5277,56 +5275,147 @@ h1.page-title+.tag-cloud-list {
 }
 
 .relatedPosts>.headline {
-  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
   font-weight: 700;
-  font-size: 1.43em;
+  font-size: 1.35em;
+  color: var(--text-highlight-color);
+}
+
+.relatedPosts>.headline>i {
+  color: #49b1f5;
+  font-size: 1.05em;
+}
+
+.relatedPosts>.relatedPosts-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+@media screen and (max-width: 900px) {
+  .relatedPosts>.relatedPosts-list {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+@media screen and (max-width: 500px) {
+  .relatedPosts>.relatedPosts-list {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 }
 
 .relatedPosts>.relatedPosts-list>div {
   position: relative;
-  display: inline-block;
   overflow: hidden;
-  margin: 3px;
-  width: calc(33.333% - 6px);
-  height: 200px;
-  background: #000;
-  vertical-align: bottom;
+  height: 160px;
+  border-radius: 8px;
+  background: #1e1e1e;
+  box-shadow: var(--card-box-shadow);
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 @media screen and (max-width: 768px) {
   .relatedPosts>.relatedPosts-list>div {
-    margin: 2px;
-    width: calc(50% - 4px);
-    height: 150px;
+    height: 145px;
   }
 }
 
-@media screen and (max-width: 600px) {
-  .relatedPosts>.relatedPosts-list>div {
-    width: calc(100% - 4px);
-  }
+.relatedPosts>.relatedPosts-list>div:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--card-hover-box-shadow);
+}
+
+.relatedPosts>.relatedPosts-list>div>a {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  border-radius: 8px;
+}
+
+.relatedPosts>.relatedPosts-list>div img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+  filter: brightness(0.9);
+  transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), filter 0.5s ease, opacity 0.5s ease;
+}
+
+.relatedPosts>.relatedPosts-list>div:hover img {
+  transform: scale(1.08);
+  filter: brightness(1.02);
+  opacity: 0.95;
+}
+
+.relatedPosts>.relatedPosts-list>div::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0.2) 100%);
+  transition: background 0.35s ease;
+  pointer-events: none;
+}
+
+.relatedPosts>.relatedPosts-list>div:hover::after {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.4) 55%, rgba(0, 0, 0, 0.15) 100%);
 }
 
 .relatedPosts>.relatedPosts-list .content {
   position: absolute;
-  top: 50%;
-  padding: 0 20px;
-  width: 100%;
-  -webkit-transform: translate(0, -50%);
-  -moz-transform: translate(0, -50%);
-  -o-transform: translate(0, -50%);
-  -ms-transform: translate(0, -50%);
-  transform: translate(0, -50%);
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 14px 16px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  text-align: left;
+  box-sizing: border-box;
 }
 
 .relatedPosts>.relatedPosts-list .content .date {
-  color: var(--light-grey);
-  font-size: 90%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.82em;
+  margin-bottom: 5px;
+  letter-spacing: 0.3px;
+}
+
+.relatedPosts>.relatedPosts-list .content .date i {
+  font-size: 0.95em;
+  opacity: 0.85;
 }
 
 .relatedPosts>.relatedPosts-list .content .title {
-  color: var(--white);
+  color: #ffffff;
+  font-size: 0.95em;
+  font-weight: 600;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  transition: color 0.25s ease;
+}
+
+.relatedPosts>.relatedPosts-list>div:hover .content .title {
+  color: #49b1f5;
 }
 
 .post-reward {
