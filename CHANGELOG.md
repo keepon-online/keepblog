@@ -23,8 +23,14 @@
 - **IndexNow 主动收录推送**（Bing/Yandex 等兼容搜索引擎）：`indexnow` 配置段（enable/key/endpoint，见 config-example.yaml），每日 21:00 与百度推送共用一次文章查询推送全部已发布文章；自动在 `/{key}.txt` 提供协议要求的密钥文件；站点域名取 `web_site.url`。
 - **Google/Bing 站长平台验证字段**：`web_site` 表新增 `google_site`/`bing_site` 列（启动迁移幂等补列），前台输出 `google-site-verification` 与 `msvalidate.01` meta，后台"备案统计"设置页新增对应输入项；接入 Google Search Console / Bing Webmaster 的前置条件就此齐备。
 - **空摘要自动兜底**：文章 `summary` 为空时，文章页 meta description/og/JSON-LD 与 RSS description 改用正文纯文本前 120 字（新增 `md.Excerpt`：解析 AST 取文本，跳过代码块与行内代码，按 rune 截断）——此前空摘要文章的搜索描述完全为空。
+- **分页条链接语义修正**：第 1 页统一指向列表基路径（首页 `/`、标签/分类/归档详情页同理，与 canonical 一致，不再生成 `/page/1` 这类重复 URL）；当前页不再链接到自身（输出无 href 锚点 + `aria-current="page"`）；禁用的上一页/下一页不再输出 `href="#"` 假链接；`/page/1` 旧地址 301 到 `/` 兜底；`HandleIndex` 收敛为 `HandleIndexWithPageSize` 的默认 pageSize 封装，消除两份重复的 HTML 构造逻辑。
 
-### 修复
+- **修复分页条上一页/下一页箭头未渲染与视觉样式问题**：
+  - `chevron-left`/`chevron-right` 补入 Font Awesome 子集，并修复子集 CSS 缺少 `.fa-solid, .fas` 与 `.fa-regular, .far` 的 `font-family: "Font Awesome 6 Free"` 声明导致的图标显示为方块问号 `[?]` 缺陷；子集脚本补齐全站扫描交叉校验与核心字体族规则兜底；
+  - 分页视觉体验全面优化：当前激活页码文字改用纯白加粗（`#ffffff`）并配柔和青色光晕阴影，彻底解决浅灰文字对比度不足问题；
+  - 链接容器改为 flex 撑满整个卡片，实现全卡片可点击与数字/图标完美居中；
+  - 区分禁用翻页箭头与省略号：禁用箭头保留卡片轮廓与布局对齐（降低不透明度且无阴影），保持左右对称美观；省略号去卡片底与阴影作为文本分隔符展示；
+  - 增加可交互页码的平滑 hover 上浮微动效，适配移动端窄屏尺寸。
 - 消除软 404：文章 hashids 解析失败或文章不存在时由 200 改为真实 404 状态码；各列表页 handler 的服务端错误由 200 渲染 error.html 改为 500；NoRoute 404 页补传站点数据（此前传 nil 导致页面标题为空）。
 - 百度定时推送的切片缺陷：`make([]string, len(content))` 先填满空串再 append，推送 body 前面有整排空行白白消耗配额，改为容量语义 `make([]string, 0, len(content))`。
 - 移动端 viewport 移除 `maximum-scale=1.0, user-scalable=no` 缩放禁用（Lighthouse 移动可访问性扣分项）。
