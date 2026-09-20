@@ -194,6 +194,9 @@ type WebInfo struct {
 	PostCount      int64  `json:"postCount"`      // 文章数目
 	TotalWordCount int64  `json:"totalWordCount"` // 总字数
 	RuntimeDays    int64  `json:"runtimeDays"`    // 运行天数
-	LastUpdateTime string `json:"lastUpdateTime"` // 最后更新时间
+	LastUpdateTime string `json:"lastUpdateTime"` // 最后更新时间（展示格式：2006年1月2日 / 暂无文章）
+	LastUpdateISO  string `json:"lastUpdateISO"`  // 最后更新时间（RFC3339，供前端 data-lastPushDate 相对时间计算）
 	SiteStartDate  string `json:"siteStartDate"`  // 网站创建日期
+	SitePV         int64  `json:"sitePV"`         // 本站总访问量（system_access_log 的 SUM(pv)）
+	SiteUV         int64  `json:"siteUV"`         // 本站访客数（system_access_log 的 COUNT(DISTINCT ip)）
 }

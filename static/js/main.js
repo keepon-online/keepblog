@@ -414,13 +414,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /**
-     * 最後一次更新時間
+     * 最後一次更新時間（无 data-lastPushDate 时保留服务端渲染文本，避免被覆盖成 1970-1-1）
      */
     const addLastPushDate = () => {
         const $lastPushDateItem = document.getElementById('last-push-date')
         if ($lastPushDateItem) {
             const lastPushDate = $lastPushDateItem.getAttribute('data-lastPushDate')
-            $lastPushDateItem.innerText = btf.diffDate(lastPushDate, true)
+            if (lastPushDate) {
+                $lastPushDateItem.innerText = btf.diffDate(lastPushDate, true)
+            }
         }
     }
 

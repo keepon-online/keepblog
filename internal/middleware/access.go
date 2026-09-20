@@ -10,6 +10,7 @@ import (
 	"gitee.com/jieepre/keepblog/pkg/area"
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/slog"
+	"gorm.io/gorm"
 )
 
 var ignoreURIS = []string{
@@ -39,11 +40,11 @@ func Statistics() gin.HandlerFunc {
 			Where("ip = ? and url = ? and strftime('%Y-%m-%d', create_at, 'unixepoch') = ?", pkg.Ip2long(ip), url, now).
 			First(&accessLog)
 
-		//记录pv请求次数
+		//记录pv请求次数（SQL 原子自增，避免并发请求读到旧值互相覆盖）
 		if accessLog.Id != nil {
 			global.GORM.Model(system.AccessLog{}).
 				Where("id = ?", *accessLog.Id).
-				Update("pv", *accessLog.PV+1)
+				Update("pv", gorm.Expr("pv + 1"))
 		}
 		c.Next()
 		//记录access日志

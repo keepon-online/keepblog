@@ -24,7 +24,7 @@
                     class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span
                     class="post-meta-label">字数总计:</span><span class="word-count">{{.posts.WordCount}}</span><span
                     class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span
-                    class="post-meta-label">阅读时长:</span><span>{{.posts.WordCount}}</span></span><span
+                    class="post-meta-label">阅读时长:</span><span>{{.posts.WordCount | readtime}} 分钟</span></span><span
                     class="post-meta-separator">|</span>
                 <span class="post-meta-pv-cv" data-flag-title="{{.posts.Title}}" id="">
                 <i class="far fa-eye fa-fw post-meta-icon"></i>

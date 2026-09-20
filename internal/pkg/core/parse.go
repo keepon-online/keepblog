@@ -49,6 +49,14 @@ func TemplateFunc() template.FuncMap {
 			}
 			return float64(a) / float64(b)
 		},
+		// readtime 按字数估算阅读时长（分钟，向上取整）。
+		// 中文默读速度约 300 字/分钟（与 butterfly 主题的中文口径一致）。
+		"readtime": func(words uint32) int {
+			if words == 0 {
+				return 0
+			}
+			return int((int64(words) + 299) / 300)
+		},
 		"gt": func(a, b int64) bool {
 			return a > b
 		},

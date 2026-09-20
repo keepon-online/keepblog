@@ -8,11 +8,13 @@ import (
 	"gitee.com/jieepre/keepblog/internal/model/request"
 	"gitee.com/jieepre/keepblog/pkg"
 	"gitee.com/jieepre/keepblog/pkg/hash"
+	"gitee.com/jieepre/keepblog/pkg/md"
 	"gitee.com/jieepre/keepblog/pkg/page"
 )
 
 // SavePost 保存文章
 func (service Service) SavePost(content model.Post) (uint64, error) {
+	content.WordCount = uint32(md.CountWords([]byte(content.PostContent)))
 	if err := service.db.Table(model.TPostsTable).Create(&content).Error; err != nil {
 		return content.PostId, errors.New("保存失败: " + err.Error())
 	}
@@ -36,6 +38,7 @@ func (service Service) UpdatePostHashids(postSlug string, postId uint64) error {
 
 // UpdatePost 更新文章
 func (service Service) UpdatePost(obj model.Post) error {
+	obj.WordCount = uint32(md.CountWords([]byte(obj.PostContent)))
 	if err := service.db.Table(model.TPostsTable).Save(&obj).Error; err != nil {
 		slog.Errorf("更新文章失败: %s", err.Error())
 		return errors.New("更新失败: " + err.Error())

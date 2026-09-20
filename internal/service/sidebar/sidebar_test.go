@@ -3,13 +3,18 @@ package sidebar
 import (
 	"testing"
 
+	"gitee.com/jieepre/keepblog/internal/model/system"
 	"gitee.com/jieepre/keepblog/internal/testutil"
+	"gorm.io/gorm"
 )
 
 // Sidebar 聚合了各服务的前台数据，钉住聚合结构与计数。
 func TestSidebar_Aggregate(t *testing.T) {
-	testutil.NewTestDB(t)
-	s := NewSidebarService(testutil.NewTestDB(t))
+	db := testutil.NewTestDB(t)
+	s := NewSidebarService(db)
+
+	// 访问日志：两个 IP、PV 合计 8（1+3 + 2+2），去重 UV = 2
+	seedAccessLogs(t, db)
 
 	sb := s.Sidebar()
 
@@ -56,4 +61,35 @@ func TestSidebar_Aggregate(t *testing.T) {
 	if sb.WebInfo.LastUpdateTime == "" {
 		t.Error("LastUpdateTime 不应为空")
 	}
+
+	// 访客数/访问量：来自 system_access_log（去重 IP 口径，与 dashboard 一致）
+	if sb.WebInfo.SiteUV != 2 {
+		t.Errorf("WebInfo.SiteUV = %d, want 2", sb.WebInfo.SiteUV)
+	}
+	if sb.WebInfo.SitePV != 8 {
+		t.Errorf("WebInfo.SitePV = %d, want 8", sb.WebInfo.SitePV)
+	}
+}
+
+// seedAccessLogs 写入确定性的访问日志 fixture：仅本包使用，
+// 避免污染共享测试库中其他包对 system_access_log 的统计口径。
+func seedAccessLogs(t *testing.T, db *gorm.DB) {
+	t.Helper()
+	logs := []system.AccessLog{
+		accessLog(3232235777, "/", 1),  // 192.168.1.1
+		accessLog(3232235777, "/about", 3),
+		accessLog(3232235521, "/", 2),  // 192.168.0.1
+		accessLog(3232235521, "/link", 2),
+	}
+	for i := range logs {
+		if err := db.Create(&logs[i]).Error; err != nil {
+			t.Fatalf("构造访问日志报错: %v", err)
+		}
+	}
+}
+
+func accessLog(ip uint32, url string, pv int) system.AccessLog {
+	p := int(pv)
+	u := uint32(ip)
+	return system.AccessLog{Ip: &u, URL: url, PV: &p, UV: &p}
 }

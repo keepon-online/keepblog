@@ -360,12 +360,9 @@
 
         /**
          * 重新加载需要重新执行的脚本
+         * （busuanzi 第三方统计已移除：站点 PV/UV 由服务端渲染，pjax 无需重取）
          */
         reloadScripts() {
-            // 重新初始化 busuanzi 统计
-            if (typeof bszCaller !== 'undefined') {
-                bszCaller.fetch();
-            }
         }
     };
 

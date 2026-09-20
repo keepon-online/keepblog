@@ -121,26 +121,32 @@ func (service Service) WebInfo() model.WebInfo {
 	webInfo.SiteStartDate = siteStartDate.Format("2006-01-02")
 	webInfo.RuntimeDays = int64(time.Since(siteStartDate).Hours() / 24)
 
-	// 最后更新时间 - 使用 Raw SQL 获取最新的更新时间
+	// 最后更新时间 - 使用 Raw SQL 获取最新的更新时间，缺失时退回最新发布时间
 	var lastUpdate struct {
 		LastTime uint64 `gorm:"column:last_time"`
 	}
 	service.db.Raw("SELECT COALESCE(MAX(last_modified_time), 0) as last_time FROM post WHERE is_published = 1 AND is_deleted = 0").Scan(&lastUpdate)
-
-	if lastUpdate.LastTime > 0 {
-		webInfo.LastUpdateTime = time.Unix(int64(lastUpdate.LastTime), 0).Format("2006年1月2日")
-	} else {
-		// 如果没有最后更新时间，尝试使用最新的发布时间
-		var pubTime struct {
-			PubTime uint64 `gorm:"column:pub_time"`
-		}
-		service.db.Raw("SELECT COALESCE(MAX(pub_time), 0) as pub_time FROM post WHERE is_published = 1 AND is_deleted = 0").Scan(&pubTime)
-		if pubTime.PubTime > 0 {
-			webInfo.LastUpdateTime = time.Unix(int64(pubTime.PubTime), 0).Format("2006年1月2日")
-		} else {
-			webInfo.LastUpdateTime = "暂无文章"
-		}
+	if lastUpdate.LastTime == 0 {
+		service.db.Raw("SELECT COALESCE(MAX(pub_time), 0) as last_time FROM post WHERE is_published = 1 AND is_deleted = 0").Scan(&lastUpdate)
 	}
+	if lastUpdate.LastTime > 0 {
+		t := time.Unix(int64(lastUpdate.LastTime), 0)
+		webInfo.LastUpdateTime = t.Format("2006年1月2日")
+		webInfo.LastUpdateISO = t.Format(time.RFC3339)
+	} else {
+		webInfo.LastUpdateTime = "暂无文章"
+	}
+
+	// 访客数/访问量 - 来自 Statistics 中间件记录的 system_access_log。
+	// PV 为全部请求计数之和，UV 按去重 IP 统计（与后台 dashboard 的口径一致）。
+	var visitStats struct {
+		PV int64 `gorm:"column:pv"`
+		UV int64 `gorm:"column:uv"`
+	}
+	service.db.Raw("SELECT COALESCE(SUM(pv), 0) AS pv, COUNT(DISTINCT ip) AS uv FROM " + system.AccessLog{}.TableName()).
+		Scan(&visitStats)
+	webInfo.SitePV = visitStats.PV
+	webInfo.SiteUV = visitStats.UV
 
 	return webInfo
 }

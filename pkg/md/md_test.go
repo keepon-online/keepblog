@@ -69,3 +69,25 @@ func TestToHTML(t *testing.T) {
 		t.Errorf("ToHTML(nil) should be empty, got: %s", got)
 	}
 }
+
+func TestCountWords(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want int
+	}{
+		{"空内容", "", 0},
+		{"中文逐字计数", "你好世界", 4},
+		{"英文按字符计数", "hello world", 10},
+		{"中英混排", "Go 是一门编译型语言", 10},
+		{"标题正文与标点", "# Hello 世界 123\n\nHello", 15},
+		{"标点与空白不计入", "春眠不觉晓，处处闻啼鸟。", 10},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := CountWords([]byte(c.in)); got != c.want {
+				t.Errorf("CountWords(%q) = %d, want %d", c.in, got, c.want)
+			}
+		})
+	}
+}

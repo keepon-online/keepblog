@@ -95,6 +95,18 @@ func Render(content []byte) *Result {
 	return r
 }
 
+// CountWords 统计 Markdown 正文的字数：只解析 AST 不渲染 HTML，
+// 适用于入库时计算 word_count。口径与 Info.NoSpaces 一致——仅统计
+// 字母与数字（CJK 文字逐字计数，空白与标点不计入）。
+func CountWords(content []byte) int {
+	if len(content) == 0 {
+		return 0
+	}
+	initEngines()
+	doc := markdown.Parser().Parse(text.NewReader(content))
+	return NewStats(doc, content).NoSpaces
+}
+
 // ToHTML 仅渲染正文 HTML，不计算目录与统计。适用于只需正文的页面（如关于页）。
 func ToHTML(content []byte) string {
 	if len(content) == 0 {

@@ -86,6 +86,9 @@ func (app *Application) Initialize() error {
 	}
 	core.InitResource()
 
+	// 存量数据回填：旧库的 word_count 从未写入，启动时补齐（幂等）
+	core.BackfillPostWordCount(global.GORM)
+
 	// 服务层装配（依赖 database 连接，此前依赖全局变量，现在通过构造函数注入）
 	app.service = service.InitAppService(global.GORM)
 
