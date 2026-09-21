@@ -6,13 +6,13 @@
       <img alt="avatar" src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png"/></div>
     <div class="sidebar-site-data site-data is-center"><a href="/archives/">
       <div class="headline">文章</div>
-      <div class="length-num">1</div>
+      <div class="length-num">{{if .cardInfo}}{{.cardInfo.Post}}{{else}}0{{end}}</div>
     </a><a href="/tags/">
       <div class="headline">标签</div>
-      <div class="length-num">1</div>
+      <div class="length-num">{{if .cardInfo}}{{.cardInfo.Tag}}{{else}}0{{end}}</div>
     </a><a href="/categories/">
       <div class="headline">分类</div>
-      <div class="length-num">1</div>
+      <div class="length-num">{{if .cardInfo}}{{.cardInfo.Category}}{{else}}0{{end}}</div>
     </a></div>
     <hr/>
     <div class="menus_items">

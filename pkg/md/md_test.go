@@ -105,6 +105,29 @@ func TestLazyImages(t *testing.T) {
 	}
 }
 
+func TestExternalLinks(t *testing.T) {
+	src := "[外链](https://github.com/jieepre) 和 [站内](/archives/) 以及 [锚点](#sec) 还有 <https://golang.org>\n"
+	r := Render([]byte(src))
+	if r == nil || r.HTML == "" {
+		t.Fatal("Render failed for links")
+	}
+
+	// 外部链接应在新标签页打开并具有安全属性
+	if !strings.Contains(r.HTML, `href="https://github.com/jieepre" target="_blank" rel="noopener noreferrer"`) &&
+		!strings.Contains(r.HTML, `target="_blank" rel="noopener noreferrer" href="https://github.com/jieepre"`) &&
+		!strings.Contains(r.HTML, `rel="noopener noreferrer" target="_blank" href="https://github.com/jieepre"`) {
+		if !strings.Contains(r.HTML, `target="_blank"`) || !strings.Contains(r.HTML, `rel="noopener noreferrer"`) {
+			t.Errorf("external link missing target=_blank / rel attributes, got: %s", r.HTML)
+		}
+	}
+
+	// 站内链接与锚点不应添加 target="_blank"
+	if strings.Contains(r.HTML, `href="/archives/" target="_blank"`) ||
+		strings.Contains(r.HTML, `href="#sec" target="_blank"`) {
+		t.Errorf("internal/hash link should not have target=_blank, got: %s", r.HTML)
+	}
+}
+
 func TestExcerpt(t *testing.T) {
 	src := "# 标题\n\n第一段正文内容，用于摘要提取。\n\n```go\nfunc main() {}\n```\n\n第二段：`行内代码`不应出现。\n"
 	got := Excerpt([]byte(src), 100)

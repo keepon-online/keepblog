@@ -1,11 +1,13 @@
 {{define "layout/foot.html" }}
 <div id="rightside">
     <div id="rightside-config-hide">
+        <button id="readmode" title="阅读模式" type="button"><i class="far fa-eye"></i></button>
         <button id="darkmode" title="浅色和深色模式转换" type="button"><i class="fas fa-adjust"></i></button>
         <button id="hide-aside-btn" title="单栏和双栏切换" type="button"><i class="fas fa-arrows-alt-h"></i></button>
     </div>
     <div id="rightside-config-show">
         <button id="rightside_config" title="设置" type="button"><i class="fas fa-cog fa-spin"></i></button>
+        <button id="mobile-toc-button" title="目录" type="button"><i class="fas fa-stream"></i></button>
         <button id="go-up" title="回到顶部" type="button"><i class="fas fa-arrow-up"></i></button>
     </div>
 </div>
@@ -47,6 +49,7 @@
     <script src="/js/main.js"></script>
     <script src="/js/code-copy.js"></script>
     <script src="/js/reading-progress.js"></script>
+    <script src="/js/image-lightbox.js"></script>
     <div class="js-pjax"></div>
     <div class="aplayer no-destroy" id="player"></div>
     <canvas class="fireworks" mobile="false"></canvas>

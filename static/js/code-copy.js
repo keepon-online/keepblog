@@ -160,6 +160,24 @@
         }, 1500);
     }
 
+    // 版权区文章链接一键复制
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.post-copyright-copy-btn');
+        if (!btn) return;
+        var url = btn.getAttribute('data-url') || window.location.href;
+        copyText(url).then(function (ok) {
+            flash(btn, ok ? 'fas fa-check' : 'fas fa-times');
+            var textSpan = btn.querySelector('.copy-btn-text');
+            if (textSpan) {
+                var oldText = textSpan.textContent;
+                textSpan.textContent = ok ? '已复制' : '失败';
+                setTimeout(function () {
+                    textSpan.textContent = oldText;
+                }, 1500);
+            }
+        });
+    });
+
     // 首次加载
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initCodeCopy);

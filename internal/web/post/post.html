@@ -55,7 +55,7 @@
                 <div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span
                         class="post-copyright-info"><a href="{{.site.URL}}">{{.posts.Author}}</a></span></div>
                 <div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span
-                        class="post-copyright-info"><a href="{{.site.URL}}/post/{{.posts.PostSlug}}">{{.site.URL}}/post/{{.posts.PostSlug}}</a></span>
+                        class="post-copyright-info"><a href="{{.site.URL}}/post/{{.posts.PostSlug}}">{{.site.URL}}/post/{{.posts.PostSlug}}</a><button class="post-copyright-copy-btn" type="button" title="复制文章链接" data-url="{{.site.URL}}/post/{{.posts.PostSlug}}"><i class="fas fa-paste"></i><span class="copy-btn-text">复制</span></button></span>
                 </div>
                 <div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span
                         class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a
@@ -164,7 +164,8 @@
                                 pageKey: location.pathname,
                                 pageTitle: pageTitle,
                                 server: server,
-                                site: site
+                                site: site,
+                                darkMode: document.documentElement.getAttribute('data-theme') === 'dark'
                             })
                         }).catch(function (err) {
                             console.warn('[Artalk] 评论加载失败:', err)

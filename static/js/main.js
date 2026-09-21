@@ -309,6 +309,9 @@ document.addEventListener('DOMContentLoaded', function () {
             typeof changeGiscusTheme === 'function' && changeGiscusTheme()
             typeof FB === 'object' && window.loadFBComment()
             typeof runMermaid === 'function' && window.runMermaid()
+            if (window.__artalkInstance && typeof window.__artalkInstance.setDarkMode === 'function') {
+                window.__artalkInstance.setDarkMode(nowMode === 'light')
+            }
         },
         showOrHideBtn: (e) => { // rightside 點擊設置 按鈕 展開
             const rightsideHideClassList = document.getElementById('rightside-config-hide').classList
@@ -333,7 +336,9 @@ document.addEventListener('DOMContentLoaded', function () {
         },
 
         runMobileToc: () => {
-            if (window.getComputedStyle(document.getElementById('card-toc')).getPropertyValue('opacity') === '0') window.mobileToc.open()
+            const cardToc = document.getElementById('card-toc')
+            if (!cardToc || !window.mobileToc) return
+            if (window.getComputedStyle(cardToc).getPropertyValue('opacity') === '0') window.mobileToc.open()
             else window.mobileToc.close()
         }
     }
@@ -609,6 +614,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 sidebarFn.open()
             })
             toggleMenu._bindClick = true
+        }
+
+        // 右下角按钮按需显示：无正文时隐藏阅读模式，无目录时隐藏移动端目录按钮
+        const readModeBtn = document.getElementById('readmode')
+        if (readModeBtn) {
+            readModeBtn.style.display = document.getElementById('article-container') ? '' : 'none'
+        }
+        const mobileTocBtn = document.getElementById('mobile-toc-button')
+        if (mobileTocBtn) {
+            mobileTocBtn.style.display = document.getElementById('card-toc') ? '' : 'none'
         }
 
         // 侧边栏懒加载和动画

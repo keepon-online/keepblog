@@ -29,22 +29,42 @@ var (
 	once     sync.Once
 )
 
-// lazyImages 为正文图片补 loading="lazy" decoding="async"。
+// linkAndImageEnhancer 为正文图片补 loading="lazy" decoding="async"，
+// 为外部链接补 target="_blank" rel="noopener noreferrer"，避免跳转打断阅读并提升安全性。
 // 正文图绝大多数在首屏之外，懒加载可减少初始请求、改善 LCP；
 // 若首图恰在首屏，浏览器对首屏内的 lazy 图仍会立即加载，无副作用。
-type lazyImages struct{}
+type linkAndImageEnhancer struct{}
 
-func (lazyImages) Transform(node *gast.Document, _ text.Reader, _ parser.Context) {
+func (linkAndImageEnhancer) Transform(node *gast.Document, reader text.Reader, _ parser.Context) {
+	source := reader.Source()
 	_ = gast.Walk(node, func(n gast.Node, entering bool) (gast.WalkStatus, error) {
 		// Walk 对每个节点进出各回调一次，只在进入时处理避免重复设置。
 		if entering {
-			if img, ok := n.(*gast.Image); ok {
-				img.SetAttributeString("loading", []byte("lazy"))
-				img.SetAttributeString("decoding", []byte("async"))
+			switch x := n.(type) {
+			case *gast.Image:
+				x.SetAttributeString("loading", []byte("lazy"))
+				x.SetAttributeString("decoding", []byte("async"))
+			case *gast.Link:
+				if isExternalURL(string(x.Destination)) {
+					x.SetAttributeString("target", []byte("_blank"))
+					x.SetAttributeString("rel", []byte("noopener noreferrer"))
+				}
+			case *gast.AutoLink:
+				if isExternalURL(string(x.URL(source))) {
+					x.SetAttributeString("target", []byte("_blank"))
+					x.SetAttributeString("rel", []byte("noopener noreferrer"))
+				}
 			}
 		}
 		return gast.WalkContinue, nil
 	})
+}
+
+// isExternalURL 判断链接是否为外部链接（http://、https://、// 开头）。
+func isExternalURL(raw string) bool {
+	return strings.HasPrefix(raw, "http://") ||
+		strings.HasPrefix(raw, "https://") ||
+		strings.HasPrefix(raw, "//")
 }
 
 // initEngines 懒初始化 goldmark 实例。
@@ -56,7 +76,7 @@ func initEngines() {
 				parser.WithAttribute(),
 				parser.WithHeadingAttribute(),
 				parser.WithASTTransformers(
-					util.Prioritized(lazyImages{}, 100),
+					util.Prioritized(linkAndImageEnhancer{}, 100),
 				),
 			),
 			goldmark.WithRendererOptions(html.WithHardWraps()),

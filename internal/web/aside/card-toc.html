@@ -12,14 +12,16 @@
     // 用 IIFE 包裹避免 let/const 成为全局声明：此脚本带 data-pjax 区域，
     // PJAX 切换页面时会重新执行，裸 let/const 会因重复声明抛 SyntaxError。
     ;(function () {
-        var $ol = document.querySelectorAll("ol");
+        var tocBox = document.getElementById("card-toc");
+        if (!tocBox) return;
+        var $ol = tocBox.querySelectorAll("ol");
         for (var i = 0; i < $ol.length; i++) {
             if (i === 0) { $ol.item(i).classList.add("toc") }
             else { $ol.item(i).classList.add("toc-child") }
         }
-        var $li = document.querySelectorAll("li");
+        var $li = tocBox.querySelectorAll("li");
         for (var i = 0; i < $li.length; i++) { $li.item(i).classList.add("toc-item") }
-        var $a = document.querySelectorAll("a");
+        var $a = tocBox.querySelectorAll("a");
         for (var i = 0; i < $a.length; i++) { $a.item(i).classList.add("toc-link") }
     })();
 </script>
