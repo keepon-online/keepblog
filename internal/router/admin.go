@@ -277,6 +277,12 @@ func postRouter(ctx *core.Context, group *gin.RouterGroup) {
 			Handler:    handler.GetList,
 			Middleware: nil, // 鉴权由 adminGroup 分组级统一生效
 		},
+		{
+			Method:     http.MethodGet,
+			Path:       "/random-cover",
+			Handler:    handler.GetRandomCover,
+			Middleware: nil, // 鉴权由 adminGroup 分组级统一生效
+		},
 	}
 	RegisterRouter(group, routes)
 }

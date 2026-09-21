@@ -1,6 +1,8 @@
 package post
 
 import (
+	"strings"
+
 	"gitee.com/jieepre/keepblog/global"
 	"gitee.com/jieepre/keepblog/internal/model"
 	"gitee.com/jieepre/keepblog/internal/model/request"
@@ -22,11 +24,29 @@ func (h *Handler) SavePost(c *gin.Context) {
 		result.Error(c, err.Error())
 		return
 	}
-	keywords := postObj.Tags
-	postObj.Author = "佚名"
-	postObj.CoverImage = pkg.GetPixabayImage()
+
+	// 优先保留请求中的 Author，若为空则取当前登录用户名，最后兜底为 "佚名"
+	if strings.TrimSpace(postObj.Author) == "" {
+		if username := c.GetString("username"); strings.TrimSpace(username) != "" {
+			postObj.Author = username
+		} else {
+			postObj.Author = "佚名"
+		}
+	}
+	// 封面图：直接保留用户传入的值（含明确留空以便前台展示星空流星效果），不再无条件覆盖 Pixabay
+
 	id, err := h.Service.PostService.SavePost(postObj)
+	if err != nil {
+		result.Error(c, err.Error())
+		return
+	}
+
+	keywords := postObj.Tags
 	for _, key := range keywords {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
 		tag := model.Tag{TagName: key}
 		tagId, _ := h.Service.TagService.Save(tag)
 		postTag := model.PostTag{
@@ -35,12 +55,10 @@ func (h *Handler) SavePost(c *gin.Context) {
 		}
 		_ = global.GORM.Table(model.TPostTagTable).Create(&postTag)
 	}
-	if err != nil {
-		result.Error(c, err.Error())
-		return
-	}
+
 	result.Ok(c, nil)
 }
+
 func (h *Handler) UpdatePost(c *gin.Context) {
 	var postObj model.Post
 	err := c.ShouldBindJSON(&postObj)
@@ -48,6 +66,14 @@ func (h *Handler) UpdatePost(c *gin.Context) {
 		result.Error(c, "参数错误")
 		return
 	}
+
+	// 若 Author 为空，补充当前登录用户
+	if strings.TrimSpace(postObj.Author) == "" {
+		if username := c.GetString("username"); strings.TrimSpace(username) != "" {
+			postObj.Author = username
+		}
+	}
+
 	err = h.Service.PostService.UpdatePost(postObj)
 	if err != nil {
 		result.Error(c, err.Error())
@@ -56,6 +82,10 @@ func (h *Handler) UpdatePost(c *gin.Context) {
 	_ = global.GORM.Table(model.TPostTagTable).Where("post_id", postObj.PostId).Delete(model.PostTag{})
 	keywords := postObj.Tags
 	for _, key := range keywords {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
 		tag := model.Tag{TagName: key}
 		tagId, _ := h.Service.TagService.Save(tag)
 		postTag := model.PostTag{
@@ -156,4 +186,13 @@ func (h *Handler) UpdatePostAllCoverImag(c *gin.Context) {
 		return
 	}
 	result.Ok(c, "ok")
+}
+
+// GetRandomCover 获取随机封面图（优先 Pixabay 高清图，异常时兜底默认美图壁纸）
+func (h *Handler) GetRandomCover(c *gin.Context) {
+	img := pkg.GetPixabayImage()
+	if img == "" {
+		img = pkg.CoverImage()
+	}
+	result.Ok(c, img)
 }

@@ -54,3 +54,8 @@ export const updateAllCover = () => {
 export const getPost = (postId?: string | string[]) => {
   return http.request<Result>("get", "/api/v1/site/post/detail/" + postId);
 };
+
+/** 获取随机封面（Pixabay / 默认壁纸） */
+export const getRandomCover = () => {
+  return http.request<Result>("get", "/api/v1/site/post/random-cover");
+};
