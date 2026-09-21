@@ -2,6 +2,8 @@ package post
 
 import (
 	"gorm.io/gorm"
+
+	"gitee.com/jieepre/keepblog/internal/pkg/querybuilder"
 )
 
 // 常量定义
@@ -9,10 +11,12 @@ const (
 	DefaultPageSize = 10
 )
 
-// PublishedScope 只查询已发布的文章
+// PublishedScope 只查询已发布且发布时间已到的文章。
+// 定时发布语义：is_published=1 且 pub_time 在未来的文章要到点才对前台可见，
+// 后台列表不走此 scope，仍可见待发布的定时文章。
 func PublishedScope() func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("post.is_published = ?", 1)
+		return db.Where(querybuilder.VisibleWhere("post"), querybuilder.VisibleNow())
 	}
 }
 

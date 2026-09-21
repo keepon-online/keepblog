@@ -3,25 +3,31 @@ package model
 const TPostsTable = "post"
 
 type Post struct {
-	PostId           uint64 `json:"postId" gorm:"primaryKey;autoIncrement"`
-	Title            string `json:"title" gorm:"default:''"`
-	PostSlug         string `json:"postSlug" gorm:"default:''"`
-	Author           string `json:"author" gorm:"default:''"`
-	CoverImage       string `json:"coverImage" gorm:"default:''"`
-	PostContent      string `json:"postContent" gorm:"default:''"`
-	PostContentHtml  string `json:"postContentHtml" gorm:"default:''"`
-	Summary          string `json:"summary" gorm:"default:''"`
-	Type             uint8  `json:"type" gorm:"default:1"`
-	Top              uint8  `json:"top" gorm:"default:0"`
-	ReadCount        uint32 `json:"readCount" gorm:"default:0"`
-	WordCount        uint32 `json:"wordCount" gorm:"default:0"`
-	IsPublished      uint8  `json:"published" gorm:"default:0"`
-	IsDeleted        uint8  `json:"isDeleted" gorm:"default:0"`
-	Status           uint8  `json:"status" gorm:"default:0"`
-	CreateTime       uint64 `json:"createTime" gorm:"autoCreateTime"`
-	PubTime          uint64 `json:"pubTime" gorm:"autoUpdateTime"`
+	PostId          uint64 `json:"postId" gorm:"primaryKey;autoIncrement"`
+	Title           string `json:"title" gorm:"default:''"`
+	PostSlug        string `json:"postSlug" gorm:"default:''"`
+	Author          string `json:"author" gorm:"default:''"`
+	CoverImage      string `json:"coverImage" gorm:"default:''"`
+	PostContent     string `json:"postContent" gorm:"default:''"`
+	PostContentHtml string `json:"postContentHtml" gorm:"default:''"`
+	Summary         string `json:"summary" gorm:"default:''"`
+	Type            uint8  `json:"type" gorm:"default:1"`
+	Top             uint8  `json:"top" gorm:"default:0"`
+	ReadCount       uint32 `json:"readCount" gorm:"default:0"`
+	WordCount       uint32 `json:"wordCount" gorm:"default:0"`
+	IsPublished     uint8  `json:"published" gorm:"default:0"`
+	IsDeleted       uint8  `json:"isDeleted" gorm:"default:0"`
+	Status          uint8  `json:"status" gorm:"default:0"`
+	CreateTime      uint64 `json:"createTime" gorm:"autoCreateTime"`
+	// PubTime 发布时间。不可标 autoUpdateTime：GORM 在 Save 时会把非零值覆盖为
+	// 当前时间，定时发布的未来时间会被冲掉，普通编辑也会悄悄重置发布时间。
+	// 由 SavePost/UpdatePost 显式维护：新建缺省为当前时间，更新缺省保留原值。
+	PubTime          uint64 `json:"pubTime"`
 	LastModifiedTime uint64 `json:"lastModifiedTime" gorm:"autoUpdateTime"`
 	CategoryId       uint32 `json:"categoryId" gorm:"default:0"`
+	// Series 所属系列名（如"Spring Boot 系列"）。空表示不属于任何系列；
+	// 同系列文章在文章页按发布时间列出，形成连载导航。
+	Series string `json:"series" gorm:"default:''"`
 	// 分类名称 只读不需要写入数据库
 	CategoryName string   `json:"categoryName" gorm:"->;-:migration"`
 	TagName      string   `json:"tagName" gorm:"->;-:migration"`
@@ -155,6 +161,14 @@ type SearchPost struct {
 	CoverImage string `json:"coverImage"`
 	CreateAt   int64  `json:"createAt"`
 	Relevance  int    `json:"relevance"` // 相关度分数
+}
+
+// SeriesPost 系列导航条目：文章页尾部"本系列"列表用，按发布时间升序。
+type SeriesPost struct {
+	PostId   uint64 `json:"postId"`
+	Title    string `json:"title"`
+	PostSlug string `json:"postSlug"`
+	PubTime  uint64 `json:"pubTime"`
 }
 
 // SearchResult 搜索结果包装

@@ -52,7 +52,27 @@ func Run(db *gorm.DB) error {
 	if err := ensureSearchVerificationColumns(db); err != nil {
 		return fmt.Errorf("ensure search verification columns: %w", err)
 	}
+	if err := ensurePostSeriesColumn(db); err != nil {
+		return fmt.Errorf("ensure post series column: %w", err)
+	}
 	return nil
+}
+
+// ensurePostSeriesColumn 给 post 补文章系列列（2026-09 加入）。与
+// ensureSearchVerificationColumns 同理：SQLite 的 ADD COLUMN 没有 IF NOT EXISTS，
+// 版本 0 引导路径的 AutoMigrate 已按模型建出该列，SQL 迁移在全新库上会撞
+// 重复列；已有版本记录的旧库则缺列需补。幂等，已有列时仅一次 pragma 查询。
+func ensurePostSeriesColumn(db *gorm.DB) error {
+	var exists int64
+	if err := db.Raw(
+		"SELECT COUNT(1) FROM pragma_table_info('post') WHERE name = 'series'",
+	).Scan(&exists).Error; err != nil {
+		return err
+	}
+	if exists > 0 {
+		return nil
+	}
+	return db.Exec("ALTER TABLE post ADD COLUMN series TEXT DEFAULT ''").Error
 }
 
 // bootstrapLegacySchema 仅处理尚未接入 goose 的旧部署：AutoMigrate 会补齐

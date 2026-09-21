@@ -10,6 +10,7 @@ import (
 	"gitee.com/jieepre/keepblog/global"
 	"gitee.com/jieepre/keepblog/internal/model"
 	inpkg "gitee.com/jieepre/keepblog/internal/pkg"
+	"gitee.com/jieepre/keepblog/internal/pkg/querybuilder"
 	postService "gitee.com/jieepre/keepblog/internal/service/post"
 	"gitee.com/jieepre/keepblog/pkg/area"
 	"github.com/go-co-op/gocron"
@@ -33,7 +34,7 @@ func Timer() *gocron.Scheduler {
 // 百度收录 API（普通收录）与 IndexNow（Bing/Yandex 等），二者共用一次文章查询。
 func pushSearchEngines() {
 	var content []model.Post
-	global.GORM.Table(model.TPostsTable).Where("is_deleted=0 and is_published=1").Find(&content)
+	global.GORM.Table(model.TPostsTable).Where(querybuilder.VisibleWhere("")+" AND is_deleted=0", querybuilder.VisibleNow()).Find(&content)
 
 	if baidu := config.Get().Baidu; baidu != nil && baidu.Push {
 		slog.Infof("定时开始运行")
@@ -81,7 +82,7 @@ func updateIPDBTask() {
 func updateCoverTask() {
 	slog.Infof("定时开始运行")
 	var content []model.Post
-	global.GORM.Table(model.TPostsTable).Where("is_deleted=0 and is_published=1").Find(&content)
+	global.GORM.Table(model.TPostsTable).Where(querybuilder.VisibleWhere("")+" AND is_deleted=0", querybuilder.VisibleNow()).Find(&content)
 	for _, post := range content {
 		_ = postService.NewPostService(global.GORM).UpdatePostCoverImag(int(post.PostId))
 	}

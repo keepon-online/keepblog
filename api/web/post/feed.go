@@ -14,9 +14,10 @@ import (
 
 // rssFeed 是 RSS 2.0 的根元素，用于 xml.Marshal 输出。
 type rssFeed struct {
-	XMLName xml.Name   `xml:"rss"`
-	Version string     `xml:"version,attr"`
-	Channel rssChannel `xml:"channel"`
+	XMLName          xml.Name   `xml:"rss"`
+	Version          string     `xml:"version,attr"`
+	ContentNamespace string     `xml:"xmlns:content,attr"`
+	Channel          rssChannel `xml:"channel"`
 }
 
 type rssChannel struct {
@@ -32,8 +33,14 @@ type rssItem struct {
 	Title       string `xml:"title"`
 	Link        string `xml:"link"`
 	Description string `xml:"description"`
-	PubDate     string `xml:"pubDate"`
-	GUID        string `xml:"guid"`
+	// Content 对应 content:encoded，输出封面图 + 渲染后的完整正文 HTML，
+	// 订阅器内可直接读完，无需跳站。
+	// Go encoding/xml 的命名空间形式会输出 <encoded xmlns=...>，订阅器普遍只认
+	// content:encoded 字面名，故直接用带冒号的字面标签（gofeed 等库同款做法）。
+	Content string `xml:"content:encoded"`
+	Author  string `xml:"author,omitempty"`
+	PubDate string `xml:"pubDate"`
+	GUID    string `xml:"guid"`
 }
 
 // sitemapURLSet 是 sitemap 0.9 的根元素。
@@ -55,6 +62,14 @@ const feedLimit = 50
 // 远大于博客文章规模，相当于全量收录。
 const sitemapLimit = 50000
 
+// xmlEscape 转义属性位置中的特殊字符。content:encoded 正文由 xml.Marshal
+// 整体转义，但封面 img 标签在拼接进正文前先经此函数保证属性值安全。
+func xmlEscape(s string) string {
+	var b strings.Builder
+	_ = xml.EscapeText(&b, []byte(s))
+	return b.String()
+}
+
 // Feed 输出 RSS 2.0 订阅源（/rss.xml）。
 func (h *Handler) Feed(c *gin.Context) {
 	site, err := h.Service.WebSiteService.GetWebSite()
@@ -74,17 +89,25 @@ func (h *Handler) Feed(c *gin.Context) {
 		if description == "" {
 			description = md.Excerpt([]byte(p.PostContent), 120)
 		}
+		// 全文输出：封面图置顶 + 渲染后的正文 HTML。
+		contentHTML := md.ToHTML([]byte(p.PostContent))
+		if p.CoverImage != "" {
+			contentHTML = `<p><img src="` + xmlEscape(p.CoverImage) + `" alt="` + xmlEscape(p.Title) + `"></p>` + contentHTML
+		}
 		items = append(items, rssItem{
 			Title:       p.Title,
 			Link:        link,
 			Description: description,
+			Content:     contentHTML,
+			Author:      p.Author,
 			PubDate:     time.Unix(int64(p.PubTime), 0).Format(time.RFC1123Z),
 			GUID:        link,
 		})
 	}
 
 	feed := rssFeed{
-		Version: "2.0",
+		Version:          "2.0",
+		ContentNamespace: "http://purl.org/rss/1.0/modules/content/",
 		Channel: rssChannel{
 			Title:         site.Title,
 			Link:          baseURL,

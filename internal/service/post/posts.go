@@ -4,11 +4,13 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"errors"
 	"gorm.io/gorm"
 
 	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/pkg/querybuilder"
 )
 
 // Service 文章服务
@@ -87,7 +89,7 @@ func (service Service) getPostTags(postId int, onlyPublished, onlyNotDeleted boo
 		Joins("JOIN post p ON pt.post_id = p.post_id").
 		Where("pt.post_id = ? AND t.tag_name IS NOT NULL", postId)
 	if onlyPublished {
-		query = query.Where("p.is_published = ?", 1)
+		query = query.Where(querybuilder.VisibleWhere("p"), time.Now().Unix())
 	}
 	if onlyNotDeleted {
 		query = query.Where("p.is_deleted = ?", 0)
@@ -119,13 +121,13 @@ func (service Service) GetLatestPosts() ([]model.LatestPosts, error) {
 }
 
 // GetPublishedPostsForFeed 取已发布文章列表（用于 RSS/sitemap），按发布时间倒序。
-// 返回 model.Post 的部分字段（title/post_slug/summary/cover_image/post_content/pub_time/last_modified_time）；
+// 返回 model.Post 的部分字段（title/post_slug/summary/cover_image/author/post_content/pub_time/last_modified_time）；
 // post_content 供 RSS 在 summary 为空时生成纯文本兜底摘要。
 func (service Service) GetPublishedPostsForFeed(limit int) ([]model.Post, error) {
 	var posts []model.Post
 
 	err := NewQueryBuilder(service.db).
-		Select("post.title, post.post_slug, post.summary, post.cover_image, post.post_content, post.pub_time, post.last_modified_time").
+		Select("post.title, post.post_slug, post.summary, post.cover_image, post.author, post.post_content, post.pub_time, post.last_modified_time").
 		WithPublished().
 		WithNotDeleted().
 		Order("post.pub_time DESC").
@@ -139,17 +141,38 @@ func (service Service) GetPublishedPostsForFeed(limit int) ([]model.Post, error)
 	return posts, nil
 }
 
+// GetSeriesPosts 取同系列文章（仅已发布且到点的可见文章），
+// 按发布时间升序排列，供文章页"本系列"导航使用。
+func (service Service) GetSeriesPosts(series string) ([]model.SeriesPost, error) {
+	if series == "" {
+		return []model.SeriesPost{}, nil
+	}
+	var posts []model.SeriesPost
+	err := service.db.Table(model.TPostsTable).
+		Select("post_id, title, post_slug, pub_time").
+		Where("series = ?", series).
+		Where(querybuilder.VisibleWhere(""), querybuilder.VisibleNow()).
+		Where("is_deleted = 0").
+		Order("pub_time ASC").
+		Find(&posts).Error
+	if err != nil {
+		return nil, errors.New("查询系列文章失败: " + err.Error())
+	}
+	return posts, nil
+}
+
 // GetAdjacentPosts 取上一篇/下一篇（按发布时间相邻，已发布未删除，排除当前文章）。
 // 上一篇：发布时间早于当前文章的最近一篇；下一篇：发布时间晚于当前文章的最早一篇。
 // 当前文章的 pub_time 作为基准传入，避免再查一次。
 func (service Service) GetAdjacentPosts(postId uint64, currentPubTime uint64) (prev, next *model.LatestPosts, err error) {
-	const baseWhere = "is_published = 1 AND is_deleted = 0 AND post_id <> ?"
-
+	// 已发布且到点的可见文章；相邻判断仍以 pub_time 为准
 	// 上一篇：pub_time < 当前，按 pub_time DESC 取第一条
 	var prevPost model.LatestPosts
 	if err = service.db.Table(model.TPostsTable).
 		Select("title, post_slug, cover_image, pub_time").
-		Where(baseWhere+" AND pub_time < ?", postId, currentPubTime).
+		Where(querybuilder.VisibleWhere(""), time.Now().Unix()).
+		Where("is_deleted = 0 AND post_id <> ?", postId).
+		Where("pub_time < ?", currentPubTime).
 		Order("pub_time DESC").
 		Limit(1).
 		Scan(&prevPost).Error; err == nil && prevPost.Title != "" {
@@ -160,7 +183,9 @@ func (service Service) GetAdjacentPosts(postId uint64, currentPubTime uint64) (p
 	var nextPost model.LatestPosts
 	if err = service.db.Table(model.TPostsTable).
 		Select("title, post_slug, cover_image, pub_time").
-		Where(baseWhere+" AND pub_time > ?", postId, currentPubTime).
+		Where(querybuilder.VisibleWhere(""), time.Now().Unix()).
+		Where("is_deleted = 0 AND post_id <> ?", postId).
+		Where("pub_time > ?", currentPubTime).
 		Order("pub_time ASC").
 		Limit(1).
 		Scan(&nextPost).Error; err == nil && nextPost.Title != "" {
@@ -186,7 +211,8 @@ func (service Service) GetRelatedPosts(postId uint64, tags []string, limit int) 
 		Joins("JOIN post_tag pt ON post.post_id = pt.post_id").
 		Joins("JOIN tag t ON pt.tag_id = t.tag_id").
 		Where("t.tag_name IN ?", tags).
-		Where("post.is_published = 1 AND post.is_deleted = 0").
+		Where(querybuilder.VisibleWhere("post"), time.Now().Unix()).
+		Where("post.is_deleted = 0").
 		Where("post.post_id <> ?", postId).
 		Group("post.post_id").
 		Order("post.pub_time DESC").
@@ -278,7 +304,8 @@ func (service Service) fetchArchiveRows(yearMonths []string) ([]archiveRow, erro
 	rows := make([]archiveRow, 0)
 	err := service.db.Table(model.TPostsTable).
 		Select("strftime('%Y-%m', pub_time, 'unixepoch') AS year_month, title, post_slug, pub_time, cover_image").
-		Where("is_published = ? AND is_deleted = ?", 1, 0).
+		Where(querybuilder.VisibleWhere(""), time.Now().Unix()).
+		Where("is_deleted = 0").
 		Where("strftime('%Y-%m', pub_time, 'unixepoch') IN ?", yearMonths).
 		Order("pub_time DESC").
 		Scan(&rows).Error
@@ -313,7 +340,8 @@ func (service Service) GetArchivePosts(year, month string) (*model.ArchivesPosts
 	var yearMonths []string
 	if err := service.db.Table(model.TPostsTable).
 		Select("strftime('%Y-%m', pub_time, 'unixepoch') AS year_month").
-		Where("is_published = ? AND is_deleted = ?", 1, 0).
+		Where(querybuilder.VisibleWhere(""), time.Now().Unix()).
+		Where("is_deleted = 0").
 		Group("year_month").
 		Order("year_month DESC").
 		Scan(&yearMonths).Error; err != nil {
@@ -339,7 +367,8 @@ func (service Service) GetArchivePostsPaged(pageNum, pageSize int) (*model.Archi
 	var yearMonths []string
 	if err := service.db.Table(model.TPostsTable).
 		Select("strftime('%Y-%m', pub_time, 'unixepoch') AS year_month").
-		Where("is_published = ? AND is_deleted = ?", 1, 0).
+		Where(querybuilder.VisibleWhere(""), time.Now().Unix()).
+		Where("is_deleted = 0").
 		Group("year_month").
 		Order("year_month DESC").
 		Scan(&yearMonths).Error; err != nil {

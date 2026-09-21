@@ -71,3 +71,20 @@ func TestRunPreservesExistingData(t *testing.T) {
 		t.Errorf("legacy title = %q, want legacy", title)
 	}
 }
+
+// TestEnsurePostSeriesColumn 系列列补齐幂等：新库补列、重复执行不报错。
+func TestEnsurePostSeriesColumn(t *testing.T) {
+	db := openMigrationDB(t)
+	if err := Run(db); err != nil {
+		t.Fatalf("first run: %v", err)
+	}
+	// Run 内部已调用 ensure，这里验证列存在且重复调用无害
+	var exists int64
+	db.Raw("SELECT COUNT(1) FROM pragma_table_info('post') WHERE name = 'series'").Scan(&exists)
+	if exists != 1 {
+		t.Fatalf("series 列存在性 = %d, want 1", exists)
+	}
+	if err := ensurePostSeriesColumn(db); err != nil {
+		t.Errorf("重复执行 ensurePostSeriesColumn 报错: %v", err)
+	}
+}

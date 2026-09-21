@@ -2,6 +2,8 @@ package post
 
 import (
 	"errors"
+	"time"
+
 	"github.com/gookit/slog"
 
 	"gitee.com/jieepre/keepblog/internal/model"
@@ -14,6 +16,11 @@ import (
 
 // SavePost 保存文章
 func (service Service) SavePost(content model.Post) (uint64, error) {
+	// pub_time 不再依赖 gorm autoUpdateTime（Save 会覆盖非零值）：
+	// 新建未指定发布时间时默认当前时间，指定（定时发布）则原样保留。
+	if content.PubTime == 0 {
+		content.PubTime = uint64(time.Now().Unix())
+	}
 	content.WordCount = uint32(md.CountWords([]byte(content.PostContent)))
 	if err := service.db.Table(model.TPostsTable).Create(&content).Error; err != nil {
 		return content.PostId, errors.New("保存失败: " + err.Error())
@@ -38,6 +45,17 @@ func (service Service) UpdatePostHashids(postSlug string, postId uint64) error {
 
 // UpdatePost 更新文章
 func (service Service) UpdatePost(obj model.Post) error {
+	// pub_time 显式管理：请求未指定时保留原发布时间，避免 Save 把发布时间
+	// 重置为编辑时刻（定时发布的未来时间也在此保护之下）。
+	if obj.PubTime == 0 {
+		var old model.Post
+		if err := service.db.Table(model.TPostsTable).
+			Select("pub_time").
+			Where("post_id", obj.PostId).
+			Take(&old).Error; err == nil {
+			obj.PubTime = old.PubTime
+		}
+	}
 	obj.WordCount = uint32(md.CountWords([]byte(obj.PostContent)))
 	if err := service.db.Table(model.TPostsTable).Save(&obj).Error; err != nil {
 		slog.Errorf("更新文章失败: %s", err.Error())

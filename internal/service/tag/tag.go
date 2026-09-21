@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 
 	"gitee.com/jieepre/keepblog/internal/model"
+	"gitee.com/jieepre/keepblog/internal/pkg/querybuilder"
 	"gitee.com/jieepre/keepblog/pkg/cloudtag"
 	tags_remove "gitee.com/jieepre/keepblog/pkg/tags-remove"
 )
@@ -94,10 +95,10 @@ func (service Service) GetTags() ([]model.Tag, error) {
 				 left join post_tag pt on tag.tag_id = pt.tag_id
 				 left join post p on pt.post_id = p.post_id
 		where p.is_deleted = 0
-		  and p.is_published = 1
+		  and ` + querybuilder.VisibleWhere("p") + `
 	`
 
-	if err := service.db.Raw(sql).
+	if err := service.db.Raw(sql, querybuilder.VisibleNow()).
 		Scan(&tagList).Error; err != nil {
 		return nil, err
 	}

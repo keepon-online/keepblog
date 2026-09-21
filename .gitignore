@@ -16,6 +16,12 @@ config.yaml
 data/ip2region.xdb
 data/*.tmp
 
+# 换库/升级前的本地数据库备份，含生产数据，绝不入库
+data/*.bak-*
+
+# 本地 AI 工具配置
+.zcodeignore
+
 # 前端（frontend）：依赖与构建产物不提交
 # static/console 的构建产物会提交，以保证 go build 时 embed 文件存在
 frontend/node_modules/

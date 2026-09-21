@@ -7,6 +7,7 @@ import (
 
 	"gitee.com/jieepre/keepblog/internal/model"
 	"gitee.com/jieepre/keepblog/internal/model/system"
+	"gitee.com/jieepre/keepblog/internal/pkg/querybuilder"
 	"gitee.com/jieepre/keepblog/internal/service/category"
 	"gitee.com/jieepre/keepblog/internal/service/post"
 	"gitee.com/jieepre/keepblog/internal/service/tag"
@@ -36,18 +37,18 @@ func (service Service) CardInfo() model.CardInfo {
 	var cardCount model.CardInfo
 	service.db.Table(model.TPostsTable).
 		Select("COUNT(DISTINCT t.tag_id )  AS tag").
-		Where("post.is_published", 1).
+		Where(querybuilder.VisibleWhere("post"), querybuilder.VisibleNow()).
 		Where("post.is_deleted", 0).
 		Joins("LEFT JOIN post_tag pt on post.post_id = pt.post_id").
 		Joins("LEFT JOIN tag t on pt.tag_id = t.tag_id").
 		Count(&cardCount.Tag)
 	service.db.Table(model.TPostsTable).
 		Select("COUNT(DISTINCT category_id)  AS category").
-		Where("is_published", 1).
+		Where(querybuilder.VisibleWhere(""), querybuilder.VisibleNow()).
 		Where("is_deleted", 0).
 		Count(&cardCount.Category)
 	service.db.Table(model.TPostsTable).
-		Where("is_published", 1).
+		Where(querybuilder.VisibleWhere(""), querybuilder.VisibleNow()).
 		Where("is_deleted", 0).Count(&cardCount.Post)
 	return cardCount
 }
@@ -71,12 +72,12 @@ func (service Service) Categories() []model.CategoryCount {
 
 func (service Service) SidebarArchives() []model.SidebarArchives {
 	var years []string
-	service.db.Table(model.TPostsTable).Raw(`SELECT strftime( '%Y/%m', pub_time, 'unixepoch' ) year FROM post WHERE is_published = 1 AND is_deleted = 0 GROUP BY year`).Scan(&years)
+	service.db.Table(model.TPostsTable).Raw(`SELECT strftime( '%Y/%m', pub_time, 'unixepoch' ) year FROM post WHERE `+querybuilder.VisibleWhere("")+` AND is_deleted = 0 GROUP BY year`, querybuilder.VisibleNow()).Scan(&years)
 	m := make(map[string]int64)
 	sidebarArchives := make([]model.SidebarArchives, 0)
 	for _, year := range years {
 		var total int64
-		service.db.Table(model.TPostsTable).Raw(" SELECT count(0) from post WHERE  is_published = 1 AND is_deleted = 0 AND strftime( '%Y/%m', pub_time, 'unixepoch' ) =?", year).Scan(&total)
+		service.db.Table(model.TPostsTable).Raw(" SELECT count(0) from post WHERE "+querybuilder.VisibleWhere("")+" AND is_deleted = 0 AND strftime( '%Y/%m', pub_time, 'unixepoch' ) =?", querybuilder.VisibleNow(), year).Scan(&total)
 		m[year] = total
 		sidebarArchive := model.SidebarArchives{
 			Year:  year,
@@ -93,7 +94,7 @@ func (service Service) WebInfo() model.WebInfo {
 
 	// 文章数目
 	service.db.Table(model.TPostsTable).
-		Where("is_published", 1).
+		Where(querybuilder.VisibleWhere(""), querybuilder.VisibleNow()).
 		Where("is_deleted", 0).
 		Count(&webInfo.PostCount)
 
@@ -101,7 +102,7 @@ func (service Service) WebInfo() model.WebInfo {
 	var totalWordCount struct {
 		Total int64 `gorm:"column:total"`
 	}
-	service.db.Raw("SELECT COALESCE(SUM(word_count), 0) as total FROM post WHERE is_published = 1 AND is_deleted = 0").Scan(&totalWordCount)
+	service.db.Raw("SELECT COALESCE(SUM(word_count), 0) as total FROM post WHERE "+querybuilder.VisibleWhere("")+" AND is_deleted = 0", querybuilder.VisibleNow()).Scan(&totalWordCount)
 	webInfo.TotalWordCount = totalWordCount.Total
 
 	// 从网站配置读取创建日期
@@ -125,9 +126,9 @@ func (service Service) WebInfo() model.WebInfo {
 	var lastUpdate struct {
 		LastTime uint64 `gorm:"column:last_time"`
 	}
-	service.db.Raw("SELECT COALESCE(MAX(last_modified_time), 0) as last_time FROM post WHERE is_published = 1 AND is_deleted = 0").Scan(&lastUpdate)
+	service.db.Raw("SELECT COALESCE(MAX(last_modified_time), 0) as last_time FROM post WHERE "+querybuilder.VisibleWhere("")+" AND is_deleted = 0", querybuilder.VisibleNow()).Scan(&lastUpdate)
 	if lastUpdate.LastTime == 0 {
-		service.db.Raw("SELECT COALESCE(MAX(pub_time), 0) as last_time FROM post WHERE is_published = 1 AND is_deleted = 0").Scan(&lastUpdate)
+		service.db.Raw("SELECT COALESCE(MAX(pub_time), 0) as last_time FROM post WHERE "+querybuilder.VisibleWhere("")+" AND is_deleted = 0", querybuilder.VisibleNow()).Scan(&lastUpdate)
 	}
 	if lastUpdate.LastTime > 0 {
 		t := time.Unix(int64(lastUpdate.LastTime), 0)

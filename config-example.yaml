@@ -54,3 +54,12 @@ artalk:
   enable: false
   server: "https://comment.example.com"
   site: "小助理"
+
+# 文章发布通知（未配置则不启用）
+# webhook 为通用 JSON POST（企业微信/钉钉/飞书机器人转接均可）；
+# telegram 需 Bot Token 与 Chat ID（国内服务器可能无法直连，建议用 webhook）
+notify:
+  webhook: ""
+  telegram:
+    token: ""
+    chatId: ""

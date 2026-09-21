@@ -9,12 +9,22 @@ import (
 	"gitee.com/jieepre/keepblog/internal/pkg/core"
 	"gitee.com/jieepre/keepblog/pkg"
 	"gitee.com/jieepre/keepblog/pkg/hash"
+	"gitee.com/jieepre/keepblog/pkg/notify"
 	"gitee.com/jieepre/keepblog/pkg/result"
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
 	*core.Context
+}
+
+// notifyPublished 发布通知。站点 URL 获取失败时用空串，通知侧自行拼接。
+func (h *Handler) notifyPublished(post model.Post) {
+	baseURL := ""
+	if site, err := h.Service.WebSiteService.GetWebSite(); err == nil && site != nil {
+		baseURL = site.URL
+	}
+	notify.PostPublished(post, baseURL)
 }
 
 func (h *Handler) SavePost(c *gin.Context) {
@@ -56,6 +66,12 @@ func (h *Handler) SavePost(c *gin.Context) {
 		_ = global.GORM.Table(model.TPostTagTable).Create(&postTag)
 	}
 
+	// 新建即发布（含定时发布）时发通知
+	if postObj.IsPublished == 1 {
+		postObj.PostId = id
+		h.notifyPublished(postObj)
+	}
+
 	result.Ok(c, nil)
 }
 
@@ -74,10 +90,25 @@ func (h *Handler) UpdatePost(c *gin.Context) {
 		}
 	}
 
+	// 发布通知仅在"未发布 → 已发布"翻转时触发，普通编辑不重复打扰
+	var oldPublished uint8
+	if postObj.PostId != 0 {
+		var old model.Post
+		if err := global.GORM.Table(model.TPostsTable).
+			Select("is_published").
+			Where("post_id", postObj.PostId).
+			Take(&old).Error; err == nil {
+			oldPublished = old.IsPublished
+		}
+	}
+
 	err = h.Service.PostService.UpdatePost(postObj)
 	if err != nil {
 		result.Error(c, err.Error())
 		return
+	}
+	if postObj.IsPublished == 1 && oldPublished == 0 {
+		h.notifyPublished(postObj)
 	}
 	_ = global.GORM.Table(model.TPostTagTable).Where("post_id", postObj.PostId).Delete(model.PostTag{})
 	keywords := postObj.Tags
@@ -108,6 +139,10 @@ func (h *Handler) PublishPost(c *gin.Context) {
 	if err != nil {
 		result.Error(c, err.Error())
 		return
+	}
+	// 列表页"发布"开关翻到已发布时通知
+	if postObj.IsPublished == 1 {
+		h.notifyPublished(postObj)
 	}
 	result.Ok(c, nil)
 }

@@ -30,6 +30,7 @@ type Configs struct {
 	Jwt      *jwt      `yaml:"jwt"`
 	Hashids  *hashids  `yaml:"hashids"`
 	Ipdb     *ipdb     `yaml:"ipdb"`
+	Notify   *notify   `yaml:"notify"`
 }
 
 // jwt 签发配置
@@ -87,6 +88,16 @@ type artalk struct {
 	Enable bool   `yaml:"enable"`
 	Server string `yaml:"server"`
 	Site   string `yaml:"site"`
+}
+
+// Notify 文章发布通知。Webhook 为通用 JSON POST（企业微信/钉钉/飞书转接均可），
+// Telegram 需要 Bot Token 与 Chat ID；两者均未配置时不启用。
+type notify struct {
+	Webhook  string `yaml:"webhook"`
+	Telegram struct {
+		Token  string `yaml:"token"`
+		ChatId string `yaml:"chatId"`
+	} `yaml:"telegram"`
 }
 
 // redis配置
@@ -212,6 +223,9 @@ func setDefaults() {
 
 	// Artalk 默认配置
 	viper.SetDefault("artalk.enable", false)
+	viper.SetDefault("notify.webhook", "")
+	viper.SetDefault("notify.telegram.token", "")
+	viper.SetDefault("notify.telegram.chatId", "")
 	viper.SetDefault("artalk.server", "")
 	viper.SetDefault("artalk.site", "")
 

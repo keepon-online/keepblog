@@ -64,6 +64,18 @@
                         href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a
                         href="{{.site.URL}}" target="_blank">{{.site.Title}}</a>！</span></div>
             </div>
+            {{if .seriesPosts}}
+            <div class="seriesNav">
+                <div class="headline"><i class="fas fa-folder-open fa-fw"></i><span> 本系列 · {{.posts.Series}}</span></div>
+                <ol class="seriesNav-list">
+                    {{range $i, $p := .seriesPosts}}
+                    <li{{if eq $p.PostId $.posts.PostId}} class="current"{{end}}>
+                        <a href="/post/{{$p.PostSlug}}" data-pjax-content="true">{{$p.Title}}</a>
+                    </li>
+                    {{end}}
+                </ol>
+            </div>
+            {{end}}
             <div class="tag_share">
                 <div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/{{.posts.TagName}}">{{.posts.TagName}}</a>
                 </div>

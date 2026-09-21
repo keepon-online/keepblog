@@ -76,9 +76,9 @@ func TestSidebar_Aggregate(t *testing.T) {
 func seedAccessLogs(t *testing.T, db *gorm.DB) {
 	t.Helper()
 	logs := []system.AccessLog{
-		accessLog(3232235777, "/", 1),  // 192.168.1.1
+		accessLog(3232235777, "/", 1), // 192.168.1.1
 		accessLog(3232235777, "/about", 3),
-		accessLog(3232235521, "/", 2),  // 192.168.0.1
+		accessLog(3232235521, "/", 2), // 192.168.0.1
 		accessLog(3232235521, "/link", 2),
 	}
 	for i := range logs {

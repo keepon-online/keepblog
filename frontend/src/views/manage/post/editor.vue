@@ -266,6 +266,47 @@
 
             <el-row :gutter="20">
               <el-col :xs="24" :span="24">
+                <el-form-item label="发布时间">
+                  <el-switch
+                    v-model="scheduleEnabled"
+                    active-text="定时发布"
+                    inactive-text="立即"
+                    style="margin-bottom: 8px"
+                  />
+                  <el-date-picker
+                    v-if="scheduleEnabled"
+                    v-model="scheduleTime"
+                    type="datetime"
+                    placeholder="选择上线时间"
+                    format="YYYY-MM-DD HH:mm"
+                    value-format="X"
+                    :clearable="false"
+                    style="width: 100%"
+                  />
+                  <div v-if="scheduleEnabled" class="form-tip">
+                    保存后文章进入“已发布”状态，到所选时间才对访客可见
+                  </div>
+                  <div v-else class="form-tip">
+                    保存后仍为草稿状态，发布请在文章列表操作
+                  </div>
+                </el-form-item>
+              </el-col>
+
+              <el-col :xs="24" :span="24">
+                <el-form-item label="文章系列">
+                  <el-input
+                    v-model="ruleForm.series"
+                    placeholder="选填，如：Spring Boot 入门系列"
+                    clearable
+                    maxlength="50"
+                  />
+                  <div class="form-tip">
+                    同名系列的文章会在正文下方生成连载导航
+                  </div>
+                </el-form-item>
+              </el-col>
+
+              <el-col :xs="24" :span="24">
                 <el-form-item label="文章状态" prop="status">
                   <el-radio-group
                     v-model="ruleForm.status"
@@ -435,8 +476,13 @@ const ruleForm = ref({
   type: 1,
   postContent: "",
   postContentHtml: "",
-  coverImage: ""
+  coverImage: "",
+  series: ""
 });
+
+// 定时发布：开启后选择未来时间，保存时随表单提交 published=1 + pubTime
+const scheduleEnabled = ref(false);
+const scheduleTime = ref<string | number>("");
 
 // Markdown 文件导入与导出
 const mdFileInputRef = ref<HTMLInputElement | null>(null);
@@ -607,7 +653,15 @@ onMounted(() => {
     getPost(id)
       .then(res => {
         if (res.code === 200) {
-          ruleForm.value = res.payload;
+          ruleForm.value = { series: "", ...res.payload };
+          // 已是未来时间的定时文章：回填开关与时间
+          if (
+            res.payload.pubTime &&
+            Number(res.payload.pubTime) > Date.now() / 1000
+          ) {
+            scheduleEnabled.value = true;
+            scheduleTime.value = res.payload.pubTime;
+          }
           // 如果有封面图片，设置到文件列表中
           if (res.payload.coverImage) {
             coverFileList.value = [
@@ -664,11 +718,20 @@ const submitForm = async (formEl: FormInstance | undefined) => {
     if (valid) {
       saveLoading.value = true;
       try {
+        // 定时发布：带上未来 pubTime 并直接置为已发布；未开启则不带这两项，
+        // 由后端保持原有发布状态与发布时间
+        const payload: Record<string, any> = { ...ruleForm.value };
+        delete payload.pubTime;
+        delete payload.published;
+        if (scheduleEnabled.value && scheduleTime.value) {
+          payload.pubTime = Number(scheduleTime.value);
+          payload.published = 1;
+        }
         let res;
         if (isEdit.value) {
-          res = await updatePost(ruleForm.value);
+          res = await updatePost(payload);
         } else {
-          res = await savePost(ruleForm.value);
+          res = await savePost(payload);
         }
 
         if (res.code === 200) {
