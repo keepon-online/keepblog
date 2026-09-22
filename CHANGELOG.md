@@ -8,6 +8,21 @@
 > 2026-09 起发版 tag 改用语义化版本号（形如 `v2.1.2`）。此前递增数字 tag 的对应关系：
 > v6=2.0.0、v7=2.0.1、v8=2.0.2、v9=2.1.0、v10=2.1.1。
 
+## [3.0.0] - 2026-09-22
+
+### 新增
+- **后台 AI 辅助写作（v3.0 主特性）**：编辑器接入 OpenAI 兼容大模型，提供商由 `config.ai` 的 baseURL/model 决定（GLM/DeepSeek/通义/本地 Ollama 均可），API Key 仅存服务端，前端零接触。编程套餐（Coding Plan）key 使用专用接入点 `open.bigmodel.cn/api/coding/paas/v4`。
+  - **任务**：选区润色/扩写/精简/中译英、光标续写（携带标题与系列上下文）、标题候选生成（3 选 1）、摘要生成（直接填充摘要字段，改善 og/RSS 输出）。
+  - **交互**：工具栏 "✨ AI" 下拉（`DropdownToolbar` overlay 插槽实现）+ 选区浮动工具栏快速润色 + 标题栏/摘要栏专用按钮；生成结果在抽屉中流式渲染，**人工确认后才写回正文**（替换选区/插入光标处，基于 CodeMirror 精确 offset），支持停止与重新生成。
+  - **流式体验**：推理模型（如 GLM 思考系列）的 `reasoning_content` 单独透传为 `reasoning` 事件，抽屉内以"思考过程"区实时展示（脉冲指示、不混入正文），消除正文输出前的静默观感；结果渲染按 150ms 节流合并，避免逐 token 全量重渲染卡顿；流式输出跟随滚动贴底，用户上翻即暂停、回到底部自动恢复。
+  - **流式链路**：`POST /api/v1/ai/edit` SSE 透传（`pkg/ai` 客户端对接 chat/completions 流式协议，坏块跳过、断连中止上游）；前端原生 fetch 解析事件流（axios 封装会整包缓冲，不可用于流式），并补齐与 axios 拦截器同款的过期无感刷新（`/api/refreshToken`）。
+  - **成本护栏**：`ai.maxTokens` 单次上限、正文按任务截断（续写取尾部窗口）、`ai.dailyQuota` 每日调用配额（超限返回明确错误）；用量审计表 `ai_usage` 只记任务类型与 token 数，不落任何文章内容。
+  - **零成本降级**：`ai.apiKey` 为空时功能整体关闭，`GET /api/v1/ai/status` 探测后前端隐藏全部入口。
+  - prompt 侧：system 注入文风设定（`ai.styleHint` 可自定义）；用户内容以分隔符包裹并声明"数据非指令"防注入；代码块内容要求原样保留。
+
+### 修复
+- **流式响应超过 10 秒被掐断**：HTTP 服务器硬编码 `WriteTimeout: 10s`，net/http 的写超时是整个响应的绝对期限，AI SSE 生成（推理模型动辄 10 秒以上）与后台 WebSocket 通知都会被强制断开，浏览器表现为 `ERR_INCOMPLETE_CHUNKED_ENCODING`/ws 连接失败。WriteTimeout 改为 0（长连接边界改由 ai 上游超时、ctx 取消与新增的 IdleTimeout=2m 保证），ReadTimeout 放宽到 30s 兼顾图片上传。
+
 ## [2.8.0] - 2026-09-21
 
 ### 新增
