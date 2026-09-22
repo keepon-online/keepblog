@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"gitee.com/jieepre/keepblog/api/admin/about"
+	ai "gitee.com/jieepre/keepblog/api/admin/ai"
 	"gitee.com/jieepre/keepblog/api/admin/category"
 	"gitee.com/jieepre/keepblog/api/admin/common"
 	"gitee.com/jieepre/keepblog/api/admin/dashboard"
@@ -37,6 +38,7 @@ func RegisterAdminRouter(ctx *core.Context, group *gin.RouterGroup) {
 	musicRouter(ctx, group)
 	logViewerRouter(ctx, group)
 	noticeRouter(ctx, group)
+	aiRouter(ctx, group)
 	websocketRouter(ctx, group)
 }
 
@@ -573,6 +575,30 @@ func logViewerRouter(ctx *core.Context, group *gin.RouterGroup) {
 			Method:     http.MethodGet,
 			Path:       "/read",
 			Handler:    handler.ReadLog,
+			Middleware: nil, // 鉴权由 adminGroup 分组级统一生效
+		},
+	}
+	RegisterRouter(group, routes)
+}
+
+func aiRouter(ctx *core.Context, group *gin.RouterGroup) {
+	handler := ai.Handler{Context: ctx}
+	routeGroup := RouteGroup{
+		Name:   "AI 辅助写作",
+		Prefix: "/api/v1/ai",
+	}
+	group = group.Group(routeGroup.Prefix)
+	routes := []Route{
+		{
+			Method:     http.MethodGet,
+			Path:       "/status",
+			Handler:    handler.Status,
+			Middleware: nil, // 鉴权由 adminGroup 分组级统一生效
+		},
+		{
+			Method:     http.MethodPost,
+			Path:       "/edit",
+			Handler:    handler.Edit,
 			Middleware: nil, // 鉴权由 adminGroup 分组级统一生效
 		},
 	}

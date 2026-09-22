@@ -31,6 +31,7 @@ type Configs struct {
 	Hashids  *hashids  `yaml:"hashids"`
 	Ipdb     *ipdb     `yaml:"ipdb"`
 	Notify   *notify   `yaml:"notify"`
+	Ai       *ai       `yaml:"ai"`
 }
 
 // jwt 签发配置
@@ -90,6 +91,21 @@ type artalk struct {
 	Site   string `yaml:"site"`
 }
 
+// Ai 后台 AI 辅助写作（OpenAI 兼容 Chat Completions 协议）。
+// baseURL 指向兼容服务（GLM open.bigmodel.cn / DeepSeek / 本地 Ollama 均可）；
+// apiKey 为空时功能整体关闭，前端隐藏入口。
+type ai struct {
+	BaseURL    string `yaml:"baseURL"`
+	APIKey     string `yaml:"apiKey"`
+	Model      string `yaml:"model"`
+	MaxTokens  int    `yaml:"maxTokens"`
+	DailyQuota int    `yaml:"dailyQuota"`
+	// StyleHint 注入 system 的文风设定，如"技术博客，简洁准确，少废话"
+	StyleHint string `yaml:"styleHint"`
+	// Timeout 单次请求超时（秒），流式生成需要比普通接口宽
+	Timeout int `yaml:"timeout"`
+}
+
 // Notify 文章发布通知。Webhook 为通用 JSON POST（企业微信/钉钉/飞书转接均可），
 // Telegram 需要 Bot Token 与 Chat ID；两者均未配置时不启用。
 type notify struct {
@@ -134,6 +150,7 @@ func Load() error {
 	_ = viper.BindEnv("http.port", "KEEPBLOG_HTTP_PORT")
 	_ = viper.BindEnv("jwt.secret", "JWT_SECRET", "KEEPBLOG_JWT_SECRET")
 	_ = viper.BindEnv("hashids.salt", "KEEPBLOG_HASHIDS_SALT")
+	_ = viper.BindEnv("ai.apiKey", "KEEPBLOG_AI_APIKEY")
 	_ = viper.BindEnv("ipdb.updateUrl", "KEEPBLOG_IPDB_UPDATE_URL")
 	_ = viper.BindEnv("redis.host", "KEEPBLOG_REDIS_HOST")
 	_ = viper.BindEnv("redis.port", "KEEPBLOG_REDIS_PORT")
@@ -182,6 +199,15 @@ func storeSnapshot() error {
 	return nil
 }
 
+// StoreForTest 测试专用：向 viper 合并值并立即刷新快照。
+// 生产代码禁止调用（命名即契约）。
+func StoreForTest(values map[string]any) error {
+	if err := viper.MergeConfigMap(values); err != nil {
+		return err
+	}
+	return storeSnapshot()
+}
+
 // Get 返回当前配置快照。未调用 Load 时返回零值配置（各指针字段为 nil，
 // 调用方需自行判空；应用正常启动流程下不会出现这种情况）。
 func Get() Configs {
@@ -223,6 +249,13 @@ func setDefaults() {
 
 	// Artalk 默认配置
 	viper.SetDefault("artalk.enable", false)
+	viper.SetDefault("ai.baseURL", "https://open.bigmodel.cn/api/paas/v4")
+	viper.SetDefault("ai.apiKey", "")
+	viper.SetDefault("ai.model", "glm-4.6")
+	viper.SetDefault("ai.maxTokens", 2048)
+	viper.SetDefault("ai.dailyQuota", 200)
+	viper.SetDefault("ai.styleHint", "技术博客写作助手，文风简洁准确，避免空洞修饰")
+	viper.SetDefault("ai.timeout", 120)
 	viper.SetDefault("notify.webhook", "")
 	viper.SetDefault("notify.telegram.token", "")
 	viper.SetDefault("notify.telegram.chatId", "")

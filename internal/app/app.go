@@ -152,6 +152,7 @@ func (app *Application) newHTTPServer(addr string, handler http.Handler) *http.S
 		Handler:      handler,
 		ReadTimeout:  app.config.ReadTimeout,
 		WriteTimeout: app.config.WriteTimeout,
+		IdleTimeout:  app.config.IdleTimeout,
 	}
 }
 

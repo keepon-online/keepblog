@@ -2,6 +2,7 @@ package service
 
 import (
 	"gitee.com/jieepre/keepblog/internal/service/about"
+	"gitee.com/jieepre/keepblog/internal/service/ai"
 	"gitee.com/jieepre/keepblog/internal/service/category"
 	"gitee.com/jieepre/keepblog/internal/service/dashboard"
 	"gitee.com/jieepre/keepblog/internal/service/link"
@@ -27,6 +28,7 @@ type AppService struct {
 	Dashboard       *dashboard.Service
 	MusicService    *music.Service
 	NoticeService   *notice.Service
+	AIService       *ai.Service
 }
 
 // InitAppService 装配应用服务。数据库连接由调用方传入，
@@ -44,5 +46,6 @@ func InitAppService(db *gorm.DB) *AppService {
 		Dashboard:       dashboard.NewDashboardService(db),
 		MusicService:    music.NewMusicService(db),
 		NoticeService:   notice.NewNoticeService(db),
+		AIService:       ai.NewService(db),
 	}
 }

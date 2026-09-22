@@ -60,13 +60,52 @@
                 clearable
                 maxlength="200"
                 show-word-limit
-              />
+              >
+                <template #append>
+                  <el-popover
+                    v-if="aiEnabled"
+                    v-model:visible="titlePopoverVisible"
+                    placement="bottom"
+                    width="320"
+                    trigger="click"
+                  >
+                    <div class="ai-title-pop">
+                      <div v-if="aiTitleLoading" class="ai-title-tip">
+                        正在生成候选标题…
+                      </div>
+                      <template v-else>
+                        <div
+                          v-for="t in aiTitleCandidates"
+                          :key="t"
+                          class="ai-title-item"
+                          @click="applyTitle(t)"
+                        >
+                          {{ t }}
+                        </div>
+                        <div v-if="!aiTitleCandidates.length" class="ai-title-tip">
+                          点击右侧 ✨ 按钮生成
+                        </div>
+                      </template>
+                    </div>
+                    <template #reference>
+                      <el-button
+                        :loading="aiTitleLoading"
+                        title="AI 生成标题"
+                        @click="generateTitle"
+                        >✨</el-button
+                      >
+                    </template>
+                  </el-popover>
+                </template>
+              </el-input>
             </el-form-item>
 
             <el-form-item label="文章正文" prop="postContent">
               <MdEditor
+                ref="editorRef"
                 v-model="ruleForm.postContent"
                 :toolbars="toolbars"
+                :floating-toolbars="aiEnabled ? floatingToolbars : []"
                 language="zh-CN"
                 :preview="true"
                 :sync-scroll="true"
@@ -77,7 +116,40 @@
                 @onGetCatalog="onGetCatalog"
                 @onUploadImg="onUploadImg"
                 @onSave="handleSaveDraft"
-              />
+              >
+                <template #defToolbars>
+                  <DropdownToolbar
+                    v-if="aiEnabled"
+                    title="AI 助手"
+                    :visible="aiMenuVisible"
+                    :on-change="(v: boolean) => (aiMenuVisible = v)"
+                  >
+                    <template #trigger>
+                      <span class="ai-toolbar-trigger">✨ AI</span>
+                    </template>
+                    <template #overlay>
+                      <ul class="ai-menu-overlay">
+                        <li
+                          v-for="m in aiMenuData"
+                          :key="m.value"
+                          @click="onAiMenuClick(m)"
+                        >
+                          {{ m.label }}
+                        </li>
+                      </ul>
+                    </template>
+                  </DropdownToolbar>
+                  <NormalToolbar
+                    v-if="aiEnabled"
+                    title="AI 润色选中内容"
+                    @onClick="() => runPolish('polish')"
+                  >
+                    <template #trigger>
+                      <span class="ai-toolbar-trigger">✨</span>
+                    </template>
+                  </NormalToolbar>
+                </template>
+              </MdEditor>
               <div class="form-tip">
                 支持 Markdown 语法格式
                 <span v-if="draftSavedAt" class="draft-indicator">
@@ -134,7 +206,20 @@
                 maxlength="500"
                 show-word-limit
               />
-              <div class="form-tip">如果不填写，系统将自动从正文中提取</div>
+              <div class="form-tip">
+                如果不填写，系统将自动从正文中提取
+                <el-button
+                  v-if="aiEnabled"
+                  link
+                  type="primary"
+                  size="small"
+                  :loading="aiSummaryLoading"
+                  style="margin-left: 6px"
+                  @click="generateSummary"
+                >
+                  ✨ AI 生成摘要
+                </el-button>
+              </div>
             </el-form-item>
 
             <el-form-item label="文章封面" class="cover-form-item">
@@ -335,6 +420,72 @@
       </el-form>
     </el-card>
 
+    <!-- AI 结果抽屉：流式渲染生成内容，人工确认后才写回正文 -->
+    <el-drawer
+      v-model="aiDrawerVisible"
+      :title="aiTaskLabel"
+      size="480px"
+      :close-on-click-modal="!aiStreaming"
+      :before-close="closeAiDrawer"
+    >
+      <div ref="aiResultBodyRef" class="ai-result-body" @scroll="onAiBodyScroll">
+        <div v-if="aiReasoningText || (aiStreaming && !aiResultText)" class="ai-reasoning">
+          <div class="ai-reasoning-title">
+            <span class="ai-reasoning-dot" :class="{ pulse: aiStreaming && !aiResultText }"></span>
+            思考过程{{ aiResultText ? "（已输出正文，可展开回看）" : "…" }}
+          </div>
+          <div class="ai-reasoning-text">{{ aiReasoningText }}</div>
+        </div>
+        <MdPreview
+          :model-value="aiResultText || (aiStreaming && !aiReasoningText ? '生成中…' : '')"
+          preview-theme="github"
+          code-theme="atom"
+          class="ai-result-preview"
+        />
+      </div>
+      <template #footer>
+        <div class="ai-result-actions">
+          <el-button
+            v-if="aiApplyType === 'replace-selection'"
+            type="primary"
+            :disabled="aiStreaming || !aiResultText"
+            @click="applyAIResult()"
+          >
+            替换选区
+          </el-button>
+          <el-button
+            v-if="aiApplyType === 'insert-cursor'"
+            type="primary"
+            :disabled="aiStreaming || !aiResultText"
+            @click="applyAIResult()"
+          >
+            插入到光标处
+          </el-button>
+          <el-button
+            :disabled="aiStreaming || !aiResultText"
+            @click="copyAIResult"
+          >
+            复制
+          </el-button>
+          <el-button
+            v-if="!aiStreaming"
+            :disabled="!aiResultText"
+            @click="regenAI"
+          >
+            重新生成
+          </el-button>
+          <el-button
+            v-if="aiStreaming"
+            type="danger"
+            plain
+            @click="stopAI"
+          >
+            停止
+          </el-button>
+        </div>
+      </template>
+    </el-drawer>
+
     <!-- 底部固定操作栏：长文写到结尾无需滚回顶部即可发布 -->
     <div class="editor-footer">
       <span v-if="draftSavedAtText" class="draft-indicator">
@@ -406,8 +557,21 @@ import {
   Upload,
   ZoomIn
 } from "@element-plus/icons-vue";
-import { MdEditor, type ToolbarNames } from "md-editor-v3";
+import {
+  MdEditor,
+  MdPreview,
+  DropdownToolbar,
+  NormalToolbar,
+  type ToolbarNames
+} from "md-editor-v3";
 import "md-editor-v3/lib/style.css";
+import "md-editor-v3/lib/preview.css";
+import {
+  getAIStatus,
+  streamAIEdit,
+  type AIEditRequest,
+  type AIStatus
+} from "@/api/ai";
 import { getPost, getRandomCover, savePost, updatePost } from "@/api/post";
 import { useRouter, useRoute } from "vue-router";
 import { upload } from "@/api/common";
@@ -419,6 +583,9 @@ const router = useRouter();
 const route = useRoute();
 const ruleFormRef = ref<FormInstance>();
 const saveLoading = ref(false);
+
+// 编辑器实例：AI 取选区/回写正文都经由它的 CodeMirror view
+const editorRef = ref<any>(null);
 
 // 判断是否为编辑模式
 const isEdit = computed(() => !!route.params.id);
@@ -496,7 +663,308 @@ const randomCoverLoading = ref(false);
 const urlPopoverVisible = ref(false);
 const customImageUrl = ref("");
 
-// Markdown 编辑器工具栏配置（支持分屏实时预览、全屏、HTML预览、大纲目录）
+// ==================== AI 辅助写作 ====================
+const aiStatus = ref<AIStatus | null>(null);
+const aiEnabled = computed(() => !!aiStatus.value?.enabled);
+
+// 抽屉状态。aiResultText/aiReasoningText 是节流后的展示值；
+// 原始增量先积攒在非响应式缓冲里，定时合并刷新，避免每个 token
+// 触发一次 MdPreview 全量重渲染造成卡顿
+const aiDrawerVisible = ref(false);
+const aiStreaming = ref(false);
+const aiResultText = ref("");
+const aiReasoningText = ref("");
+const aiResultBodyRef = ref<any>(null);
+let aiResultBuf = "";
+let aiReasoningBuf = "";
+let aiFlushTimer: ReturnType<typeof setTimeout> | null = null;
+// 跟随滚动：用户主动上翻时暂停贴底，回到底部附近再恢复
+let aiStickBottom = true;
+const aiTaskLabel = ref("AI 助手");
+// 本次结果的回写方式与选区快照（发起请求时记录，应用时使用）
+const aiApplyType = ref<"replace-selection" | "insert-cursor" | "none">(
+  "none"
+);
+const aiSelFrom = ref(0);
+const aiSelTo = ref(0);
+const aiCursorPos = ref(0);
+let aiAbort: (() => void) | null = null;
+let aiLastRequest: AIEditRequest | null = null;
+
+// 下拉菜单数据
+const aiMenuVisible = ref(false);
+const aiMenuData = [
+  { label: "润色选中文本", value: "polish" },
+  { label: "扩写选中文本", value: "expand" },
+  { label: "精简选中文本", value: "shorten" },
+  { label: "翻译为英文", value: "translate" },
+  { label: "续写正文", value: "continue" }
+];
+
+// 标题候选
+const titlePopoverVisible = ref(false);
+const aiTitleLoading = ref(false);
+const aiTitleCandidates = ref<string[]>([]);
+const aiSummaryLoading = ref(false);
+
+// 组件卸载时中止进行中的生成
+onBeforeUnmount(() => {
+  aiAbort?.();
+});
+
+// 探测 AI 状态（未配置则所有入口隐藏）
+onMounted(async () => {
+  try {
+    const res = await getAIStatus();
+    if (res.code === 200) aiStatus.value = res.payload;
+  } catch {
+    /* 探测失败按未启用处理 */
+  }
+});
+
+// 编辑器选区快照
+function captureSelection() {
+  const view = editorRef.value?.getEditorView?.();
+  const sel = view?.state?.selection?.main;
+  if (!view || !sel) return null;
+  return {
+    view,
+    from: sel.from,
+    to: sel.to,
+    text: view.state.sliceDoc(sel.from, sel.to)
+  };
+}
+
+function onAiMenuClick(item: any) {
+  aiMenuVisible.value = false;
+  const value = String(item?.value || "polish");
+  if (value === "continue") {
+    runContinue();
+    return;
+  }
+  const modes = ["polish", "expand", "shorten", "translate"] as const;
+  runPolish(
+    (modes as readonly string[]).includes(value)
+      ? (value as (typeof modes)[number])
+      : "polish"
+  );
+}
+
+// 选区润色/扩写/精简/翻译
+function runPolish(mode: "polish" | "expand" | "shorten" | "translate") {
+  const sel = captureSelection();
+  if (!sel || !sel.text.trim()) {
+    message("请先选中要处理的正文内容", { type: "info" });
+    return;
+  }
+  aiSelFrom.value = sel.from;
+  aiSelTo.value = sel.to;
+  const labelMap: Record<string, string> = {
+    polish: "AI 润色",
+    expand: "AI 扩写",
+    shorten: "AI 精简",
+    translate: "AI 翻译"
+  };
+  startAI(
+    {
+      task: "polish",
+      mode,
+      selection: sel.text,
+      before: sel.view.state.sliceDoc(Math.max(0, sel.from - 600), sel.from),
+      after: sel.view.state.sliceDoc(
+        sel.to,
+        Math.min(sel.view.state.doc.length, sel.to + 300)
+      )
+    },
+    labelMap[mode] || "AI 润色",
+    "replace-selection"
+  );
+}
+
+// 续写
+function runContinue() {
+  const sel = captureSelection();
+  aiCursorPos.value = sel?.to ?? 0;
+  startAI(
+    {
+      task: "continue",
+      digest: ruleForm.value.postContent,
+      title: ruleForm.value.title,
+      series: ruleForm.value.series
+    },
+    "AI 续写",
+    "insert-cursor"
+  );
+}
+
+function onAiBodyScroll() {
+  const el = aiResultBodyRef.value;
+  if (!el) return;
+  aiStickBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+}
+
+function flushAIStream(final = false) {
+  aiResultText.value = aiResultBuf;
+  aiReasoningText.value = aiReasoningBuf;
+  if (aiStickBottom && aiResultBodyRef.value) {
+    aiResultBodyRef.value.scrollTop = aiResultBodyRef.value.scrollHeight;
+  }
+  if (final && aiFlushTimer) {
+    clearTimeout(aiFlushTimer);
+    aiFlushTimer = null;
+  }
+}
+
+function scheduleAIFlush() {
+  if (aiFlushTimer) return;
+  aiFlushTimer = setTimeout(() => {
+    aiFlushTimer = null;
+    flushAIStream();
+  }, 150);
+}
+
+function startAI(req: AIEditRequest, label: string, apply: typeof aiApplyType.value) {
+  aiLastRequest = req;
+  aiTaskLabel.value = label;
+  aiApplyType.value = apply;
+  aiResultBuf = "";
+  aiReasoningBuf = "";
+  aiResultText.value = "";
+  aiReasoningText.value = "";
+  aiStickBottom = true;
+  aiStreaming.value = true;
+  aiDrawerVisible.value = true;
+  aiAbort = streamAIEdit(req, {
+    onDelta: text => {
+      aiResultBuf += text;
+      scheduleAIFlush();
+    },
+    onReasoning: text => {
+      aiReasoningBuf += text;
+      scheduleAIFlush();
+    },
+    onDone: () => {
+      flushAIStream(true);
+      aiStreaming.value = false;
+    },
+    onError: msg => {
+      flushAIStream(true);
+      aiStreaming.value = false;
+      message(msg, { type: "error" });
+    }
+  });
+}
+
+function stopAI() {
+  aiAbort?.();
+  flushAIStream(true);
+  aiStreaming.value = false;
+}
+
+function closeAiDrawer(done: () => void) {
+  if (aiStreaming.value) stopAI();
+  done();
+}
+
+function regenAI() {
+  if (aiLastRequest) {
+    const req = { ...aiLastRequest };
+    const label = aiTaskLabel.value;
+    const apply = aiApplyType.value;
+    startAI(req, label, apply);
+  }
+}
+
+function applyAIResult() {
+  if (!aiResultText.value) return;
+  const view = editorRef.value?.getEditorView?.();
+  if (!view) return;
+  if (aiApplyType.value === "replace-selection") {
+    view.dispatch({
+      changes: { from: aiSelFrom.value, to: aiSelTo.value, insert: aiResultText.value }
+    });
+  } else if (aiApplyType.value === "insert-cursor") {
+    view.dispatch({
+      changes: { from: aiCursorPos.value, to: aiCursorPos.value, insert: "\n\n" + aiResultText.value }
+    });
+  }
+  aiDrawerVisible.value = false;
+  message("已写回正文", { type: "success" });
+}
+
+async function copyAIResult() {
+  try {
+    await navigator.clipboard.writeText(aiResultText.value);
+    message("已复制", { type: "success" });
+  } catch {
+    message("复制失败", { type: "error" });
+  }
+}
+
+// 生成标题：流式接收整段文本后按行拆成候选
+function generateTitle() {
+  if (!ruleForm.value.postContent.trim()) {
+    message("请先填写正文内容", { type: "info" });
+    return;
+  }
+  aiTitleLoading.value = true;
+  aiTitleCandidates.value = [];
+  let acc = "";
+  const abort = streamAIEdit(
+    { task: "title", digest: ruleForm.value.postContent },
+    {
+      onDelta: t => (acc += t),
+      onDone: () => {
+        aiTitleLoading.value = false;
+        aiTitleCandidates.value = acc
+          .split("\n")
+          .map(x => x.replace(/^[-*\d.、\s]+/, "").trim())
+          .filter(Boolean)
+          .slice(0, 3);
+      },
+      onError: msg => {
+        aiTitleLoading.value = false;
+        message(msg, { type: "error" });
+      }
+    }
+  );
+  aiAbort = abort;
+}
+
+function applyTitle(t: string) {
+  ruleForm.value.title = t;
+  titlePopoverVisible.value = false;
+}
+
+function generateSummary() {
+  if (!ruleForm.value.postContent.trim()) {
+    message("请先填写正文内容", { type: "info" });
+    return;
+  }
+  aiSummaryLoading.value = true;
+  let acc = "";
+  const abort = streamAIEdit(
+    { task: "summary", digest: ruleForm.value.postContent },
+    {
+      onDelta: t => (acc += t),
+      onDone: () => {
+        aiSummaryLoading.value = false;
+        if (acc.trim()) ruleForm.value.summary = acc.trim();
+      },
+      onError: msg => {
+        aiSummaryLoading.value = false;
+        message(msg, { type: "error" });
+      }
+    }
+  );
+  aiAbort = abort;
+}
+
+// 选中文本后浮现的快速工具栏：加粗/斜体 + AI 快速润色（索引 1 = defToolbars 第二个）
+const floatingToolbars: ToolbarNames[] = ["bold", "italic", 1];
+
+// Markdown 编辑器工具栏配置（支持分屏实时预览、全屏、HTML预览、大纲目录）；
+// 数字 0 对应 defToolbars 插槽里的第一个组件（AI 下拉菜单）
 const toolbars: ToolbarNames[] = [
   "bold",
   "underline",
@@ -516,6 +984,7 @@ const toolbars: ToolbarNames[] = [
   "code",
   "link",
   "image",
+  0,
   "table",
   "mermaid",
   "katex",
@@ -1516,5 +1985,118 @@ const handleExportMd = () => {
       }
     }
   }
+}
+
+/* ===== AI 辅助写作 ===== */
+.ai-menu-overlay {
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--el-bg-color, #fff);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+  min-width: 150px;
+}
+
+.ai-menu-overlay li {
+  padding: 7px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--el-text-color-primary, #303133);
+}
+
+.ai-menu-overlay li:hover {
+  background: var(--el-fill-color-light, #f5f7fa);
+  color: var(--el-color-primary, #409eff);
+}
+
+.ai-toolbar-trigger {
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 2px;
+  user-select: none;
+}
+
+.ai-result-body {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.ai-reasoning {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--el-fill-color-light, #f5f7fa);
+}
+
+.ai-reasoning-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary, #909399);
+  margin-bottom: 6px;
+}
+
+.ai-reasoning-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--el-color-primary, #409eff);
+}
+
+.ai-reasoning-dot.pulse {
+  animation: ai-reasoning-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes ai-reasoning-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.ai-reasoning-text {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--el-text-color-secondary, #909399);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.ai-result-preview {
+  min-height: 200px;
+}
+
+.ai-result-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ai-title-pop .ai-title-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: background-color 0.15s;
+}
+
+.ai-title-pop .ai-title-item:hover {
+  background-color: var(--el-fill-color-light);
+}
+
+.ai-title-pop .ai-title-tip {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  padding: 4px 2px;
 }
 </style>
