@@ -570,11 +570,33 @@
     <!-- AI 结果抽屉：流式渲染生成内容，人工确认后才写回正文 -->
     <el-drawer
       v-model="aiDrawerVisible"
-      :title="aiTaskLabel"
-      :size="aiLastRequest?.task === 'proofread' ? '540px' : '480px'"
-      :close-on-click-modal="!aiStreaming"
+      :size="aiLastRequest?.task === 'proofread' ? '540px' : '500px'"
+      :modal="false"
+      :lock-scroll="false"
+      class="ai-docked-drawer"
+      :close-on-click-modal="false"
       :before-close="closeAiDrawer"
+      @keydown.ctrl.enter.prevent="handleDrawerPrimaryAction"
+      @keydown.meta.enter.prevent="handleDrawerPrimaryAction"
     >
+      <template #header>
+        <div class="ai-drawer-header">
+          <span class="ai-drawer-title">{{ aiTaskLabel }}</span>
+          <!-- 历史版本药丸导航 -->
+          <div v-if="aiHistory.length > 1" class="ai-history-pills">
+            <span
+              v-for="(h, idx) in aiHistory"
+              :key="idx"
+              class="ai-history-pill"
+              :class="{ active: aiHistoryIdx === idx }"
+              :title="h.content"
+              @click="selectHistoryIndex(idx)"
+            >
+              {{ h.label }}
+            </span>
+          </div>
+        </div>
+      </template>
       <div ref="aiResultBodyRef" class="ai-result-body" @scroll="onAiBodyScroll">
         <el-alert
           v-if="aiError"
@@ -718,7 +740,7 @@
         <template v-else>
           <!-- 差异对比 / 最终效果 视图切换栏（存在原始选区时展示） -->
           <div v-if="aiOriginalSelection" class="ai-view-switch-row">
-            <el-radio-group v-model="aiViewMode" size="small">
+            <el-radio-group v-if="!aiDrawerEditMode" v-model="aiViewMode" size="small">
               <el-radio-button label="diff">
                 <el-icon class="mr-2px"><DocumentCopy /></el-icon>
                 差异对比
@@ -728,23 +750,76 @@
                 最终效果
               </el-radio-button>
             </el-radio-group>
-            <span v-if="aiViewMode === 'diff'" class="diff-legend">
+            <span v-if="aiViewMode === 'diff' && !aiDrawerEditMode" class="diff-legend">
               <span class="legend-badge legend-del">红色删除</span>
               <span class="legend-badge legend-ins">绿色新增</span>
             </span>
+            <el-button
+              size="small"
+              :type="aiDrawerEditMode ? 'primary' : 'default'"
+              :disabled="aiStreaming || !aiResultText"
+              class="ml-auto"
+              @click="toggleDrawerEditMode"
+            >
+              <el-icon class="mr-2px"><EditPen /></el-icon>
+              {{ aiDrawerEditMode ? "完成微调" : "就地微调" }}
+            </el-button>
           </div>
 
-          <div v-if="aiReasoningText || (aiStreaming && !aiResultText)" class="ai-reasoning">
-            <div class="ai-reasoning-title">
-              <span class="ai-reasoning-dot" :class="{ pulse: aiStreaming && !aiResultText }"></span>
-              思考过程{{ aiResultText ? "（已输出正文，可展开回看）" : "…" }}
+          <!-- 思维链（Reasoning）智能胶囊折叠 -->
+          <div
+            v-if="aiReasoningText || (aiStreaming && !aiResultText)"
+            class="ai-reasoning-capsule"
+            :class="{ 'is-collapsed': aiReasoningCollapsed }"
+          >
+            <div
+              class="ai-capsule-header"
+              @click="aiReasoningCollapsed = !aiReasoningCollapsed"
+            >
+              <span
+                class="ai-capsule-dot"
+                :class="{ pulse: aiStreaming && !aiResultText }"
+              ></span>
+              <span class="ai-capsule-title">
+                {{
+                  aiStreaming && !aiResultText
+                    ? "正在深度思考…"
+                    : `思考过程 (${aiReasoningText.length} 字${
+                        aiMeta?.elapsed ? " · " + aiMeta.elapsed : ""
+                      })`
+                }}
+              </span>
+              <span class="ai-capsule-toggle-tip">
+                {{ aiReasoningCollapsed ? "展开回看" : "收起" }}
+              </span>
+              <el-icon
+                class="ai-capsule-arrow"
+                :class="{ 'is-open': !aiReasoningCollapsed }"
+              >
+                <ArrowDown />
+              </el-icon>
             </div>
-            <div class="ai-reasoning-text">{{ aiReasoningText }}</div>
+            <div v-show="!aiReasoningCollapsed" class="ai-reasoning-content">
+              {{ aiReasoningText }}
+            </div>
+          </div>
+
+          <!-- 就地直接编辑模式 -->
+          <div v-if="aiDrawerEditMode" class="ai-direct-edit-box">
+            <div class="ai-edit-tip text-xs text-gray-400 mb-1">
+              可在下方直接编辑文字，点击「替换选区」将应用修改后的最终内容：
+            </div>
+            <el-input
+              v-model="aiResultText"
+              type="textarea"
+              :rows="14"
+              class="ai-direct-edit-textarea"
+            />
           </div>
 
           <!-- 差异对比视图 -->
           <div
-            v-if="aiOriginalSelection && aiViewMode === 'diff'"
+            v-else-if="aiOriginalSelection && aiViewMode === 'diff'"
             class="ai-diff-container"
           >
             <div v-if="!aiResultText && aiStreaming" class="ai-diff-placeholder">
@@ -771,15 +846,31 @@
       </div>
       <template #footer>
         <div class="ai-result-foot">
+          <!-- 追加指令快捷芯片（Quick Refine Chips） -->
+          <div
+            v-if="!aiStreaming && aiResultText && !aiError && aiLastRequest?.task !== 'proofread'"
+            class="ai-quick-refine-chips"
+          >
+            <span class="chips-label">快捷调整：</span>
+            <span
+              v-for="chip in aiQuickRefineChips"
+              :key="chip"
+              class="ai-refine-chip"
+              @click="applyRefineChip(chip)"
+            >
+              {{ chip }}
+            </span>
+          </div>
+
           <!-- 追加指令：以上一版为基础继续调整 -->
           <div
-            v-if="!aiStreaming && aiResultText && !aiError"
+            v-if="!aiStreaming && aiResultText && !aiError && aiLastRequest?.task !== 'proofread'"
             class="ai-refine-row"
           >
             <el-input
               v-model="aiRefineInput"
               size="small"
-              placeholder="追加要求：再精简一点 / 补个示例 / 语气更正式"
+              placeholder="输入追加要求，或点击上方快捷芯片"
               clearable
               @keydown.enter="refineAI"
             />
@@ -826,17 +917,19 @@
               v-if="aiLastRequest?.task === 'proofread' && pendingProofreadCount > 0"
               type="primary"
               :disabled="aiStreaming"
+              title="按 Ctrl/Cmd + Enter 快速采纳"
               @click="applyAllProofreadItems"
             >
-              一键采纳全部 ({{ pendingProofreadCount }})
+              一键采纳全部 ({{ pendingProofreadCount }}) <span class="kbd-hint">⌘⏎</span>
             </el-button>
             <el-button
               v-if="aiApplyType === 'replace-selection'"
               type="primary"
               :disabled="aiStreaming || !aiResultText"
+              title="按 Ctrl/Cmd + Enter 快速替换"
               @click="applyAIResult()"
             >
-              替换选区
+              替换选区 <span class="kbd-hint">⌘⏎</span>
             </el-button>
             <el-button
               v-if="aiApplyType === 'replace-selection'"
@@ -1158,6 +1251,7 @@ import type { FormInstance, FormRules, UploadFile } from "element-plus";
 import { ElMessageBox } from "element-plus";
 import {
   Aim,
+  ArrowDown,
   Check,
   CircleCheck,
   CollectionTag,
@@ -1166,6 +1260,7 @@ import {
   DocumentChecked,
   DocumentCopy,
   Download,
+  EditPen,
   Link,
   MagicStick,
   Picture,
@@ -1376,11 +1471,28 @@ let copilotAbortTags: (() => void) | null = null;
 const aiMeta = ref<{ elapsed: string; tokens: number } | null>(null);
 // 抽屉内错误横幅（非流式信封错误与流中错误都会写入，配重试按钮）
 const aiError = ref("");
-// 版本栈：regen/refine 的历次结果，‹ › 导航回看
-const aiHistory = ref<string[]>([]);
+// 版本栈：包含指令标签，支持药丸点击回看
+interface AIHistoryEntry {
+  content: string;
+  label: string;
+}
+const aiHistory = ref<AIHistoryEntry[]>([]);
 const aiHistoryIdx = ref(-1);
 // 抽屉追加指令
 const aiRefineInput = ref("");
+
+// AI 抽屉新特性：思维链折叠、就地微调模式、微调快捷芯片
+const aiReasoningCollapsed = ref(true);
+const aiDrawerEditMode = ref(false);
+
+const aiQuickRefineChips = [
+  "再精简 30%",
+  "补个代码示例",
+  "更严谨专业",
+  "改成口语化",
+  "转成要点清单",
+  "加点幽默感"
+];
 
 // 配额展示：菜单底部与抽屉 footer 共用；用尽时禁用入口
 const aiQuotaText = computed(() => {
@@ -1908,12 +2020,18 @@ function startAI(
     aiHistory.value = [];
     aiHistoryIdx.value = -1;
   }
+  aiDrawerEditMode.value = false;
+  aiReasoningCollapsed.value = false;
   aiStreaming.value = true;
   aiDrawerVisible.value = true;
   aiStartedAt = Date.now();
   aiAbort = aiStream(req, {
     onDelta: text => {
       aiResultBuf += text;
+      // 当正文首个增量到达时，自动收起思维链胶囊
+      if (!aiReasoningCollapsed.value && aiReasoningBuf) {
+        aiReasoningCollapsed.value = true;
+      }
       scheduleAIFlush();
     },
     onReasoning: text => {
@@ -1927,7 +2045,15 @@ function startAI(
         elapsed: ((Date.now() - aiStartedAt) / 1000).toFixed(1) + "s",
         tokens: Number(usage?.total_tokens) || 0
       };
-      aiHistory.value.push(aiResultBuf);
+      const label =
+        aiHistory.value.length === 0
+          ? "v1 初始"
+          : `v${aiHistory.value.length + 1} ${
+              aiLastRequest?.instruction
+                ? aiLastRequest.instruction.slice(0, 4)
+                : "调整"
+            }`;
+      aiHistory.value.push({ content: aiResultBuf, label });
       aiHistoryIdx.value = aiHistory.value.length - 1;
       refreshAIStatus();
     },
@@ -1985,12 +2111,38 @@ function refineAI() {
   );
 }
 
-// 版本栈导航：‹ › 回看历次结果，当前展示版本即应用/继续调整的对象
+// 版本栈导航：‹ › 回看历次结果
 function aiNavHistory(dir: -1 | 1) {
   const next = aiHistoryIdx.value + dir;
   if (next < 0 || next >= aiHistory.value.length) return;
   aiHistoryIdx.value = next;
-  aiResultText.value = aiHistory.value[next];
+  aiResultText.value = aiHistory.value[next].content;
+}
+
+function selectHistoryIndex(idx: number) {
+  if (idx < 0 || idx >= aiHistory.value.length) return;
+  aiHistoryIdx.value = idx;
+  aiResultText.value = aiHistory.value[idx].content;
+}
+
+function applyRefineChip(chip: string) {
+  aiRefineInput.value = chip;
+  refineAI();
+}
+
+function toggleDrawerEditMode() {
+  aiDrawerEditMode.value = !aiDrawerEditMode.value;
+}
+
+function handleDrawerPrimaryAction() {
+  if (!aiDrawerVisible.value || aiStreaming.value) return;
+  if (aiLastRequest?.task === "proofread") {
+    if (pendingProofreadCount.value > 0) {
+      applyAllProofreadItems();
+    }
+  } else if (aiApplyType.value === "replace-selection" && aiResultText.value) {
+    applyAIResult();
+  }
 }
 
 // 全文校对：解析结构化卡片，支持一键定位与采纳
@@ -2600,10 +2752,18 @@ const exitFocusMode = () => {
   if (focusMode.value) focusMode.value = false;
 };
 
-// Esc 键统一调度：续写中优先停止续写，其次退出专注模式
+// Esc 键统一调度：续写中优先停止续写，其次关闭抽屉，最后退出专注模式
 function handleEscKey() {
   if (inlineStreaming.value) {
     stopInline();
+    return;
+  }
+  if (aiDrawerVisible.value) {
+    if (aiStreaming.value) {
+      stopAI();
+    } else {
+      aiDrawerVisible.value = false;
+    }
     return;
   }
   if (focusMode.value) {
@@ -4178,5 +4338,190 @@ const handleExportMd = () => {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* AI 抽屉非模态悬浮阴影与头部 */
+:deep(.ai-docked-drawer) {
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.12) !important;
+  border-left: 1px solid var(--el-border-color-light, #e4e7ed) !important;
+
+  .el-drawer__header {
+    margin-bottom: 12px;
+    padding: 16px 20px 10px;
+    border-bottom: 1px solid var(--el-border-color-lighter, #ebeef5);
+  }
+
+  .el-drawer__body {
+    padding: 16px 20px;
+  }
+
+  .el-drawer__footer {
+    border-top: 1px solid var(--el-border-color-lighter, #ebeef5);
+    padding: 14px 20px;
+  }
+}
+
+.ai-drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.ai-drawer-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--el-text-color-primary, #303133);
+}
+
+.ai-history-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ai-history-pill {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--el-border-color, #dcdfe6);
+  background: var(--el-fill-color-light, #f5f7fa);
+  color: var(--el-text-color-secondary, #909399);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: var(--el-color-primary, #409eff);
+    color: var(--el-color-primary, #409eff);
+  }
+
+  &.active {
+    background: var(--el-color-primary, #409eff);
+    border-color: var(--el-color-primary, #409eff);
+    color: #fff;
+    font-weight: 500;
+  }
+}
+
+/* 思维链智能胶囊折叠样式 */
+.ai-reasoning-capsule {
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: var(--el-fill-color-light, #f5f7fa);
+  border: 1px solid var(--el-border-color-lighter, #ebeef5);
+  overflow: hidden;
+  transition: all 0.2s ease;
+
+  .ai-capsule-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--el-text-color-regular, #606266);
+    user-select: none;
+
+    &:hover {
+      background: var(--el-fill-color, #eaecf0);
+    }
+  }
+
+  .ai-capsule-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--el-color-primary, #409eff);
+    flex: none;
+
+    &.pulse {
+      animation: ai-reasoning-pulse 1.1s ease-in-out infinite;
+    }
+  }
+
+  .ai-capsule-title {
+    font-weight: 500;
+  }
+
+  .ai-capsule-toggle-tip {
+    font-size: 11px;
+    color: var(--el-text-color-secondary, #909399);
+    margin-left: auto;
+  }
+
+  .ai-capsule-arrow {
+    font-size: 12px;
+    color: var(--el-text-color-secondary, #909399);
+    transition: transform 0.25s ease;
+
+    &.is-open {
+      transform: rotate(180deg);
+    }
+  }
+
+  .ai-reasoning-content {
+    padding: 10px 14px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--el-text-color-secondary, #909399);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 160px;
+    overflow-y: auto;
+    border-top: 1px solid var(--el-border-color-lighter, #ebeef5);
+  }
+}
+
+/* 就地编辑框 */
+.ai-direct-edit-box {
+  margin-top: 4px;
+  margin-bottom: 12px;
+}
+
+.ai-direct-edit-textarea {
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* 快捷调整芯片 */
+.ai-quick-refine-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 2px;
+
+  .chips-label {
+    font-size: 12px;
+    color: var(--el-text-color-secondary, #909399);
+  }
+
+  .ai-refine-chip {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--el-fill-color-light, #f5f7fa);
+    border: 1px solid var(--el-border-color-lighter, #ebeef5);
+    color: var(--el-text-color-regular, #606266);
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover {
+      background: var(--el-color-primary-light-9, #ecf5ff);
+      border-color: var(--el-color-primary-light-6, #b3d8ff);
+      color: var(--el-color-primary, #409eff);
+    }
+  }
+}
+
+.kbd-hint {
+  font-size: 10px;
+  opacity: 0.8;
+  margin-left: 4px;
+  padding: 1px 4px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
 }
 </style>
