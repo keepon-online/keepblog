@@ -2,13 +2,23 @@
   <div
     class="editor-container"
     :class="{ 'focus-mode': focusMode }"
-    @keydown.esc.exact="exitFocusMode"
+    @keydown.esc.exact="handleEscKey"
   >
     <el-card class="editor-card">
       <template #header>
         <div class="card-header">
           <span class="card-title">{{ isEdit ? "编辑文章" : "新增文章" }}</span>
           <div class="header-actions">
+            <el-button
+              v-if="aiEnabled"
+              type="success"
+              plain
+              title="一键智能生成推荐标题、核心摘要与推荐标签"
+              @click="openPublishCopilot"
+            >
+              <el-icon class="mr-2px"><MagicStick /></el-icon>
+              AI 发文助手
+            </el-button>
             <el-button
               :type="focusMode ? 'primary' : 'default'"
               :title="focusMode ? '退出专注模式 (Esc)' : '专注模式'"
@@ -172,6 +182,39 @@
                     </template>
                     <template #overlay>
                       <ul class="ai-menu-overlay">
+                        <!-- 自由指令输入框（Ask AI） -->
+                        <li class="ai-menu-custom-box" @click.stop>
+                          <div class="ai-custom-prompt-wrap">
+                            <el-input
+                              v-model="aiCustomPrompt"
+                              size="small"
+                              placeholder="对选中内容提要求（Enter发送）"
+                              clearable
+                              :disabled="aiQuotaExhausted"
+                              @keydown.enter.stop="runCustomSelectionPrompt"
+                            >
+                              <template #suffix>
+                                <el-icon
+                                  class="ai-send-icon"
+                                  :class="{ active: !!aiCustomPrompt.trim() }"
+                                  @click.stop="runCustomSelectionPrompt"
+                                >
+                                  <Promotion />
+                                </el-icon>
+                              </template>
+                            </el-input>
+                            <div class="ai-quick-tags">
+                              <span
+                                v-for="tag in aiQuickPromptTags"
+                                :key="tag"
+                                class="ai-quick-tag"
+                                @click.stop="applyQuickPrompt(tag)"
+                              >
+                                {{ tag }}
+                              </span>
+                            </div>
+                          </div>
+                        </li>
                         <li
                           v-for="m in aiMenuData"
                           :key="m.value"
@@ -528,7 +571,7 @@
     <el-drawer
       v-model="aiDrawerVisible"
       :title="aiTaskLabel"
-      size="480px"
+      :size="aiLastRequest?.task === 'proofread' ? '540px' : '480px'"
       :close-on-click-modal="!aiStreaming"
       :before-close="closeAiDrawer"
     >
@@ -541,19 +584,190 @@
           :closable="false"
           class="ai-error-banner"
         />
-        <div v-if="aiReasoningText || (aiStreaming && !aiResultText)" class="ai-reasoning">
-          <div class="ai-reasoning-title">
-            <span class="ai-reasoning-dot" :class="{ pulse: aiStreaming && !aiResultText }"></span>
-            思考过程{{ aiResultText ? "（已输出正文，可展开回看）" : "…" }}
+
+        <!-- 任务为全文校对时的专属交互界面 -->
+        <template v-if="aiLastRequest?.task === 'proofread'">
+          <!-- 校对控制条 -->
+          <div class="proofread-header-bar">
+            <div class="proofread-stats">
+              <span class="proofread-total-badge">
+                发现 {{ proofreadItems.length }} 处问题
+              </span>
+              <span v-if="pendingProofreadCount > 0" class="text-orange-500 text-xs">
+                ({{ pendingProofreadCount }} 待处理)
+              </span>
+              <span v-if="appliedProofreadCount > 0" class="text-green-600 text-xs">
+                ({{ appliedProofreadCount }} 已采纳)
+              </span>
+            </div>
+
+            <div class="proofread-header-actions">
+              <el-button
+                v-if="pendingProofreadCount > 0 && !aiStreaming"
+                size="small"
+                type="primary"
+                plain
+                @click="applyAllProofreadItems"
+              >
+                一键采纳全部 ({{ pendingProofreadCount }})
+              </el-button>
+              <el-radio-group v-model="proofreadViewMode" size="small">
+                <el-radio-button label="cards">卡片视图</el-radio-button>
+                <el-radio-button label="raw">原始输出</el-radio-button>
+              </el-radio-group>
+            </div>
           </div>
-          <div class="ai-reasoning-text">{{ aiReasoningText }}</div>
-        </div>
-        <MdPreview
-          :model-value="aiResultText || (aiStreaming && !aiReasoningText ? '生成中…' : '')"
-          preview-theme="github"
-          code-theme="atom"
-          class="ai-result-preview"
-        />
+
+          <!-- 卡片视图下的筛选与列表 -->
+          <div v-if="proofreadViewMode === 'cards'" class="proofread-cards-container">
+            <div v-if="proofreadItems.length > 0" class="proofread-filter-row">
+              <el-radio-group v-model="proofreadFilter" size="small">
+                <el-radio-button label="all">全部 ({{ proofreadItems.length }})</el-radio-button>
+                <el-radio-button label="pending">待处理 ({{ pendingProofreadCount }})</el-radio-button>
+                <el-radio-button label="applied">已采纳 ({{ appliedProofreadCount }})</el-radio-button>
+              </el-radio-group>
+            </div>
+
+            <div v-if="proofreadItems.length === 0 && !aiStreaming" class="proofread-empty">
+              <el-icon class="text-green-500 text-3xl mb-2"><CircleCheck /></el-icon>
+              <div>未发现明显错别字或语病，全文表述良好！</div>
+            </div>
+
+            <div class="proofread-cards-list">
+              <div
+                v-for="item in filteredProofreadItems"
+                :key="item.id"
+                class="proofread-card"
+                :class="{
+                  'is-applied': item.status === 'applied',
+                  'is-ignored': item.status === 'ignored',
+                  'is-not-found': item.status === 'not_found'
+                }"
+              >
+                <div class="proofread-card-header">
+                  <el-tag
+                    size="small"
+                    :type="getProofreadTagType(item.type)"
+                    effect="light"
+                  >
+                    {{ item.type }}
+                  </el-tag>
+                  <span v-if="item.reason" class="proofread-reason" :title="item.reason">
+                    {{ item.reason }}
+                  </span>
+                  <span class="proofread-status-indicator">
+                    <span v-if="item.status === 'applied'" class="text-green-600 font-medium">✓ 已采纳</span>
+                    <span v-else-if="item.status === 'ignored'" class="text-gray-400">已忽略</span>
+                    <span v-else-if="item.status === 'not_found'" class="text-orange-400">未在正文中匹配</span>
+                  </span>
+                </div>
+
+                <div class="proofread-card-diff">
+                  <div class="diff-line">
+                    <span class="diff-tag del">原</span>
+                    <span class="diff-text del">{{ item.original }}</span>
+                  </div>
+                  <div class="diff-line">
+                    <span class="diff-tag ins">改</span>
+                    <span class="diff-text ins">{{ item.suggestion }}</span>
+                  </div>
+                </div>
+
+                <div class="proofread-card-footer">
+                  <el-button
+                    link
+                    size="small"
+                    type="primary"
+                    @click="locateProofreadItem(item)"
+                  >
+                    <el-icon class="mr-2px"><Search /></el-icon>
+                    定位原文
+                  </el-button>
+                  <template v-if="item.status === 'pending'">
+                    <el-button
+                      size="small"
+                      type="primary"
+                      @click="applyProofreadItem(item)"
+                    >
+                      采纳修改
+                    </el-button>
+                    <el-button
+                      link
+                      size="small"
+                      @click="ignoreProofreadItem(item)"
+                    >
+                      忽略
+                    </el-button>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 原始输出视图 -->
+          <MdPreview
+            v-else
+            :model-value="aiResultText || (aiStreaming ? '正在校对全文…' : '')"
+            preview-theme="github"
+            code-theme="atom"
+            class="ai-result-preview"
+          />
+        </template>
+
+        <!-- 任务为润色/改写等其他任务时的常规视图 -->
+        <template v-else>
+          <!-- 差异对比 / 最终效果 视图切换栏（存在原始选区时展示） -->
+          <div v-if="aiOriginalSelection" class="ai-view-switch-row">
+            <el-radio-group v-model="aiViewMode" size="small">
+              <el-radio-button label="diff">
+                <el-icon class="mr-2px"><DocumentCopy /></el-icon>
+                差异对比
+              </el-radio-button>
+              <el-radio-button label="preview">
+                <el-icon class="mr-2px"><View /></el-icon>
+                最终效果
+              </el-radio-button>
+            </el-radio-group>
+            <span v-if="aiViewMode === 'diff'" class="diff-legend">
+              <span class="legend-badge legend-del">红色删除</span>
+              <span class="legend-badge legend-ins">绿色新增</span>
+            </span>
+          </div>
+
+          <div v-if="aiReasoningText || (aiStreaming && !aiResultText)" class="ai-reasoning">
+            <div class="ai-reasoning-title">
+              <span class="ai-reasoning-dot" :class="{ pulse: aiStreaming && !aiResultText }"></span>
+              思考过程{{ aiResultText ? "（已输出正文，可展开回看）" : "…" }}
+            </div>
+            <div class="ai-reasoning-text">{{ aiReasoningText }}</div>
+          </div>
+
+          <!-- 差异对比视图 -->
+          <div
+            v-if="aiOriginalSelection && aiViewMode === 'diff'"
+            class="ai-diff-container"
+          >
+            <div v-if="!aiResultText && aiStreaming" class="ai-diff-placeholder">
+              正在生成并计算差异…
+            </div>
+            <div v-else class="ai-diff-content">
+              <template v-for="(chunk, idx) in diffChunks" :key="idx">
+                <del v-if="chunk.type === 'removed'" class="diff-chunk diff-del">{{ chunk.value }}</del>
+                <ins v-else-if="chunk.type === 'added'" class="diff-chunk diff-ins">{{ chunk.value }}</ins>
+                <span v-else class="diff-chunk diff-common">{{ chunk.value }}</span>
+              </template>
+            </div>
+          </div>
+
+          <!-- 原 Markdown 预览视图 -->
+          <MdPreview
+            v-else
+            :model-value="aiResultText || (aiStreaming && !aiReasoningText ? '生成中…' : '')"
+            preview-theme="github"
+            code-theme="atom"
+            class="ai-result-preview"
+          />
+        </template>
       </div>
       <template #footer>
         <div class="ai-result-foot">
@@ -607,6 +821,15 @@
             </span>
           </div>
           <div class="ai-result-actions">
+            <!-- 全文校对任务的批量采纳按钮 -->
+            <el-button
+              v-if="aiLastRequest?.task === 'proofread' && pendingProofreadCount > 0"
+              type="primary"
+              :disabled="aiStreaming"
+              @click="applyAllProofreadItems"
+            >
+              一键采纳全部 ({{ pendingProofreadCount }})
+            </el-button>
             <el-button
               v-if="aiApplyType === 'replace-selection'"
               type="primary"
@@ -614,6 +837,14 @@
               @click="applyAIResult()"
             >
               替换选区
+            </el-button>
+            <el-button
+              v-if="aiApplyType === 'replace-selection'"
+              :disabled="aiStreaming || !aiResultText"
+              title="保留原选区文本，在后方追加换行并插入本次生成内容"
+              @click="insertBelowAIResult()"
+            >
+              在选区后插入
             </el-button>
             <el-button
               :disabled="aiStreaming || !aiResultText"
@@ -699,6 +930,164 @@
       </template>
     </el-dialog>
 
+    <!-- AI 发文助手一站式弹窗 -->
+    <el-dialog
+      v-model="copilotVisible"
+      title="✨ AI 发文助手"
+      width="680px"
+      append-to-body
+      class="ai-copilot-dialog"
+      :before-close="closeCopilot"
+    >
+      <div v-loading="copilotLoading" element-loading-text="AI 正在分析全文提炼发文元数据…" class="copilot-body">
+        <el-alert
+          type="info"
+          :closable="false"
+          show-icon
+          title="一键基于全文提炼推荐标题、摘要与精准匹配标签，确认后可「一键应用到文章」。"
+          style="margin-bottom: 16px"
+        />
+
+        <!-- 1. 推荐标题 -->
+        <div class="copilot-section">
+          <div class="copilot-section-header">
+            <span class="copilot-section-title">
+              <el-icon class="mr-4px text-primary"><CollectionTag /></el-icon>
+              推荐标题
+            </span>
+            <el-button
+              link
+              type="primary"
+              size="small"
+              :loading="copilotTitleLoading"
+              @click="copilotRegenTitle"
+            >
+              换一批
+            </el-button>
+          </div>
+          <div class="copilot-title-list">
+            <el-radio-group v-model="copilotChosenTitle" class="copilot-radio-group">
+              <el-radio
+                v-for="(t, idx) in copilotTitleCandidates"
+                :key="idx"
+                :label="t"
+                class="copilot-title-radio"
+              >
+                {{ t }}
+              </el-radio>
+              <el-radio
+                v-if="ruleForm.title"
+                :label="ruleForm.title"
+                class="copilot-title-radio text-gray-500"
+              >
+                保持当前原标题：{{ ruleForm.title }}
+              </el-radio>
+            </el-radio-group>
+          </div>
+        </div>
+
+        <!-- 2. 文章摘要 -->
+        <div class="copilot-section">
+          <div class="copilot-section-header">
+            <span class="copilot-section-title">
+              <el-icon class="mr-4px text-primary"><Tickets /></el-icon>
+              文章摘要
+            </span>
+            <el-button
+              link
+              type="primary"
+              size="small"
+              :loading="copilotSummaryLoading"
+              @click="copilotRegenSummary"
+            >
+              重新提炼
+            </el-button>
+          </div>
+          <el-input
+            v-model="copilotSummary"
+            type="textarea"
+            :rows="3"
+            maxlength="500"
+            show-word-limit
+            placeholder="AI 正在生成摘要…"
+          />
+        </div>
+
+        <!-- 3. 标签匹配与建议 -->
+        <div class="copilot-section">
+          <div class="copilot-section-header">
+            <span class="copilot-section-title">
+              <el-icon class="mr-4px text-primary"><PriceTag /></el-icon>
+              标签建议（智能比对标签库）
+            </span>
+            <el-button
+              link
+              type="primary"
+              size="small"
+              :loading="copilotTagsLoading"
+              @click="copilotRegenTags"
+            >
+              重新建议
+            </el-button>
+          </div>
+
+          <!-- 已有标签库中匹配的（推荐复用，默认高亮） -->
+          <div v-if="copilotMatchedTags.length > 0" class="copilot-tag-subgroup">
+            <div class="subgroup-label">命中系统已有标签库（建议勾选复用）：</div>
+            <div class="copilot-tags-wrap">
+              <el-check-tag
+                v-for="t in copilotMatchedTags"
+                :key="t"
+                :checked="copilotSelectedTags.includes(t)"
+                class="copilot-tag-item matched"
+                @change="toggleCopilotTag(t)"
+              >
+                <el-icon class="mr-2px"><Check /></el-icon>
+                {{ t }}
+              </el-check-tag>
+            </div>
+          </div>
+
+          <!-- 推荐新建的标签 -->
+          <div v-if="copilotNewTags.length > 0" class="copilot-tag-subgroup">
+            <div class="subgroup-label">推荐新建标签：</div>
+            <div class="copilot-tags-wrap">
+              <el-check-tag
+                v-for="t in copilotNewTags"
+                :key="t"
+                :checked="copilotSelectedTags.includes(t)"
+                class="copilot-tag-item new-tag"
+                @change="toggleCopilotTag(t)"
+              >
+                + {{ t }}
+              </el-check-tag>
+            </div>
+          </div>
+          <div v-if="copilotMatchedTags.length === 0 && copilotNewTags.length === 0 && !copilotTagsLoading" class="text-xs text-gray-400">
+            暂无标签建议
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="copilot-foot">
+          <div class="copilot-foot-tip text-xs text-gray-400">
+            已选：标题 {{ copilotChosenTitle ? '✓' : '-' }} · 摘要 {{ copilotSummary ? '✓' : '-' }} · 标签 ({{ copilotSelectedTags.length }})
+          </div>
+          <div class="copilot-foot-actions">
+            <el-button @click="copilotVisible = false">取消</el-button>
+            <el-button
+              type="primary"
+              :disabled="copilotLoading || (!copilotChosenTitle && !copilotSummary && copilotSelectedTags.length === 0)"
+              @click="applyCopilotToForm"
+            >
+              一键应用到文章
+            </el-button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
+
     <!-- 底部固定操作栏：长文写到结尾无需滚回顶部即可发布 -->
     <div class="editor-footer">
       <span v-if="draftSavedAtText" class="draft-indicator">
@@ -706,6 +1095,16 @@
         草稿已保存 {{ draftSavedAtText }}
       </span>
       <span class="footer-spacer" />
+      <el-button
+        v-if="aiEnabled"
+        type="success"
+        plain
+        title="一键智能生成推荐标题、核心摘要与推荐标签"
+        @click="openPublishCopilot"
+      >
+        <el-icon class="mr-2px"><MagicStick /></el-icon>
+        AI 发文助手
+      </el-button>
       <el-button @click="router.go(-1)">取消</el-button>
       <el-button :loading="draftSaving" @click="handleSaveDraft">
         <el-icon class="mr-2px"><Document /></el-icon>
@@ -759,15 +1158,25 @@ import type { FormInstance, FormRules, UploadFile } from "element-plus";
 import { ElMessageBox } from "element-plus";
 import {
   Aim,
+  Check,
+  CircleCheck,
+  CollectionTag,
   Delete,
   Document,
   DocumentChecked,
+  DocumentCopy,
   Download,
   Link,
   MagicStick,
   Picture,
   Plus,
+  PriceTag,
+  Promotion,
+  Right,
+  Search,
+  Tickets,
   Upload,
+  View,
   ZoomIn
 } from "@element-plus/icons-vue";
 import {
@@ -788,6 +1197,8 @@ import {
   type AIStreamHandlers,
   type AITemplateItem
 } from "@/api/ai";
+import { computeDiff, type DiffChunk } from "@/utils/diff";
+import { parseProofreadOutput, type ProofreadItem } from "@/utils/proofread";
 import { getPost, getRandomCover, savePost, updatePost } from "@/api/post";
 import { useRouter, useRoute } from "vue-router";
 import { upload } from "@/api/common";
@@ -904,6 +1315,62 @@ const aiSelTo = ref(0);
 let aiAbort: (() => void) | null = null;
 let aiLastRequest: AIEditRequest | null = null;
 let aiStartedAt = 0;
+
+// 选区原始快照与差异对比视图
+const aiOriginalSelection = ref("");
+const aiViewMode = ref<"diff" | "preview">("diff");
+const diffChunks = computed<DiffChunk[]>(() => {
+  if (!aiOriginalSelection.value) return [];
+  return computeDiff(aiOriginalSelection.value, aiResultText.value || "");
+});
+
+// 全文校对卡片状态
+const proofreadItems = ref<ProofreadItem[]>([]);
+const proofreadFilter = ref<"all" | "pending" | "applied">("all");
+const proofreadViewMode = ref<"cards" | "raw">("cards");
+
+const filteredProofreadItems = computed(() => {
+  if (proofreadFilter.value === "pending") {
+    return proofreadItems.value.filter(i => i.status === "pending");
+  }
+  if (proofreadFilter.value === "applied") {
+    return proofreadItems.value.filter(i => i.status === "applied");
+  }
+  return proofreadItems.value;
+});
+
+const pendingProofreadCount = computed(
+  () => proofreadItems.value.filter(i => i.status === "pending").length
+);
+const appliedProofreadCount = computed(
+  () => proofreadItems.value.filter(i => i.status === "applied").length
+);
+
+// 选区自定义指令（Ask AI）
+const aiCustomPrompt = ref("");
+const aiQuickPromptTags = [
+  "转为表格",
+  "提炼核心要点",
+  "更口语化",
+  "更严谨专业",
+  "翻译为英文"
+];
+
+// AI 发文助手状态
+const copilotVisible = ref(false);
+const copilotLoading = ref(false);
+const copilotTitleLoading = ref(false);
+const copilotSummaryLoading = ref(false);
+const copilotTagsLoading = ref(false);
+const copilotTitleCandidates = ref<string[]>([]);
+const copilotChosenTitle = ref("");
+const copilotSummary = ref("");
+const copilotMatchedTags = ref<string[]>([]);
+const copilotNewTags = ref<string[]>([]);
+const copilotSelectedTags = ref<string[]>([]);
+let copilotAbortTitle: (() => void) | null = null;
+let copilotAbortSummary: (() => void) | null = null;
+let copilotAbortTags: (() => void) | null = null;
 
 // 抽屉元信息：耗时与 token（done 事件带出，此前被丢弃）
 const aiMeta = ref<{ elapsed: string; tokens: number } | null>(null);
@@ -1051,6 +1518,9 @@ const aiTagCandidates = ref<string[]>([]);
 // 组件卸载时中止进行中的生成
 onBeforeUnmount(() => {
   aiAbort?.();
+  copilotAbortTitle?.();
+  copilotAbortSummary?.();
+  copilotAbortTags?.();
   if (inlineTimer) {
     clearTimeout(inlineTimer);
     inlineTimer = null;
@@ -1122,6 +1592,8 @@ function runPolish(mode: "polish" | "expand" | "shorten" | "translate") {
   }
   aiSelFrom.value = sel.from;
   aiSelTo.value = sel.to;
+  aiOriginalSelection.value = sel.text;
+  aiViewMode.value = "diff";
   const labelMap: Record<string, string> = {
     polish: "AI 润色",
     expand: "AI 扩写",
@@ -1146,6 +1618,43 @@ function runPolish(mode: "polish" | "expand" | "shorten" | "translate") {
     labelMap[mode] || "AI 润色",
     "replace-selection"
   );
+}
+
+// 选区自定义指令（Ask AI）执行
+function runCustomSelectionPrompt() {
+  const prompt = aiCustomPrompt.value.trim();
+  if (!prompt) return;
+  if (aiQuotaExhausted.value) {
+    message("今日 AI 调用配额已用完", { type: "warning" });
+    return;
+  }
+  const sel = captureSelection();
+  if (!sel || !sel.text.trim()) {
+    message("请先选中要处理的正文内容", { type: "info" });
+    return;
+  }
+  aiMenuVisible.value = false;
+  aiSelFrom.value = sel.from;
+  aiSelTo.value = sel.to;
+  aiOriginalSelection.value = sel.text;
+  aiViewMode.value = "diff";
+  aiCustomPrompt.value = "";
+  startAI(
+    {
+      task: "refine",
+      previous: sel.text,
+      instruction: prompt,
+      title: ruleForm.value.title,
+      series: ruleForm.value.series
+    },
+    `AI：${prompt.length > 10 ? prompt.slice(0, 10) + "…" : prompt}`,
+    "replace-selection"
+  );
+}
+
+function applyQuickPrompt(tag: string) {
+  aiCustomPrompt.value = tag;
+  runCustomSelectionPrompt();
 }
 
 // 续写：光标处流式插入。上下文取光标前后窗口（后端有 Before 时不再整篇截尾），
@@ -1361,6 +1870,10 @@ function flushAIStream(final = false) {
   if (aiStickBottom && aiResultBodyRef.value) {
     aiResultBodyRef.value.scrollTop = aiResultBodyRef.value.scrollHeight;
   }
+  // 全文校对任务：同步解析结构化建议
+  if (aiLastRequest?.task === "proofread") {
+    syncProofreadItems();
+  }
   if (final && aiFlushTimer) {
     clearTimeout(aiFlushTimer);
     aiFlushTimer = null;
@@ -1480,17 +1993,164 @@ function aiNavHistory(dir: -1 | 1) {
   aiResultText.value = aiHistory.value[next];
 }
 
-// 全文校对：问题清单走抽屉展示（无写回，仅复制）
+// 全文校对：解析结构化卡片，支持一键定位与采纳
 function runProofread() {
   if (!ruleForm.value.postContent.trim()) {
     message("请先填写正文内容", { type: "info" });
     return;
   }
+  proofreadItems.value = [];
+  proofreadFilter.value = "all";
+  proofreadViewMode.value = "cards";
   startAI(
     { task: "proofread", digest: ruleForm.value.postContent },
     "AI 全文校对",
     "none"
   );
+}
+
+function syncProofreadItems() {
+  const parsed = parseProofreadOutput(aiResultBuf);
+  const statusMap = new Map<string, ProofreadItem["status"]>();
+  proofreadItems.value.forEach(item => {
+    statusMap.set(`${item.original}::${item.suggestion}`, item.status);
+  });
+  proofreadItems.value = parsed.map(item => {
+    const key = `${item.original}::${item.suggestion}`;
+    if (statusMap.has(key)) {
+      item.status = statusMap.get(key)!;
+    }
+    return item;
+  });
+}
+
+function getProofreadTagType(
+  type: string
+): "primary" | "danger" | "warning" | "info" | "success" {
+  if (type.includes("错")) return "danger";
+  if (type.includes("标点")) return "info";
+  if (type.includes("语病")) return "warning";
+  if (type.includes("格式")) return "primary";
+  return "success";
+}
+
+function locateProofreadItem(item: ProofreadItem) {
+  const view = editorRef.value?.getEditorView?.();
+  if (!view) return;
+  const docText = view.state.doc.toString();
+  const index = docText.indexOf(item.original);
+  if (index === -1) {
+    message(`在正文中未找到「${item.original}」，可能已被修改或删除`, {
+      type: "warning"
+    });
+    item.status = "not_found";
+    return;
+  }
+  const from = index;
+  const to = index + item.original.length;
+  view.dispatch({
+    selection: { anchor: from, head: to },
+    scrollIntoView: true
+  });
+  const lineNo = docText.slice(0, from).split("\n").length;
+  message(`已在正文第 ${lineNo} 行定位并选中`, { type: "info" });
+}
+
+function applyProofreadItem(item: ProofreadItem) {
+  const view = editorRef.value?.getEditorView?.();
+  if (!view) return;
+  const docText = view.state.doc.toString();
+  const index = docText.indexOf(item.original);
+  if (index === -1) {
+    message(`在正文中未找到「${item.original}」，无法采纳`, {
+      type: "warning"
+    });
+    item.status = "not_found";
+    return;
+  }
+  const from = index;
+  const to = index + item.original.length;
+  view.dispatch({
+    changes: { from, to, insert: item.suggestion },
+    selection: { anchor: from + item.suggestion.length },
+    scrollIntoView: true
+  });
+  ruleForm.value.postContent = view.state.doc.toString();
+  item.status = "applied";
+  message(`已采纳修改：「${item.original}」→「${item.suggestion}」`, {
+    type: "success"
+  });
+}
+
+function ignoreProofreadItem(item: ProofreadItem) {
+  item.status = "ignored";
+}
+
+function applyAllProofreadItems() {
+  const view = editorRef.value?.getEditorView?.();
+  if (!view) return;
+  const pending = proofreadItems.value.filter(i => i.status === "pending");
+  if (pending.length === 0) return;
+
+  const docText = view.state.doc.toString();
+  const replacements: {
+    item: ProofreadItem;
+    from: number;
+    to: number;
+    insert: string;
+  }[] = [];
+
+  for (const item of pending) {
+    const idx = docText.indexOf(item.original);
+    if (idx !== -1) {
+      replacements.push({
+        item,
+        from: idx,
+        to: idx + item.original.length,
+        insert: item.suggestion
+      });
+    } else {
+      item.status = "not_found";
+    }
+  }
+
+  if (replacements.length === 0) {
+    message("未在正文中匹配到待修改内容", { type: "warning" });
+    return;
+  }
+
+  // 按起始位置倒序排列，保证区间替换不引起前方位置漂移
+  replacements.sort((a, b) => b.from - a.from);
+
+  // 丢弃重叠冲突项
+  const safeReplacements: typeof replacements = [];
+  let lastFrom = Infinity;
+  for (const rep of replacements) {
+    if (rep.to <= lastFrom) {
+      safeReplacements.push(rep);
+      lastFrom = rep.from;
+    }
+  }
+
+  const changes = safeReplacements.map(r => ({
+    from: r.from,
+    to: r.to,
+    insert: r.insert
+  }));
+
+  view.dispatch({
+    changes,
+    scrollIntoView: true
+  });
+
+  ruleForm.value.postContent = view.state.doc.toString();
+  safeReplacements.forEach(r => {
+    r.item.status = "applied";
+  });
+
+  message(`已一键采纳 ${safeReplacements.length} 处校对建议`, {
+    type: "success"
+  });
 }
 
 function applyAIResult() {
@@ -1503,6 +2163,22 @@ function applyAIResult() {
   });
   aiDrawerVisible.value = false;
   message("已写回正文", { type: "success" });
+}
+
+// 在选区后插入生成内容（保留原选区作为参考）
+function insertBelowAIResult() {
+  if (!aiResultText.value) return;
+  const view = editorRef.value?.getEditorView?.();
+  if (!view) return;
+  const insertPos = Math.max(aiSelFrom.value, aiSelTo.value);
+  const chunk = `\n\n${aiResultText.value}\n`;
+  view.dispatch({
+    changes: { from: insertPos, to: insertPos, insert: chunk },
+    selection: { anchor: insertPos + chunk.length },
+    scrollIntoView: true
+  });
+  aiDrawerVisible.value = false;
+  message("已在选区后插入内容", { type: "success" });
 }
 
 async function copyAIResult() {
@@ -1617,6 +2293,177 @@ function generateSummary() {
     }
   );
   aiAbort = abort;
+}
+
+// ---------- AI 发文助手 (Publish Copilot) ----------
+function openPublishCopilot() {
+  if (!ruleForm.value.postContent.trim()) {
+    message("请先填写正文内容，以便 AI 分析提炼", { type: "info" });
+    return;
+  }
+  if (aiQuotaExhausted.value) {
+    message("今日 AI 调用配额已用完", { type: "warning" });
+    return;
+  }
+  copilotVisible.value = true;
+  copilotChosenTitle.value = ruleForm.value.title || "";
+  copilotSummary.value = ruleForm.value.summary || "";
+  copilotSelectedTags.value = [...ruleForm.value.tags];
+  copilotMatchedTags.value = [];
+  copilotNewTags.value = [];
+  copilotTitleCandidates.value = [];
+
+  // 并发触发三大生成任务
+  copilotRegenTitle();
+  copilotRegenSummary();
+  copilotRegenTags();
+}
+
+function closeCopilot(done: () => void) {
+  copilotAbortTitle?.();
+  copilotAbortSummary?.();
+  copilotAbortTags?.();
+  copilotLoading.value = false;
+  done();
+}
+
+function copilotRegenTitle() {
+  copilotTitleLoading.value = true;
+  copilotTitleCandidates.value = [];
+  let acc = "";
+  copilotAbortTitle = aiStream(
+    { task: "title", digest: ruleForm.value.postContent },
+    {
+      onDelta: t => (acc += t),
+      onDone: () => {
+        copilotTitleLoading.value = false;
+        const candidates = acc
+          .split("\n")
+          .map(x => x.replace(/^[-*\d.、\s]+/, "").trim())
+          .filter(Boolean)
+          .slice(0, 4);
+        copilotTitleCandidates.value = candidates;
+        if (!copilotChosenTitle.value && candidates.length > 0) {
+          copilotChosenTitle.value = candidates[0];
+        }
+      },
+      onError: msg => {
+        copilotTitleLoading.value = false;
+        console.warn("AI 标题生成失败:", msg);
+      }
+    }
+  );
+}
+
+function copilotRegenSummary() {
+  copilotSummaryLoading.value = true;
+  let acc = "";
+  copilotAbortSummary = aiStream(
+    { task: "summary", digest: ruleForm.value.postContent },
+    {
+      onDelta: t => (acc += t),
+      onDone: () => {
+        copilotSummaryLoading.value = false;
+        if (acc.trim()) {
+          copilotSummary.value = acc.trim();
+        }
+      },
+      onError: msg => {
+        copilotSummaryLoading.value = false;
+        console.warn("AI 摘要生成失败:", msg);
+      }
+    }
+  );
+}
+
+function copilotRegenTags() {
+  copilotTagsLoading.value = true;
+  copilotMatchedTags.value = [];
+  copilotNewTags.value = [];
+  let acc = "";
+  copilotAbortTags = aiStream(
+    {
+      task: "tags",
+      digest: ruleForm.value.postContent,
+      title: copilotChosenTitle.value || ruleForm.value.title
+    },
+    {
+      onDelta: t => (acc += t),
+      onDone: () => {
+        copilotTagsLoading.value = false;
+        const recTags = acc
+          .split("\n")
+          .map(x => x.replace(/^[-*\d.、\s]+/, "").trim())
+          .filter(Boolean)
+          .slice(0, 8);
+
+        // 系统已有标签名列表
+        const systemTagNames: string[] = tags.value.map(
+          (t: any) => t.tagName || ""
+        );
+
+        const matched: string[] = [];
+        const newTags: string[] = [];
+
+        recTags.forEach(tag => {
+          // 不区分大小写匹配已有标签
+          const found = systemTagNames.find(
+            st => st.toLowerCase() === tag.toLowerCase()
+          );
+          if (found) {
+            if (!matched.includes(found)) matched.push(found);
+            // 命中已有标签，自动勾选
+            if (!copilotSelectedTags.value.includes(found)) {
+              copilotSelectedTags.value.push(found);
+            }
+          } else {
+            if (!newTags.includes(tag)) newTags.push(tag);
+          }
+        });
+
+        copilotMatchedTags.value = matched;
+        copilotNewTags.value = newTags;
+        refreshAIStatus();
+      },
+      onError: msg => {
+        copilotTagsLoading.value = false;
+        console.warn("AI 标签生成失败:", msg);
+      }
+    }
+  );
+}
+
+function toggleCopilotTag(t: string) {
+  const idx = copilotSelectedTags.value.indexOf(t);
+  if (idx > -1) {
+    copilotSelectedTags.value.splice(idx, 1);
+  } else {
+    copilotSelectedTags.value.push(t);
+  }
+}
+
+function applyCopilotToForm() {
+  let appliedCount = 0;
+  if (copilotChosenTitle.value && copilotChosenTitle.value !== ruleForm.value.title) {
+    ruleForm.value.title = copilotChosenTitle.value;
+    appliedCount++;
+  }
+  if (copilotSummary.value && copilotSummary.value !== ruleForm.value.summary) {
+    ruleForm.value.summary = copilotSummary.value;
+    appliedCount++;
+  }
+  if (copilotSelectedTags.value.length > 0) {
+    // 合并标签（保持去重）
+    const merged = Array.from(
+      new Set([...ruleForm.value.tags, ...copilotSelectedTags.value])
+    );
+    ruleForm.value.tags = merged;
+    appliedCount++;
+  }
+  copilotVisible.value = false;
+  message(`已将发文建议应用到文章（更新了 ${appliedCount} 项）`, {
+    type: "success"
+  });
 }
 
 // 选中文本后浮现的快速工具栏：加粗/斜体 + AI 菜单（索引 0 = defToolbars
@@ -1752,6 +2599,17 @@ const toggleFocusMode = () => {
 const exitFocusMode = () => {
   if (focusMode.value) focusMode.value = false;
 };
+
+// Esc 键统一调度：续写中优先停止续写，其次退出专注模式
+function handleEscKey() {
+  if (inlineStreaming.value) {
+    stopInline();
+    return;
+  }
+  if (focusMode.value) {
+    exitFocusMode();
+  }
+}
 
 // 监听表单变化自动存草稿（深度，防抖 2s）
 watch(
@@ -2754,19 +3612,23 @@ const handleExportMd = () => {
   color: var(--el-text-color-secondary, #909399);
 }
 
-/* 续写光标流式插入状态条 */
+/* 续写光标流式插入状态条优化：黏性吸顶保证长文滚动时不脱离视线 */
 .ai-inline-bar {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
   margin-bottom: 6px;
-  padding: 6px 12px;
+  padding: 8px 12px;
   border: 1px solid var(--el-color-primary-light-7, #d9ecff);
   border-radius: 6px;
   background: var(--el-color-primary-light-9, #ecf5ff);
   font-size: 13px;
   color: var(--el-text-color-regular, #606266);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.12);
 }
 
 .ai-inline-bar .ai-inline-dot {
@@ -2918,5 +3780,403 @@ const handleExportMd = () => {
   color: var(--el-text-color-secondary);
   font-size: 13px;
   padding: 4px 2px;
+}
+
+/* 差异对比视图 */
+.ai-view-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--el-fill-color-lighter, #fafafa);
+  border: 1px solid var(--el-border-color-lighter, #ebeef5);
+  border-radius: 6px;
+}
+
+.diff-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.legend-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.legend-del {
+  background: #ffeef0;
+  color: #cf222e;
+  border: 1px solid #ffd8d3;
+}
+
+.legend-ins {
+  background: #dafbe1;
+  color: #1a7f37;
+  border: 1px solid #aceebb;
+}
+
+.ai-diff-container {
+  padding: 12px;
+  background: var(--el-bg-color, #fff);
+  border: 1px solid var(--el-border-color-light, #e4e7ed);
+  border-radius: 6px;
+  min-height: 200px;
+  max-height: calc(100vh - 350px);
+  overflow-y: auto;
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+.ai-diff-placeholder {
+  color: var(--el-text-color-secondary, #909399);
+  text-align: center;
+  padding: 40px 0;
+  font-size: 13px;
+}
+
+.diff-chunk {
+  display: inline;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.diff-del {
+  background-color: #ffeef0;
+  color: #cf222e;
+  text-decoration: line-through;
+  padding: 1px 3px;
+  border-radius: 3px;
+  margin: 0 1px;
+}
+
+.diff-ins {
+  background-color: #dafbe1;
+  color: #1a7f37;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 1px 3px;
+  border-radius: 3px;
+  margin: 0 1px;
+}
+
+.diff-common {
+  color: var(--el-text-color-primary, #303133);
+}
+
+/* 选区自定义指令（Ask AI）菜单项 */
+.ai-menu-custom-box {
+  padding: 8px 10px !important;
+  cursor: default !important;
+  border-bottom: 1px solid var(--el-border-color-lighter, #ebeef5);
+  margin-bottom: 4px;
+}
+
+.ai-custom-prompt-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 240px;
+}
+
+.ai-send-icon {
+  cursor: pointer;
+  color: var(--el-text-color-placeholder, #a8abb2);
+  transition: color 0.2s;
+}
+
+.ai-send-icon.active {
+  color: var(--el-color-primary, #409eff);
+}
+
+.ai-send-icon:hover {
+  color: var(--el-color-primary, #409eff);
+}
+
+.ai-quick-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ai-quick-tag {
+  font-size: 11px;
+  padding: 1px 6px;
+  background: var(--el-fill-color-light, #f5f7fa);
+  color: var(--el-text-color-regular, #606266);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ai-quick-tag:hover {
+  background: var(--el-color-primary-light-9, #ecf5ff);
+  color: var(--el-color-primary, #409eff);
+}
+
+/* AI 发文助手弹窗样式 */
+:deep(.ai-copilot-dialog) {
+  .copilot-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .copilot-section {
+    border: 1px solid var(--el-border-color-light, #e4e7ed);
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: var(--el-bg-color, #fff);
+  }
+
+  .copilot-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .copilot-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--el-text-color-primary, #303133);
+    display: flex;
+    align-items: center;
+  }
+
+  .copilot-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .copilot-title-radio {
+    margin-right: 0;
+    height: auto;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--el-border-color-lighter, #ebeef5);
+    white-space: normal;
+    line-height: 1.4;
+    transition: all 0.2s;
+
+    &:hover {
+      border-color: var(--el-color-primary-light-5, #a0cfff);
+      background: var(--el-color-primary-light-9, #ecf5ff);
+    }
+
+    &.is-checked {
+      border-color: var(--el-color-primary, #409eff);
+      background: var(--el-color-primary-light-9, #ecf5ff);
+    }
+  }
+
+  .copilot-tag-subgroup {
+    margin-bottom: 8px;
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .subgroup-label {
+    font-size: 12px;
+    color: var(--el-text-color-secondary, #909399);
+    margin-bottom: 6px;
+  }
+
+  .copilot-tags-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .copilot-tag-item {
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s;
+
+    &.matched {
+      font-weight: 500;
+    }
+
+    &.new-tag {
+      border-style: dashed;
+    }
+  }
+
+  .copilot-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
+/* 全文校对交互卡片界面 */
+.proofread-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--el-fill-color-lighter, #fafafa);
+  border: 1px solid var(--el-border-color-lighter, #ebeef5);
+  border-radius: 6px;
+  gap: 8px;
+}
+
+.proofread-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--el-text-color-primary, #303133);
+}
+
+.proofread-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.proofread-filter-row {
+  margin-bottom: 10px;
+}
+
+.proofread-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 10px;
+  color: var(--el-text-color-secondary, #909399);
+  font-size: 13px;
+  text-align: center;
+}
+
+.proofread-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.proofread-card {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--el-border-color-light, #e4e7ed);
+  background: var(--el-bg-color, #fff);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: var(--el-color-primary-light-5, #a0cfff);
+    box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+  }
+
+  &.is-applied {
+    background: var(--el-fill-color-lighter, #fafafa);
+    border-color: var(--el-border-color-lighter, #ebeef5);
+    opacity: 0.8;
+  }
+
+  &.is-ignored {
+    opacity: 0.6;
+    background: var(--el-fill-color-lighter, #fafafa);
+  }
+
+  &.is-not-found {
+    border-color: var(--el-color-warning-light-5, #f8e3c5);
+  }
+}
+
+.proofread-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.proofread-reason {
+  color: var(--el-text-color-secondary, #909399);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.proofread-status-indicator {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.proofread-card-diff {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: var(--el-fill-color-light, #f5f7fa);
+  margin-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.diff-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.diff-tag {
+  flex: none;
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  line-height: 1.2;
+
+  &.del {
+    background: #ffeef0;
+    color: #cf222e;
+    border: 1px solid #ffd8d3;
+  }
+
+  &.ins {
+    background: #dafbe1;
+    color: #1a7f37;
+    border: 1px solid #aceebb;
+  }
+}
+
+.diff-text {
+  word-break: break-word;
+  white-space: pre-wrap;
+
+  &.del {
+    color: #cf222e;
+    text-decoration: line-through;
+  }
+
+  &.ins {
+    color: #1a7f37;
+    font-weight: 500;
+  }
+}
+
+.proofread-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 </style>
