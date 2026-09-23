@@ -55,6 +55,24 @@ artalk:
   server: "https://comment.example.com"
   site: "小助理"
 
+# 后台 AI 辅助写作（OpenAI 兼容 Chat Completions 协议）
+# baseURL 填服务根地址（客户端自动拼接 /chat/completions，勿带在末尾）：
+#   GLM:        https://open.bigmodel.cn/api/paas/v4
+#   GLM Coding: https://open.bigmodel.cn/api/coding/paas/v4
+#   DeepSeek:   https://api.deepseek.com
+#   本地 Ollama: http://127.0.0.1:11434/v1
+# apiKey 为空时功能整体关闭，前端隐藏入口。
+# maxTokens 单次生成上限；dailyQuota 每日调用配额（0=不限）；
+# styleHint 注入 system 的文风设定；timeout 单次请求超时秒数（流式建议 ≥120）。
+ai:
+  baseURL: ""
+  apiKey: ""
+  model: "glm-5.3"
+  maxTokens: 8192
+  dailyQuota: 200
+  styleHint: "技术博客，简洁准确，少废话"
+  timeout: 120
+
 # 文章发布通知（未配置则不启用）
 # webhook 为通用 JSON POST（企业微信/钉钉/飞书机器人转接均可）；
 # telegram 需 Bot Token 与 Chat ID（国内服务器可能无法直连，建议用 webhook）
