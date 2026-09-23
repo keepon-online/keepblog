@@ -601,6 +601,30 @@ func aiRouter(ctx *core.Context, group *gin.RouterGroup) {
 			Handler:    handler.Edit,
 			Middleware: nil, // 鉴权由 adminGroup 分组级统一生效
 		},
+		{
+			Method:     http.MethodGet,
+			Path:       "/templates",
+			Handler:    handler.Templates,
+			Middleware: nil,
+		},
+		{
+			Method:     http.MethodPut,
+			Path:       "/templates",
+			Handler:    handler.SaveTemplate,
+			Middleware: nil,
+		},
+		{
+			Method:     http.MethodGet,
+			Path:       "/config",
+			Handler:    handler.AIConfig,
+			Middleware: nil,
+		},
+		{
+			Method:     http.MethodPut,
+			Path:       "/config",
+			Handler:    handler.SaveAIConfig,
+			Middleware: nil,
+		},
 	}
 	RegisterRouter(group, routes)
 }

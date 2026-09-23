@@ -180,6 +180,34 @@
                         >
                           {{ m.label }}
                         </li>
+                        <li
+                          v-if="aiModelOptions.length > 1"
+                          class="ai-menu-models"
+                          @click.stop
+                        >
+                          <span class="ai-menu-quota">模型</span>
+                          <div class="ai-model-chips">
+                            <span
+                              v-for="mo in aiModelOptions"
+                              :key="mo.name"
+                              class="ai-model-chip"
+                              :class="{
+                                active:
+                                  (aiModelChoice || 'default') === mo.name
+                              }"
+                              :title="mo.model"
+                              @click="setAIModel(mo.name)"
+                            >
+                              {{ mo.name === "default" ? mo.model : mo.name }}
+                            </span>
+                          </div>
+                        </li>
+                        <li
+                          class="ai-menu-action"
+                          @click="openTplDialog"
+                        >
+                          自定义指令模板
+                        </li>
                         <li v-if="aiQuotaText" class="ai-menu-quota">
                           {{ aiQuotaText }}
                         </li>
@@ -621,6 +649,56 @@
       </template>
     </el-drawer>
 
+    <!-- AI 指令模板管理：覆盖任务内置指令，留空恢复默认 -->
+    <el-dialog
+      v-model="aiTplVisible"
+      title="AI 指令模板"
+      width="620px"
+      append-to-body
+    >
+      <el-alert
+        type="info"
+        :closable="false"
+        show-icon
+        title="自定义指令会替换该任务的内置提示词；文章内容等上下文仍由系统自动附加。留空保存即恢复默认。"
+        style="margin-bottom: 14px"
+      />
+      <el-select v-model="aiTplKey" style="width: 100%" @change="onTplKeyChange">
+        <el-option
+          v-for="t in aiTplItems"
+          :key="t.key"
+          :label="aiTplLabelMap[t.key] || t.key"
+          :value="t.key"
+        />
+      </el-select>
+      <div v-if="aiTplCurrent" class="ai-tpl-default">
+        <div class="ai-tpl-default-title">内置默认指令</div>
+        <div class="ai-tpl-default-text">{{ aiTplCurrent.defaultContent }}</div>
+      </div>
+      <el-input
+        v-model="aiTplContent"
+        type="textarea"
+        :rows="5"
+        maxlength="500"
+        show-word-limit
+        placeholder="输入自定义指令（留空使用默认）"
+        style="margin-top: 12px"
+      />
+      <template #footer>
+        <el-button :disabled="!aiTplContent" @click="saveTpl(true)">
+          恢复默认
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="aiTplSaving"
+          :disabled="!aiTplContent && !aiTplCurrent?.content"
+          @click="saveTpl(false)"
+        >
+          保存
+        </el-button>
+      </template>
+    </el-dialog>
+
     <!-- 底部固定操作栏：长文写到结尾无需滚回顶部即可发布 -->
     <div class="editor-footer">
       <span v-if="draftSavedAtText" class="draft-indicator">
@@ -703,8 +781,12 @@ import "md-editor-v3/lib/preview.css";
 import {
   getAIStatus,
   streamAIEdit,
+  getAITemplates,
+  saveAITemplate,
   type AIEditRequest,
-  type AIStatus
+  type AIStatus,
+  type AIStreamHandlers,
+  type AITemplateItem
 } from "@/api/ai";
 import { getPost, getRandomCover, savePost, updatePost } from "@/api/post";
 import { useRouter, useRoute } from "vue-router";
@@ -864,6 +946,85 @@ let inlineTimer: ReturnType<typeof setTimeout> | null = null;
 // 光标续写的上下文窗口（与后端 prompt.go 窗口对齐）
 const CURSOR_BEFORE_WINDOW = 12000;
 const CURSOR_AFTER_WINDOW = 800;
+
+// ===== 多模型切换：选择持久化，所有任务统一注入 =====
+const AI_MODEL_STORAGE = "keepblog-ai-model";
+const aiModelChoice = ref<string>("");
+try {
+  aiModelChoice.value = localStorage.getItem(AI_MODEL_STORAGE) || "";
+} catch {
+  /* 隐私模式等场景忽略 */
+}
+const aiModelOptions = computed(() => aiStatus.value?.models ?? []);
+function setAIModel(name: string) {
+  aiModelChoice.value = name;
+  try {
+    localStorage.setItem(AI_MODEL_STORAGE, name);
+  } catch {
+    /* 忽略 */
+  }
+}
+// 统一流式出口：所有任务注入当前选择的模型名
+function aiStream(req: AIEditRequest, handlers: AIStreamHandlers) {
+  return streamAIEdit(
+    { ...req, model: aiModelChoice.value || undefined },
+    handlers
+  );
+}
+
+// ===== 指令模板管理 =====
+const aiTplVisible = ref(false);
+const aiTplItems = ref<AITemplateItem[]>([]);
+const aiTplKey = ref("polish:polish");
+const aiTplContent = ref("");
+const aiTplSaving = ref(false);
+const aiTplLabelMap: Record<string, string> = {
+  "polish:polish": "润色",
+  "polish:expand": "扩写",
+  "polish:shorten": "精简",
+  "polish:translate": "翻译",
+  continue: "续写",
+  title: "标题生成",
+  summary: "摘要生成",
+  refine: "追加调整",
+  tags: "标签建议",
+  proofread: "全文校对"
+};
+const aiTplCurrent = computed(
+  () => aiTplItems.value.find(t => t.key === aiTplKey.value) ?? null
+);
+async function openTplDialog() {
+  aiMenuVisible.value = false;
+  aiTplVisible.value = true;
+  try {
+    const res = await getAITemplates();
+    if (res.code === 200) {
+      aiTplItems.value = res.payload ?? [];
+      const cur = aiTplItems.value.find(t => t.key === aiTplKey.value);
+      aiTplContent.value = cur?.content ?? "";
+    }
+  } catch {
+    /* 列表失败保持空 */
+  }
+}
+function onTplKeyChange() {
+  aiTplContent.value = aiTplCurrent.value?.content ?? "";
+}
+async function saveTpl(reset = false) {
+  aiTplSaving.value = true;
+  try {
+    const content = reset ? "" : aiTplContent.value;
+    const res = await saveAITemplate(aiTplKey.value, content);
+    if (res.code === 200) {
+      const cur = aiTplItems.value.find(t => t.key === aiTplKey.value);
+      if (cur) cur.content = reset ? "" : aiTplContent.value.trim();
+      if (reset) aiTplContent.value = "";
+      message(reset ? "已恢复默认指令" : "模板已保存", { type: "success" });
+    }
+  } finally {
+    aiTplSaving.value = false;
+  }
+}
 
 // 下拉菜单数据
 const aiMenuVisible = ref(false);
@@ -1027,7 +1188,7 @@ function runContinue() {
     title: ruleForm.value.title,
     series: ruleForm.value.series
   };
-  aiAbort = streamAIEdit(aiLastRequest, {
+  aiAbort = aiStream(aiLastRequest, {
     onDelta: text => {
       inlinePending += text;
       scheduleInlineFlush();
@@ -1147,7 +1308,7 @@ function retryInline() {
   inlineUndoable.value = false;
   inlineStreaming.value = true;
   aiStartedAt = Date.now();
-  aiAbort = streamAIEdit(aiLastRequest, {
+  aiAbort = aiStream(aiLastRequest, {
     onDelta: text => {
       inlinePending += text;
       scheduleInlineFlush();
@@ -1237,7 +1398,7 @@ function startAI(
   aiStreaming.value = true;
   aiDrawerVisible.value = true;
   aiStartedAt = Date.now();
-  aiAbort = streamAIEdit(req, {
+  aiAbort = aiStream(req, {
     onDelta: text => {
       aiResultBuf += text;
       scheduleAIFlush();
@@ -1362,7 +1523,7 @@ function generateTitle() {
   aiTitleLoading.value = true;
   aiTitleCandidates.value = [];
   let acc = "";
-  const abort = streamAIEdit(
+  const abort = aiStream(
     { task: "title", digest: ruleForm.value.postContent },
     {
       onDelta: t => (acc += t),
@@ -1401,7 +1562,7 @@ function generateTags() {
   aiTagsLoading.value = true;
   aiTagCandidates.value = [];
   let acc = "";
-  const abort = streamAIEdit(
+  const abort = aiStream(
     {
       task: "tags",
       digest: ruleForm.value.postContent,
@@ -1441,7 +1602,7 @@ function generateSummary() {
   }
   aiSummaryLoading.value = true;
   let acc = "";
-  const abort = streamAIEdit(
+  const abort = aiStream(
     { task: "summary", digest: ruleForm.value.postContent },
     {
       onDelta: t => (acc += t),
@@ -2504,6 +2665,64 @@ const handleExportMd = () => {
   cursor: pointer;
   white-space: nowrap;
   color: var(--el-text-color-primary, #303133);
+}
+
+.ai-menu-models {
+  display: block !important;
+  padding: 4px 12px !important;
+  cursor: default !important;
+}
+
+.ai-model-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.ai-model-chip {
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  border: 1px solid var(--el-border-color, #dcdfe6);
+  color: var(--el-text-color-regular, #606266);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s;
+}
+
+.ai-model-chip:hover {
+  border-color: var(--el-color-primary, #409eff);
+}
+
+.ai-model-chip.active {
+  background: var(--el-color-primary, #409eff);
+  border-color: var(--el-color-primary, #409eff);
+  color: #fff;
+}
+
+.ai-menu-action {
+  color: var(--el-color-primary, #409eff) !important;
+  font-size: 12px !important;
+}
+
+.ai-tpl-default {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--el-fill-color-light, #f5f7fa);
+}
+
+.ai-tpl-default-title {
+  font-size: 12px;
+  color: var(--el-text-color-secondary, #909399);
+  margin-bottom: 4px;
+}
+
+.ai-tpl-default-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--el-text-color-regular, #606266);
 }
 
 .ai-menu-overlay li:hover {

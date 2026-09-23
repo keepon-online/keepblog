@@ -13,7 +13,7 @@ func TestBuildMessages_Polish(t *testing.T) {
 	msgs, err := BuildMessages(EditRequest{
 		Task: TaskPolish, Mode: "expand",
 		Selection: "选中的段落", Before: "前文", After: "后文",
-	})
+	}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestBuildMessages_Polish(t *testing.T) {
 
 func TestBuildMessages_ContinueUsesTail(t *testing.T) {
 	long := strings.Repeat("前", digestLimit+500) + "结尾在这里"
-	msgs, err := BuildMessages(EditRequest{Task: TaskContinue, Digest: long, Title: "T", Series: "S"})
+	msgs, err := BuildMessages(EditRequest{Task: TaskContinue, Digest: long, Title: "T", Series: "S"}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestBuildMessages_ContinueUsesTail(t *testing.T) {
 func TestBuildMessages_ContinueAtCursor(t *testing.T) {
 	msgs, err := BuildMessages(EditRequest{
 		Task: TaskContinue, Before: "光标前的内容", After: "光标后的内容", Title: "T",
-	})
+	}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestBuildMessages_ContinueAtCursor(t *testing.T) {
 func TestBuildMessages_Refine(t *testing.T) {
 	msgs, err := BuildMessages(EditRequest{
 		Task: TaskRefine, Previous: "上一版结果", Instruction: "再精简一点",
-	})
+	}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,48 +76,48 @@ func TestBuildMessages_Refine(t *testing.T) {
 			t.Errorf("refine 缺少 %q: %s", need, body)
 		}
 	}
-	if _, err := BuildMessages(EditRequest{Task: TaskRefine, Previous: "x"}); err == nil {
+	if _, err := BuildMessages(EditRequest{Task: TaskRefine, Previous: "x"}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰"); err == nil {
 		t.Error("refine 缺追加要求应报错")
 	}
-	if _, err := BuildMessages(EditRequest{Task: TaskRefine, Instruction: "x"}); err == nil {
+	if _, err := BuildMessages(EditRequest{Task: TaskRefine, Instruction: "x"}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰"); err == nil {
 		t.Error("refine 缺上一版结果应报错")
 	}
 }
 
 func TestBuildMessages_TagsAndProofread(t *testing.T) {
-	msgs, err := BuildMessages(EditRequest{Task: TaskTags, Digest: "正文", Title: "T"})
+	msgs, err := BuildMessages(EditRequest{Task: TaskTags, Digest: "正文", Title: "T"}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰")
 	if err != nil || !strings.Contains(msgs[1].Content, "5~8 个标签") {
 		t.Errorf("tags 任务: %v", err)
 	}
-	msgs, err = BuildMessages(EditRequest{Task: TaskProofread, Digest: "正文"})
+	msgs, err = BuildMessages(EditRequest{Task: TaskProofread, Digest: "正文"}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰")
 	if err != nil || !strings.Contains(msgs[1].Content, "未发现问题") {
 		t.Errorf("proofread 任务: %v", err)
 	}
-	if _, err := BuildMessages(EditRequest{Task: TaskProofread}); err == nil {
+	if _, err := BuildMessages(EditRequest{Task: TaskProofread}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰"); err == nil {
 		t.Error("proofread 无正文应报错")
 	}
 }
 
 func TestBuildMessages_TitleAndSummary(t *testing.T) {
-	msgs, err := BuildMessages(EditRequest{Task: TaskTitle, Digest: "正文"})
+	msgs, err := BuildMessages(EditRequest{Task: TaskTitle, Digest: "正文"}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰")
 	if err != nil || !strings.Contains(msgs[1].Content, "3 个候选标题") {
 		t.Errorf("title 任务: %v", err)
 	}
-	msgs, err = BuildMessages(EditRequest{Task: TaskSummary, Digest: "正文"})
+	msgs, err = BuildMessages(EditRequest{Task: TaskSummary, Digest: "正文"}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰")
 	if err != nil || !strings.Contains(msgs[1].Content, "120 字以内") {
 		t.Errorf("summary 任务: %v", err)
 	}
 }
 
 func TestBuildMessages_InputGuard(t *testing.T) {
-	if _, err := BuildMessages(EditRequest{Task: TaskPolish}); err == nil {
+	if _, err := BuildMessages(EditRequest{Task: TaskPolish}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰"); err == nil {
 		t.Error("润色无选区应报错")
 	}
-	if _, err := BuildMessages(EditRequest{Task: "hack"}); err == nil {
+	if _, err := BuildMessages(EditRequest{Task: "hack"}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰"); err == nil {
 		t.Error("未知任务应报错")
 	}
 	// 截断不破坏中文（超过 digestLimit 才触发）
-	msgs, _ := BuildMessages(EditRequest{Task: TaskSummary, Digest: strings.Repeat("字", digestLimit+999)})
+	msgs, _ := BuildMessages(EditRequest{Task: TaskSummary, Digest: strings.Repeat("字", digestLimit+999)}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰")
 	if !strings.Contains(msgs[1].Content, "已截断") {
 		t.Error("超长正文应截断")
 	}

@@ -72,6 +72,13 @@ ai:
   dailyQuota: 200
   styleHint: "技术博客，简洁准确，少废话"
   timeout: 120
+  # 多模型切换（可选）：配置后 AI 菜单出现模型选择，请求按 name 路由；
+  # baseURL/apiKey/maxTokens 缺省继承上方顶层配置
+  #models:
+  #  - name: "DeepSeek"
+  #    model: deepseek-chat
+  #    baseURL: https://api.deepseek.com
+  #    apiKey: "your-ds-key"
 
 # 文章发布通知（未配置则不启用）
 # webhook 为通用 JSON POST（企业微信/钉钉/飞书机器人转接均可）；
@@ -81,3 +88,4 @@ notify:
   telegram:
     token: ""
     chatId: ""
+

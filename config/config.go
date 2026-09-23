@@ -104,6 +104,19 @@ type ai struct {
 	StyleHint string `yaml:"styleHint"`
 	// Timeout 单次请求超时（秒），流式生成需要比普通接口宽
 	Timeout int `yaml:"timeout"`
+	// Models 可选的多模型切换列表。name 为前端展示与请求引用名；
+	// baseURL/apiKey/maxTokens 缺省时继承 ai 段顶层配置。
+	// 请求（ai.edit 的 model 字段）按 name 匹配，未匹配返回错误。
+	Models []aiModel `yaml:"models"`
+}
+
+// aiModel 多模型条目
+type aiModel struct {
+	Name      string `yaml:"name"`
+	Model     string `yaml:"model"`
+	BaseURL   string `yaml:"baseURL"`
+	APIKey    string `yaml:"apiKey"`
+	MaxTokens int    `yaml:"maxTokens"`
 }
 
 // Notify 文章发布通知。Webhook 为通用 JSON POST（企业微信/钉钉/飞书转接均可），

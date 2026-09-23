@@ -7,14 +7,29 @@ type Result = {
   payload?: any;
 };
 
+export type AIModelOption = {
+  name: string;
+  model: string;
+};
+
 export type AIStatus = {
   enabled: boolean;
   model: string;
   todayUsed: number;
   dailyQuota: number;
+  defaultModel?: string;
+  models?: AIModelOption[];
+};
+
+export type AITemplateItem = {
+  key: string;
+  defaultContent: string;
+  content: string;
 };
 
 export type AIEditRequest = {
+  /** 多模型切换：ai.models 里的 name，空用默认 */
+  model?: string;
   task:
     | "polish"
     | "continue"
@@ -173,4 +188,59 @@ export const streamAIEdit = (
   })();
 
   return () => controller.abort();
+};
+
+/** 模板列表：内置默认 + 用户覆盖 */
+export const getAITemplates = () => {
+  return http.request<Result>("get", "/api/v1/ai/templates");
+};
+
+/** 保存模板覆盖（content 为空即恢复默认） */
+export const saveAITemplate = (key: string, content: string) => {
+  return http.request<Result>("put", "/api/v1/ai/templates", {
+    data: { key, content }
+  });
+};
+
+export type AIModelEntry = {
+  name: string;
+  model: string;
+  baseURL?: string;
+  apiKey?: string;
+  maxTokens?: number;
+};
+
+export type AIConfigInfo = {
+  baseURL: string;
+  apiKeySet: boolean;
+  apiKeyMasked: string;
+  model: string;
+  maxTokens: number;
+  dailyQuota: number;
+  styleHint: string;
+  timeout: number;
+  models: AIModelEntry[];
+  fromDB: Record<string, boolean>;
+};
+
+export type AISaveConfigRequest = {
+  baseURL?: string;
+  apiKey?: string;
+  clearApiKey?: boolean;
+  model?: string;
+  maxTokens?: number;
+  dailyQuota?: number;
+  styleHint?: string;
+  timeout?: number;
+  models?: AIModelEntry[];
+};
+
+/** 读当前生效 AI 配置（apiKey 仅掩码） */
+export const getAIConfig = () => {
+  return http.request<Result>("get", "/api/v1/ai/config");
+};
+
+/** 保存配置覆盖层：字段留空回落 config.yaml 基线 */
+export const updateAIConfig = (data: AISaveConfigRequest) => {
+  return http.request<Result>("put", "/api/v1/ai/config", { data });
 };

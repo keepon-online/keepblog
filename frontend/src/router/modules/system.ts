@@ -35,6 +35,15 @@ export default {
       }
     },
     {
+      path: "/system/ai",
+      name: "AI配置",
+      component: () => import("@/views/system/ai/index.vue"),
+      meta: {
+        title: "AI配置",
+        icon: "ant-design:robot-outlined"
+      }
+    },
+    {
       path: "/system/notice",
       name: "通知管理",
       component: () => import("@/views/system/notice/index.vue"),
