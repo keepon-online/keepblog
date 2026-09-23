@@ -15,7 +15,14 @@ export type AIStatus = {
 };
 
 export type AIEditRequest = {
-  task: "polish" | "continue" | "title" | "summary";
+  task:
+    | "polish"
+    | "continue"
+    | "title"
+    | "summary"
+    | "refine"
+    | "tags"
+    | "proofread";
   mode?: "polish" | "expand" | "shorten" | "translate";
   selection?: string;
   before?: string;
@@ -23,6 +30,10 @@ export type AIEditRequest = {
   title?: string;
   series?: string;
   digest?: string;
+  /** refine 任务：上一版结果 */
+  previous?: string;
+  /** refine 任务：追加修饰要求 */
+  instruction?: string;
 };
 
 export type AIStreamHandlers = {

@@ -15,24 +15,31 @@ import (
 
 // 支持的任务与润色模式。新增任务时同步 BuildMessages 与前端入口。
 const (
-	TaskPolish   = "polish"
-	TaskContinue = "continue"
-	TaskTitle    = "title"
-	TaskSummary  = "summary"
+	TaskPolish    = "polish"
+	TaskContinue  = "continue"
+	TaskTitle     = "title"
+	TaskSummary   = "summary"
+	TaskRefine    = "refine"    // 对上一版结果按追加指令再生成
+	TaskTags      = "tags"      // 全文标签建议
+	TaskProofread = "proofread" // 全文校对，输出问题清单
 )
 
 // EditRequest AI 编辑请求。上下文片段由前端采集：
-// Selection 为选中文本；Before/After 为选区前后文窗口（润色）；
-// Digest 为长文压缩摘要（续写/标题/摘要任务用全文时前端先行截断）。
+// Selection 为选中文本；Before/After 为选区前后文窗口（润色），
+// 续写任务里 Before/After 语义为光标前后窗口（有 Before 优先于 Digest 尾部截断）；
+// Digest 为长文压缩摘要（续写/标题/摘要/标签/校对任务用全文时前端先行截断）；
+// Refine 任务：Previous 为上一版结果，Instruction 为追加修饰要求。
 type EditRequest struct {
-	Task      string `json:"task" binding:"required"`
-	Mode      string `json:"mode"`
-	Selection string `json:"selection"`
-	Before    string `json:"before"`
-	After     string `json:"after"`
-	Title     string `json:"title"`
-	Series    string `json:"series"`
-	Digest    string `json:"digest"`
+	Task        string `json:"task" binding:"required"`
+	Mode        string `json:"mode"`
+	Selection   string `json:"selection"`
+	Before      string `json:"before"`
+	After       string `json:"after"`
+	Title       string `json:"title"`
+	Series      string `json:"series"`
+	Digest      string `json:"digest"`
+	Previous    string `json:"previous"`
+	Instruction string `json:"instruction"`
 }
 
 // UsageRow 用量审计表。按 ensure-column 同款思路：建表语句幂等，
