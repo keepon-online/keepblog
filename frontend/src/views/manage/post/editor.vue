@@ -902,7 +902,11 @@ const floatingAiSelection = ref("");
 
 // Slash 命令菜单 (/)
 const slashCommandVisible = ref(false);
-const slashCommandPos = ref({ top: 0, left: 0 });
+const slashCommandPos = ref<{
+  top: number;
+  left: number;
+  placement?: "top" | "bottom";
+}>({ top: 0, left: 0, placement: "bottom" });
 const slashFilterText = ref("");
 
 // Ghost 智能续写胶囊 (Tab)
@@ -956,6 +960,11 @@ config({
       },
       mouseover(event) {
         handleEditorMouseOver(event);
+      },
+      scroll(event, view) {
+        if (slashCommandVisible.value) {
+          checkSlashCommand();
+        }
       }
     });
 
@@ -988,10 +997,21 @@ const checkSlashCommand = () => {
 
   if (textBeforeCursor.startsWith("/") && textBeforeCursor.length <= 12) {
     const coords = view.coordsAtPos(pos);
-    if (coords) {
+    if (coords && coords.bottom >= 0 && coords.top <= window.innerHeight) {
+      const menuHeight = 320;
+      const menuWidth = 320;
+      const vh = window.innerHeight;
+      const vw = window.innerWidth;
+      const spaceBelow = vh - coords.bottom;
+      const spaceAbove = coords.top;
+
+      // 当底部可用空间不足预估高度(320px)且上方空间比下方更宽敞时，自动向上翻转弹出
+      const placeUp = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+
       slashCommandPos.value = {
-        top: coords.bottom + 6,
-        left: Math.max(10, coords.left - 10)
+        top: placeUp ? coords.top - 6 : coords.bottom + 6,
+        left: Math.min(Math.max(12, coords.left - 10), Math.max(12, vw - menuWidth - 20)),
+        placement: placeUp ? "top" : "bottom"
       };
       slashFilterText.value = textBeforeCursor.slice(1);
       slashCommandVisible.value = true;

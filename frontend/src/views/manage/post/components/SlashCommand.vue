@@ -1,8 +1,10 @@
 <template>
   <div
     v-if="visible"
+    ref="menuRef"
     class="slash-command-menu"
-    :style="{ top: `${position.top}px`, left: `${position.left}px` }"
+    :class="[`placement-${resolvedPlacement}`]"
+    :style="menuStyle"
     @click.stop
   >
     <div class="menu-header">
@@ -10,7 +12,11 @@
       <span class="menu-tip">↑↓ 切换 · 回车确认 · Esc 退出</span>
     </div>
 
-    <div class="menu-list">
+    <div
+      ref="menuListRef"
+      class="menu-list"
+      :style="{ maxHeight: maxListHeight }"
+    >
       <div
         v-for="(cmd, index) in filteredCommands"
         :key="cmd.id"
@@ -34,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
 
 export interface SlashCommandItem {
   id: string;
@@ -46,17 +52,30 @@ export interface SlashCommandItem {
   action?: string;
 }
 
-const props = defineProps<{
-  visible: boolean;
-  position: { top: number; left: number };
-  filterText?: string;
-}>();
+export interface SlashCommandPosition {
+  top: number;
+  left: number;
+  placement?: "top" | "bottom";
+}
+
+const props = withDefaults(
+  defineProps<{
+    visible: boolean;
+    position: SlashCommandPosition;
+    filterText?: string;
+  }>(),
+  {
+    filterText: ""
+  }
+);
 
 const emit = defineEmits<{
   (e: "select", cmd: SlashCommandItem): void;
   (e: "close"): void;
 }>();
 
+const menuRef = ref<HTMLElement | null>(null);
+const menuListRef = ref<HTMLElement | null>(null);
 const selectedIndex = ref(0);
 
 const COMMANDS: SlashCommandItem[] = [
@@ -145,6 +164,36 @@ const filteredCommands = computed(() => {
   );
 });
 
+const resolvedPlacement = computed(() => {
+  return props.position?.placement || "bottom";
+});
+
+const menuStyle = computed(() => {
+  const isTop = resolvedPlacement.value === "top";
+  return {
+    top: `${props.position.top}px`,
+    left: `${props.position.left}px`,
+    transform: isTop ? "translateY(-100%)" : "translateY(0)"
+  };
+});
+
+const maxListHeight = computed(() => {
+  if (typeof window === "undefined") return "280px";
+  const vh = window.innerHeight;
+  const isTop = resolvedPlacement.value === "top";
+  const topPos = props.position?.top ?? 300;
+
+  if (isTop) {
+    // 向上弹出时，可用高度是 topPos - 头部高度(约50px) - 视口安全边距(16px)
+    const available = topPos - 66;
+    return `${Math.max(120, Math.min(280, available))}px`;
+  } else {
+    // 向下弹出时，可用高度是 视口高度 - topPos - 头部高度(约50px) - 视口安全边距(16px)
+    const available = vh - topPos - 66;
+    return `${Math.max(120, Math.min(280, available))}px`;
+  }
+});
+
 watch(
   () => props.filterText,
   () => {
@@ -160,6 +209,15 @@ watch(
     }
   }
 );
+
+watch(selectedIndex, async () => {
+  await nextTick();
+  if (!menuListRef.value) return;
+  const activeEl = menuListRef.value.querySelector(".command-item.active") as HTMLElement;
+  if (activeEl) {
+    activeEl.scrollIntoView({ block: "nearest" });
+  }
+});
 
 const executeCommand = (cmd: SlashCommandItem) => {
   emit("select", cmd);
@@ -195,12 +253,21 @@ const handleKeyDown = (e: KeyboardEvent) => {
   }
 };
 
+const handlePointerDown = (e: PointerEvent) => {
+  if (!props.visible) return;
+  if (menuRef.value && !menuRef.value.contains(e.target as Node)) {
+    emit("close");
+  }
+};
+
 onMounted(() => {
   window.addEventListener("keydown", handleKeyDown, true);
+  window.addEventListener("pointerdown", handlePointerDown, true);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", handleKeyDown, true);
+  window.removeEventListener("pointerdown", handlePointerDown, true);
 });
 </script>
 
@@ -216,7 +283,14 @@ onBeforeUnmount(() => {
   padding: 8px;
   display: flex;
   flex-direction: column;
-  animation: slashFadeIn 0.15s ease-out;
+
+  &.placement-top {
+    animation: slashFadeInTop 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  &.placement-bottom {
+    animation: slashFadeInBottom 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
 
   .menu-header {
     display: flex;
@@ -241,6 +315,7 @@ onBeforeUnmount(() => {
     max-height: 280px;
     overflow-y: auto;
     padding: 4px 0;
+    overscroll-behavior: contain;
   }
 
   .command-item {
@@ -310,7 +385,7 @@ onBeforeUnmount(() => {
   }
 }
 
-@keyframes slashFadeIn {
+@keyframes slashFadeInBottom {
   from {
     opacity: 0;
     transform: translateY(6px);
@@ -318,6 +393,17 @@ onBeforeUnmount(() => {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes slashFadeInTop {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-100% - 6px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-100%);
   }
 }
 </style>
