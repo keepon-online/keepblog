@@ -109,6 +109,21 @@ func TestBuildMessages_TitleAndSummary(t *testing.T) {
 	}
 }
 
+func TestBuildMessages_OutlineAndCode(t *testing.T) {
+	msgs, err := BuildMessages(EditRequest{Task: TaskOutline, Title: "Go 并发控制", Instruction: "进阶实战"}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰")
+	if err != nil || !strings.Contains(msgs[1].Content, "Markdown 技术博文大纲") || !strings.Contains(msgs[1].Content, "Go 并发控制") {
+		t.Errorf("outline 任务: %v, %v", err, msgs)
+	}
+	if _, err := BuildMessages(EditRequest{Task: TaskOutline}, "", ""); err == nil {
+		t.Error("outline 缺少主题应报错")
+	}
+
+	msgs, err = BuildMessages(EditRequest{Task: TaskPolish, Mode: "code_comment", Selection: "func main() {}"}, "", "")
+	if err != nil || !strings.Contains(msgs[1].Content, "逐行或核心逻辑注释") {
+		t.Errorf("code_comment 模式: %v", err)
+	}
+}
+
 func TestBuildMessages_InputGuard(t *testing.T) {
 	if _, err := BuildMessages(EditRequest{Task: TaskPolish}, "", "技术博客写作助手，文风简洁准确，避免空洞修饰"); err == nil {
 		t.Error("润色无选区应报错")

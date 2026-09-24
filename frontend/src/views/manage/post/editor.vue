@@ -20,6 +20,16 @@
               AI 发文助手
             </el-button>
             <el-button
+              v-if="aiEnabled"
+              type="primary"
+              plain
+              title="根据主题与读者深度智能生成多级文章大纲与写作要点"
+              @click="openOutlineDialog"
+            >
+              <el-icon class="mr-2px"><DocumentCopy /></el-icon>
+              ✨ 生成大纲
+            </el-button>
+            <el-button
               :type="focusMode ? 'primary' : 'default'"
               :title="focusMode ? '退出专注模式 (Esc)' : '专注模式'"
               @click="toggleFocusMode"
@@ -111,6 +121,36 @@
             </el-form-item>
 
             <el-form-item label="文章正文" prop="postContent">
+              <!-- 空白页灵感启动台 -->
+              <div
+                v-if="aiEnabled && !ruleForm.postContent.trim() && showOutlineInspiration"
+                class="ai-outline-banner"
+              >
+                <div class="banner-left">
+                  <span class="banner-badge">✨ 灵感启动台</span>
+                  <span class="banner-text">
+                    文章正文尚为空白？输入一个主题，让 AI 协助梳理严谨的多级技术大纲与写作要点
+                  </span>
+                </div>
+                <div class="banner-right">
+                  <el-button
+                    size="small"
+                    type="primary"
+                    @click="openOutlineDialog"
+                  >
+                    生成文章大纲
+                  </el-button>
+                  <el-button
+                    size="small"
+                    text
+                    title="收起引导"
+                    @click="showOutlineInspiration = false"
+                  >
+                    <el-icon><Close /></el-icon>
+                  </el-button>
+                </div>
+              </div>
+
               <!-- 续写光标流式插入的状态条：生成中/完成提示 + 停止/撤销/重试 -->
               <div
                 v-if="aiEnabled && (inlineStreaming || inlineDoneTip)"
@@ -223,6 +263,19 @@
                         >
                           {{ m.label }}
                         </li>
+                        <li class="ai-menu-divider" />
+                        <li class="ai-menu-section-header">
+                          <span class="ai-section-title">💻 代码块助手</span>
+                        </li>
+                        <li
+                          v-for="c in aiCodeMenuData"
+                          :key="c.value"
+                          :class="{ disabled: aiQuotaExhausted }"
+                          @click="onAiCodeMenuClick(c)"
+                        >
+                          {{ c.label }}
+                        </li>
+                        <li class="ai-menu-divider" />
                         <li
                           v-if="aiModelOptions.length > 1"
                           class="ai-menu-models"
@@ -479,7 +532,19 @@
                     随机壁纸
                   </el-button>
 
-                  <!-- 方式4：设为无封面（星空流星模式） -->
+                  <!-- 方式4：AI 现代技术卡片封面生成 -->
+                  <el-button
+                    size="small"
+                    type="primary"
+                    plain
+                    title="依据文章标题与标签一键渲染极简技术卡片封面"
+                    @click="openTechCoverDialog"
+                  >
+                    <el-icon class="mr-2px"><PictureFilled /></el-icon>
+                    AI 技术封面
+                  </el-button>
+
+                  <!-- 方式5：设为无封面（星空流星模式） -->
                   <el-button
                     v-if="ruleForm.coverImage"
                     size="small"
@@ -1181,6 +1246,266 @@
       </template>
     </el-dialog>
 
+    <!-- AI 大纲生成器弹窗 -->
+    <el-dialog
+      v-model="outlineDialogVisible"
+      title="✨ AI 主题大纲生成器"
+      width="780px"
+      append-to-body
+      class="ai-outline-dialog"
+      :before-close="closeOutlineDialog"
+    >
+      <div class="outline-modal-body">
+        <el-alert
+          type="info"
+          :closable="false"
+          show-icon
+          title="输入文章构思或主题，选择目标受众深度与结构规模，AI 将流式构建严密的多级 Markdown 大纲与要点提示。"
+          style="margin-bottom: 16px"
+        />
+
+        <div class="outline-config-grid">
+          <div class="config-item topic-item">
+            <label class="config-label">文章主题 / 核心构思</label>
+            <el-input
+              v-model="outlineTopic"
+              placeholder="例如：Go 语言并发原语与微服务实战陷阱"
+              clearable
+              maxlength="150"
+              show-word-limit
+            />
+          </div>
+
+          <div class="config-row">
+            <div class="config-item">
+              <label class="config-label">读者定位与深度偏好</label>
+              <el-radio-group v-model="outlineDepth" size="default">
+                <el-radio-button label="beginner">🟢 入门教程</el-radio-button>
+                <el-radio-button label="advanced">🔵 进阶实战</el-radio-button>
+                <el-radio-button label="architecture">🟣 架构选型</el-radio-button>
+              </el-radio-group>
+            </div>
+
+            <div class="config-item">
+              <label class="config-label">篇幅规模</label>
+              <el-radio-group v-model="outlineScale" size="default">
+                <el-radio-button label="concise">⚡ 精简核心 (3~4章)</el-radio-button>
+                <el-radio-button label="detailed">📖 深入详尽 (5~7章)</el-radio-button>
+              </el-radio-group>
+            </div>
+          </div>
+        </div>
+
+        <div class="outline-action-bar">
+          <el-button
+            type="primary"
+            :loading="outlineLoading"
+            :disabled="!outlineTopic.trim() || aiQuotaExhausted"
+            @click="startOutlineGeneration"
+          >
+            <el-icon class="mr-4px"><Promotion /></el-icon>
+            {{ outlineResult ? "重新生成大纲" : "开始生成大纲" }}
+          </el-button>
+          <el-button
+            v-if="outlineLoading"
+            type="danger"
+            plain
+            size="small"
+            @click="stopOutlineGeneration"
+          >
+            停止生成
+          </el-button>
+        </div>
+
+        <!-- 大纲结果展示区（带 Markdown 预览） -->
+        <div v-if="outlineResult || outlineLoading" class="outline-preview-container">
+          <div class="preview-header">
+            <span class="preview-title">
+              大纲预览
+              <span v-if="outlineLoading" class="outline-streaming-tag">生成中…</span>
+            </span>
+            <el-button
+              v-if="outlineResult"
+              size="small"
+              text
+              @click="copyOutlineContent"
+            >
+              复制大纲
+            </el-button>
+          </div>
+          <div class="outline-preview-scroll">
+            <MdPreview
+              :model-value="outlineResult"
+              language="zh-CN"
+              code-theme="atom"
+            />
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="outline-foot">
+          <span class="outline-foot-tip text-xs text-gray-400">
+            {{ outlineResult ? `已生成约 ${outlineResult.length} 字符` : "配置后点击开始生成" }}
+          </span>
+          <div class="outline-foot-actions">
+            <el-button @click="closeOutlineDialog">关闭</el-button>
+            <el-dropdown
+              v-if="outlineResult && !outlineLoading"
+              trigger="click"
+              @command="handleApplyOutlineCommand"
+            >
+              <el-button type="primary">
+                应用到编辑器 <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="replace">
+                    覆盖当前正文
+                  </el-dropdown-item>
+                  <el-dropdown-item command="append">
+                    追加到正文末尾
+                  </el-dropdown-item>
+                  <el-dropdown-item command="sync-title" divided>
+                    同时提取并填充主标题与摘要
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- AI 技术博文卡片封面生成弹窗 -->
+    <el-dialog
+      v-model="techCoverDialogVisible"
+      title="🎨 AI 极客技术封面生成器"
+      width="820px"
+      append-to-body
+      class="ai-tech-cover-dialog"
+    >
+      <div class="tech-cover-body">
+        <el-alert
+          type="info"
+          :closable="false"
+          show-icon
+          title="纯前端 Canvas 渲染 16:9 高清极客卡片封面。自动提取文章标题、技术标签与作者，支持一键上传或保存至本地。"
+          style="margin-bottom: 14px"
+        />
+
+        <!-- 主题切换芯片 -->
+        <div class="theme-selector-wrap">
+          <span class="theme-label">视觉主题预设：</span>
+          <div class="theme-chips">
+            <div
+              v-for="t in TECH_COVER_THEMES"
+              :key="t.id"
+              class="theme-chip-card"
+              :class="{ active: techCoverThemeId === t.id }"
+              @click="switchTechCoverTheme(t.id)"
+            >
+              <div
+                class="chip-color-preview"
+                :style="{ background: `linear-gradient(135deg, ${t.bgStart}, ${t.accent})` }"
+              ></div>
+              <span class="chip-name">{{ t.name }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 实时 Canvas 预览区域 -->
+        <div class="cover-canvas-container">
+          <canvas
+            ref="techCoverCanvasRef"
+            class="tech-cover-canvas"
+          ></canvas>
+        </div>
+
+        <!-- 微调属性 -->
+        <div class="cover-customize-form">
+          <el-row :gutter="14">
+            <el-col :span="12">
+              <el-input
+                v-model="techCoverTitle"
+                placeholder="封面主标题"
+                size="small"
+                clearable
+                @input="refreshTechCoverCanvas"
+              >
+                <template #prepend>标题</template>
+              </el-input>
+            </el-col>
+            <el-col :span="6">
+              <el-input
+                v-model="techCoverAuthor"
+                placeholder="作者/站点"
+                size="small"
+                clearable
+                @input="refreshTechCoverCanvas"
+              >
+                <template #prepend>作者</template>
+              </el-input>
+            </el-col>
+            <el-col :span="6">
+              <el-input
+                v-model="techCoverTagStr"
+                placeholder="标签(逗号隔开)"
+                size="small"
+                clearable
+                @input="onTechCoverTagsInput"
+              >
+                <template #prepend>标签</template>
+              </el-input>
+            </el-col>
+          </el-row>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="tech-cover-foot">
+          <el-button @click="techCoverDialogVisible = false">取消</el-button>
+          <el-button @click="downloadTechCoverImage">
+            <el-icon class="mr-4px"><Download /></el-icon>
+            下载封面 PNG
+          </el-button>
+          <el-button
+            type="primary"
+            :loading="techCoverApplying"
+            @click="applyTechCoverToPost"
+          >
+            <el-icon class="mr-4px"><Check /></el-icon>
+            一键设为文章封面
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 语言转换目标选择弹窗 -->
+    <el-dialog
+      v-model="codeConvertVisible"
+      title="🔄 跨语言代码转换"
+      width="420px"
+      append-to-body
+    >
+      <div style="padding: 10px 0;">
+        <div style="margin-bottom: 8px; font-size: 13px; color: #606266;">
+          选择目标编程语言：
+        </div>
+        <el-radio-group v-model="targetConvertLang" style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <el-radio-button label="Go">Go</el-radio-button>
+          <el-radio-button label="TypeScript">TypeScript</el-radio-button>
+          <el-radio-button label="Python">Python</el-radio-button>
+          <el-radio-button label="Rust">Rust</el-radio-button>
+          <el-radio-button label="Java">Java</el-radio-button>
+        </el-radio-group>
+      </div>
+      <template #footer>
+        <el-button @click="codeConvertVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmCodeConvert">开始转换</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 底部固定操作栏：长文写到结尾无需滚回顶部即可发布 -->
     <div class="editor-footer">
       <span v-if="draftSavedAtText" class="draft-indicator">
@@ -1245,7 +1570,8 @@ import {
   reactive,
   ref,
   computed,
-  watch
+  watch,
+  nextTick
 } from "vue";
 import type { FormInstance, FormRules, UploadFile } from "element-plus";
 import { ElMessageBox } from "element-plus";
@@ -1254,7 +1580,9 @@ import {
   ArrowDown,
   Check,
   CircleCheck,
+  Close,
   CollectionTag,
+  Cpu,
   Delete,
   Document,
   DocumentChecked,
@@ -1264,6 +1592,7 @@ import {
   Link,
   MagicStick,
   Picture,
+  PictureFilled,
   Plus,
   PriceTag,
   Promotion,
@@ -1294,6 +1623,13 @@ import {
 } from "@/api/ai";
 import { computeDiff, type DiffChunk } from "@/utils/diff";
 import { parseProofreadOutput, type ProofreadItem } from "@/utils/proofread";
+import { detectCodeBlock, guessLanguage, wrapCodeFence } from "@/utils/codeBlock";
+import {
+  renderTechCover,
+  TECH_COVER_THEMES,
+  canvasToBlob,
+  downloadCanvas
+} from "@/utils/techCover";
 import { getPost, getRandomCover, savePost, updatePost } from "@/api/post";
 import { useRouter, useRoute } from "vue-router";
 import { upload } from "@/api/common";
@@ -1404,7 +1740,9 @@ let aiFlushTimer: ReturnType<typeof setTimeout> | null = null;
 let aiStickBottom = true;
 const aiTaskLabel = ref("AI 助手");
 // 本次结果的回写方式与选区快照（发起请求时记录，应用时使用）
-const aiApplyType = ref<"replace-selection" | "none">("none");
+const aiApplyType = ref<"replace-selection" | "insert-below" | "none">(
+  "none"
+);
 const aiSelFrom = ref(0);
 const aiSelTo = ref(0);
 let aiAbort: (() => void) | null = null;
@@ -1446,9 +1784,10 @@ const aiCustomPrompt = ref("");
 const aiQuickPromptTags = [
   "转为表格",
   "提炼核心要点",
-  "更口语化",
-  "更严谨专业",
-  "翻译为英文"
+  "生成 Mermaid 流程图",
+  "为代码添加注释",
+  "排查代码 Bug",
+  "更口语化"
 ];
 
 // AI 发文助手状态
@@ -1613,7 +1952,18 @@ const aiMenuData = [
   { label: "精简选中文本", value: "shorten" },
   { label: "翻译为英文", value: "translate" },
   { label: "续写正文（光标处）", value: "continue" },
-  { label: "全文校对", value: "proofread" }
+  { label: "全文校对", value: "proofread" },
+  { label: "✨ 生成文章大纲", value: "outline" },
+  { label: "📐 生成 Mermaid 流程图", value: "mermaid" }
+];
+
+const aiCodeMenuData = [
+  { label: "💡 代码智能逐行注释", value: "code_comment" },
+  { label: "🐞 排查 Bug 与安全陷阱", value: "code_bug" },
+  { label: "⚡ 性能优化与重构建议", value: "code_optimize" },
+  { label: "🧪 生成单元测试用例", value: "code_test" },
+  { label: "🔄 转换编程语言 (Go/TS/Py...)", value: "code_convert" },
+  { label: "📝 详细解析算法逻辑", value: "code_explain" }
 ];
 
 // 标题候选
@@ -1633,6 +1983,10 @@ onBeforeUnmount(() => {
   copilotAbortTitle?.();
   copilotAbortSummary?.();
   copilotAbortTags?.();
+  if (outlineAbort) {
+    outlineAbort();
+    outlineAbort = null;
+  }
   if (inlineTimer) {
     clearTimeout(inlineTimer);
     inlineTimer = null;
@@ -1687,6 +2041,14 @@ function onAiMenuClick(item: any) {
     runProofread();
     return;
   }
+  if (value === "outline") {
+    openOutlineDialog();
+    return;
+  }
+  if (value === "mermaid") {
+    runMermaidAction();
+    return;
+  }
   const modes = ["polish", "expand", "shorten", "translate"] as const;
   runPolish(
     (modes as readonly string[]).includes(value)
@@ -1730,6 +2092,395 @@ function runPolish(mode: "polish" | "expand" | "shorten" | "translate") {
     labelMap[mode] || "AI 润色",
     "replace-selection"
   );
+}
+
+// 代码块助手点击处理
+function onAiCodeMenuClick(item: { label: string; value: string }) {
+  aiMenuVisible.value = false;
+  if (aiQuotaExhausted.value) {
+    message("今日 AI 调用配额已用完，明天再来吧", { type: "warning" });
+    return;
+  }
+  if (item.value === "code_convert") {
+    openCodeConvertDialog();
+    return;
+  }
+  const modes = [
+    "code_comment",
+    "code_bug",
+    "code_optimize",
+    "code_test",
+    "code_explain"
+  ] as const;
+  if ((modes as readonly string[]).includes(item.value)) {
+    runCodeAction(item.value as (typeof modes)[number], item.label);
+  }
+}
+
+// 代码块专属操作执行（自动智能探测光标所在代码块）
+type AIPolishMode = NonNullable<AIEditRequest["mode"]>;
+
+function runCodeAction(mode: AIPolishMode, label: string, instruction = "") {
+  const sel = captureSelection();
+  const view = sel?.view ?? editorRef.value?.getEditorView?.();
+  if (!view) {
+    message("编辑器尚未就绪", { type: "warning" });
+    return;
+  }
+
+  const doc = view.state.doc.toString();
+  const from = sel ? sel.from : 0;
+  const to = sel ? sel.to : 0;
+
+  // 尝试自动识别光标所在代码块
+  const detected = detectCodeBlock(doc, from, to);
+  let targetCode = "";
+  let replaceFrom = from;
+  let replaceTo = to;
+
+  if (detected) {
+    targetCode = detected.fullBlock;
+    replaceFrom = detected.from;
+    replaceTo = detected.to;
+  } else if (sel && sel.text.trim()) {
+    targetCode = sel.text;
+    replaceFrom = sel.from;
+    replaceTo = sel.to;
+  } else {
+    message("请将光标置于代码块内或选中文本后再执行", { type: "info" });
+    return;
+  }
+
+  aiSelFrom.value = replaceFrom;
+  aiSelTo.value = replaceTo;
+  aiOriginalSelection.value = targetCode;
+  aiViewMode.value = "diff";
+
+  startAI(
+    {
+      task: "polish",
+      mode,
+      selection: targetCode,
+      instruction,
+      before: view.state.sliceDoc(Math.max(0, replaceFrom - 1500), replaceFrom),
+      after: view.state.sliceDoc(replaceTo, Math.min(doc.length, replaceTo + 800))
+    },
+    label,
+    "replace-selection"
+  );
+}
+
+// 跨语言转换弹窗
+const codeConvertVisible = ref(false);
+const targetConvertLang = ref("TypeScript");
+let codeConvertPendingTarget = "";
+let codeConvertFrom = 0;
+let codeConvertTo = 0;
+
+function openCodeConvertDialog() {
+  const sel = captureSelection();
+  const view = sel?.view ?? editorRef.value?.getEditorView?.();
+  if (!view) return;
+  const doc = view.state.doc.toString();
+  const detected = detectCodeBlock(doc, sel?.from ?? 0, sel?.to ?? 0);
+  if (detected) {
+    codeConvertPendingTarget = detected.fullBlock;
+    codeConvertFrom = detected.from;
+    codeConvertTo = detected.to;
+  } else if (sel && sel.text.trim()) {
+    codeConvertPendingTarget = sel.text;
+    codeConvertFrom = sel.from;
+    codeConvertTo = sel.to;
+  } else {
+    message("请先选中文档中的代码或将光标置于代码块内", { type: "info" });
+    return;
+  }
+  codeConvertVisible.value = true;
+}
+
+function confirmCodeConvert() {
+  codeConvertVisible.value = false;
+  aiSelFrom.value = codeConvertFrom;
+  aiSelTo.value = codeConvertTo;
+  aiOriginalSelection.value = codeConvertPendingTarget;
+  aiViewMode.value = "diff";
+  startAI(
+    {
+      task: "polish",
+      mode: "code_convert",
+      selection: codeConvertPendingTarget,
+      instruction: `目标编程语言：${targetConvertLang.value}`
+    },
+    `代码转 ${targetConvertLang.value}`,
+    "replace-selection"
+  );
+}
+
+// 生成 Mermaid 流程图
+function runMermaidAction() {
+  const sel = captureSelection();
+  const text = sel?.text.trim() || "";
+  const from = sel?.from ?? 0;
+  const to = sel?.to ?? 0;
+
+  if (!text) {
+    ElMessageBox.prompt(
+      "请输入要转换为流程图/架构图的业务逻辑或链路描述：",
+      "生成 Mermaid 流程图",
+      {
+        confirmButtonText: "开始生成",
+        cancelButtonText: "取消",
+        inputPlaceholder: "例如：客户端请求 -> API网关鉴权 -> Redis缓存检查 -> MySQL持久化 -> 发送MQ"
+      }
+    )
+      .then(({ value }) => {
+        if (value && value.trim()) {
+          executeMermaidGeneration(value.trim(), from, to, false);
+        }
+      })
+      .catch(() => {});
+    return;
+  }
+
+  executeMermaidGeneration(text, from, to, true);
+}
+
+function executeMermaidGeneration(
+  description: string,
+  from: number,
+  to: number,
+  isSelection: boolean
+) {
+  aiSelFrom.value = from;
+  aiSelTo.value = to;
+  aiOriginalSelection.value = isSelection ? description : "";
+  aiViewMode.value = "preview"; // 直接以最终预览模式展现 Mermaid 图表
+  startAI(
+    {
+      task: "polish",
+      mode: "mermaid",
+      selection: description
+    },
+    "Mermaid 流程图",
+    isSelection ? "replace-selection" : "insert-below"
+  );
+}
+
+// 空白页灵感大纲生成器
+const showOutlineInspiration = ref(true);
+const outlineDialogVisible = ref(false);
+const outlineLoading = ref(false);
+const outlineTopic = ref("");
+const outlineDepth = ref<"beginner" | "advanced" | "architecture">("advanced");
+const outlineScale = ref<"concise" | "detailed">("detailed");
+const outlineResult = ref("");
+let outlineAbort: (() => void) | null = null;
+
+function openOutlineDialog() {
+  if (ruleForm.value.title && !outlineTopic.value) {
+    outlineTopic.value = ruleForm.value.title;
+  }
+  outlineDialogVisible.value = true;
+}
+
+function closeOutlineDialog() {
+  stopOutlineGeneration();
+  outlineDialogVisible.value = false;
+}
+
+function stopOutlineGeneration() {
+  if (outlineAbort) {
+    outlineAbort();
+    outlineAbort = null;
+  }
+  outlineLoading.value = false;
+}
+
+function startOutlineGeneration() {
+  const topic = outlineTopic.value.trim();
+  if (!topic) {
+    message("请输入文章主题或核心构思", { type: "info" });
+    return;
+  }
+  stopOutlineGeneration();
+  outlineLoading.value = true;
+  outlineResult.value = "";
+
+  const depthMap = {
+    beginner: "读者定位：初学者/入门教程，循序渐进，概念详尽，铺垫基础知识与避坑提示",
+    advanced: "读者定位：中高级工程师/进阶实战，深入核心底层原理，聚焦生产踩坑、避坑指南与高并发性能调优",
+    architecture: "读者定位：架构师/技术选型，体系化方案对比、指标衡量、选型依据与演进规划"
+  };
+  const scaleMap = {
+    concise: "篇幅规格：精简核心，梳理 3~4 个核心骨干章节",
+    detailed: "篇幅规格：深入详尽，梳理 5~7 个逻辑递进的章节并带总结"
+  };
+
+  const instruction = `${depthMap[outlineDepth.value]}；${scaleMap[outlineScale.value]}`;
+
+  outlineAbort = streamAIEdit(
+    {
+      task: "outline",
+      title: topic,
+      instruction,
+      digest: ruleForm.value.postContent
+    },
+    {
+      onDelta(delta) {
+        outlineResult.value += delta;
+      },
+      onDone() {
+        outlineLoading.value = false;
+        outlineAbort = null;
+        refreshAIStatus();
+        message("大纲生成完成", { type: "success" });
+      },
+      onError(err) {
+        outlineLoading.value = false;
+        outlineAbort = null;
+        message(`大纲生成中断: ${err}`, { type: "warning" });
+      }
+    }
+  );
+}
+
+function copyOutlineContent() {
+  if (!outlineResult.value) return;
+  navigator.clipboard.writeText(outlineResult.value);
+  message("大纲内容已复制到剪贴板", { type: "success" });
+}
+
+function handleApplyOutlineCommand(cmd: string) {
+  if (!outlineResult.value) return;
+
+  if (cmd === "sync-title") {
+    const titleMatch = outlineResult.value.match(/^#\s+(.+)$/m);
+    if (titleMatch && titleMatch[1]) {
+      ruleForm.value.title = titleMatch[1].trim();
+    }
+    const summaryMatch = outlineResult.value.match(/> 💡 写作要点：\s*(.+)/);
+    if (summaryMatch && summaryMatch[1]) {
+      ruleForm.value.summary = summaryMatch[1].trim();
+    }
+    applyOutlineToContent("replace");
+    message("已提取标题与摘要，并应用大纲到正文", { type: "success" });
+    outlineDialogVisible.value = false;
+    return;
+  }
+
+  applyOutlineToContent(cmd as "replace" | "append");
+  outlineDialogVisible.value = false;
+}
+
+function applyOutlineToContent(mode: "replace" | "append") {
+  if (mode === "append" && ruleForm.value.postContent.trim()) {
+    ruleForm.value.postContent =
+      ruleForm.value.postContent.trimEnd() + "\n\n" + outlineResult.value;
+  } else {
+    ruleForm.value.postContent = outlineResult.value;
+  }
+  if (!ruleForm.value.title) {
+    const titleMatch = outlineResult.value.match(/^#\s+(.+)$/m);
+    if (titleMatch && titleMatch[1]) {
+      ruleForm.value.title = titleMatch[1].trim();
+    }
+  }
+  message("大纲已成功应用到编辑器", { type: "success" });
+}
+
+// 极客现代技术封面生成器
+const techCoverDialogVisible = ref(false);
+const techCoverThemeId = ref("galaxy");
+const techCoverTitle = ref("");
+const techCoverAuthor = ref("");
+const techCoverTagStr = ref("");
+const techCoverApplying = ref(false);
+const techCoverCanvasRef = ref<HTMLCanvasElement | null>(null);
+
+function openTechCoverDialog() {
+  techCoverTitle.value = ruleForm.value.title || "技术架构探索与实践";
+  techCoverAuthor.value = "KeepBlog Author";
+  techCoverTagStr.value =
+    (ruleForm.value.tags || []).join(", ") || "Engineering, Architecture";
+  techCoverThemeId.value = "galaxy";
+  techCoverDialogVisible.value = true;
+  nextTick(() => {
+    refreshTechCoverCanvas();
+  });
+}
+
+function switchTechCoverTheme(id: string) {
+  techCoverThemeId.value = id;
+  refreshTechCoverCanvas();
+}
+
+function refreshTechCoverCanvas() {
+  if (!techCoverCanvasRef.value) return;
+  const tags = techCoverTagStr.value
+    .split(/[,，]/)
+    .map(s => s.trim())
+    .filter(Boolean);
+  renderTechCover(techCoverCanvasRef.value, {
+    title: techCoverTitle.value,
+    themeId: techCoverThemeId.value,
+    tags,
+    author: techCoverAuthor.value,
+    siteName: "KEEPBLOG TECH"
+  });
+}
+
+function onTechCoverTagsInput() {
+  refreshTechCoverCanvas();
+}
+
+async function applyTechCoverToPost() {
+  if (!techCoverCanvasRef.value) return;
+  techCoverApplying.value = true;
+  try {
+    const blob = await canvasToBlob(techCoverCanvasRef.value);
+    const file = new File([blob], `tech_cover_${Date.now()}.png`, {
+      type: "image/png"
+    });
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await upload(formData);
+    if (res?.code === 200 && res.payload) {
+      ruleForm.value.coverImage = res.payload;
+      coverFileList.value = [
+        { name: "tech_cover.png", url: res.payload } as UploadFile
+      ];
+      message("极客技术封面已成功上传并设为文章封面！", { type: "success" });
+      techCoverDialogVisible.value = false;
+    } else {
+      const dataUrl = techCoverCanvasRef.value.toDataURL("image/png");
+      ruleForm.value.coverImage = dataUrl;
+      coverFileList.value = [
+        { name: "tech_cover.png", url: dataUrl } as UploadFile
+      ];
+      message("已使用本地数据设为文章封面", { type: "success" });
+      techCoverDialogVisible.value = false;
+    }
+  } catch {
+    const dataUrl = techCoverCanvasRef.value.toDataURL("image/png");
+    ruleForm.value.coverImage = dataUrl;
+    coverFileList.value = [
+      { name: "tech_cover.png", url: dataUrl } as UploadFile
+    ];
+    message("已设为文章封面", { type: "success" });
+    techCoverDialogVisible.value = false;
+  } finally {
+    techCoverApplying.value = false;
+  }
+}
+
+function downloadTechCoverImage() {
+  if (!techCoverCanvasRef.value) return;
+  downloadCanvas(
+    techCoverCanvasRef.value,
+    `${ruleForm.value.title || "tech_cover"}.png`
+  );
+  message("封面已开始下载", { type: "success" });
 }
 
 // 选区自定义指令（Ask AI）执行
@@ -2309,10 +3060,21 @@ function applyAIResult() {
   if (!aiResultText.value) return;
   const view = editorRef.value?.getEditorView?.();
   if (!view) return;
-  // 目前仅替换选区一种写回（续写已改为光标流式插入，不经过抽屉）
-  view.dispatch({
-    changes: { from: aiSelFrom.value, to: aiSelTo.value, insert: aiResultText.value }
-  });
+  // 替换选区为默认写回（续写已改为光标流式插入，不经过抽屉）；
+  // insert-below 用于无选区场景（如 Mermaid 生成），在锚点下方起新段插入
+  if (aiApplyType.value === "insert-below") {
+    view.dispatch({
+      changes: {
+        from: aiSelTo.value,
+        to: aiSelTo.value,
+        insert: "\n\n" + aiResultText.value
+      }
+    });
+  } else {
+    view.dispatch({
+      changes: { from: aiSelFrom.value, to: aiSelTo.value, insert: aiResultText.value }
+    });
+  }
   aiDrawerVisible.value = false;
   message("已写回正文", { type: "success" });
 }
@@ -4523,5 +5285,256 @@ const handleExportMd = () => {
   padding: 1px 4px;
   background: rgba(0, 0, 0, 0.1);
   border-radius: 3px;
+}
+
+/* AI 下拉菜单分段与代码专属标题 */
+.ai-menu-divider {
+  height: 1px;
+  background: var(--el-border-color-lighter, #ebeef5);
+  margin: 6px 0;
+  padding: 0 !important;
+}
+
+.ai-menu-section-header {
+  padding: 4px 12px 2px !important;
+  user-select: none;
+  cursor: default !important;
+
+  &:hover {
+    background: transparent !important;
+  }
+
+  .ai-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--el-color-primary, #409eff);
+    letter-spacing: 0.5px;
+  }
+}
+
+/* 空白页灵感启动台 */
+.ai-outline-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.08), rgba(103, 194, 58, 0.08));
+  border: 1px dashed var(--el-color-primary-light-5, #a0cfff);
+  animation: fadeIn 0.3s ease;
+
+  .banner-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .banner-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--el-color-primary, #409eff);
+    color: #fff;
+  }
+
+  .banner-text {
+    font-size: 13px;
+    color: var(--el-text-color-regular, #606266);
+  }
+
+  .banner-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+}
+
+/* AI 大纲生成器弹窗样式 */
+.ai-outline-dialog {
+  .outline-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .outline-config-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--el-fill-color-lighter, #fafafa);
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--el-border-color-lighter, #ebeef5);
+
+    .config-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--el-text-color-regular, #606266);
+      margin-bottom: 6px;
+    }
+
+    .config-row {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+  }
+
+  .outline-action-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .outline-preview-container {
+    border-radius: 8px;
+    border: 1px solid var(--el-border-color-lighter, #ebeef5);
+    background: var(--el-bg-color, #fff);
+    overflow: hidden;
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: var(--el-fill-color-light, #f5f7fa);
+      border-bottom: 1px solid var(--el-border-color-lighter, #ebeef5);
+
+      .preview-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--el-text-color-primary, #303133);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .outline-streaming-tag {
+        font-size: 11px;
+        color: var(--el-color-primary, #409eff);
+      }
+    }
+
+    .outline-preview-scroll {
+      max-height: 380px;
+      overflow-y: auto;
+      padding: 14px;
+    }
+  }
+
+  .outline-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
+/* AI 极客技术封面生成弹窗样式 */
+.ai-tech-cover-dialog {
+  .tech-cover-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .theme-selector-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+
+    .theme-label {
+      font-size: 13px;
+      color: var(--el-text-color-regular, #606266);
+      font-weight: 500;
+    }
+
+    .theme-chips {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .theme-chip-card {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--el-border-color-lighter, #ebeef5);
+      background: var(--el-bg-color, #fff);
+      cursor: pointer;
+      transition: all 0.2s;
+
+      .chip-color-preview {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+      }
+
+      .chip-name {
+        font-size: 12px;
+        color: var(--el-text-color-regular, #606266);
+      }
+
+      &:hover {
+        border-color: var(--el-color-primary-light-5, #a0cfff);
+        background: var(--el-color-primary-light-9, #ecf5ff);
+      }
+
+      &.active {
+        border-color: var(--el-color-primary, #409eff);
+        background: var(--el-color-primary-light-9, #ecf5ff);
+        font-weight: 600;
+
+        .chip-name {
+          color: var(--el-color-primary, #409eff);
+        }
+      }
+    }
+  }
+
+  .cover-canvas-container {
+    display: flex;
+    justify-content: center;
+    background: #000;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+
+    .tech-cover-canvas {
+      width: 100%;
+      max-width: 680px;
+      height: auto;
+      aspect-ratio: 16 / 9;
+      border-radius: 6px;
+      display: block;
+    }
+  }
+
+  .cover-customize-form {
+    background: var(--el-fill-color-lighter, #fafafa);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--el-border-color-lighter, #ebeef5);
+  }
+
+  .tech-cover-foot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    width: 100%;
+  }
 }
 </style>

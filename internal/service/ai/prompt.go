@@ -97,6 +97,21 @@ func BuildMessages(req EditRequest, override, styleHint string) ([]ai.Message, e
 			return nil, errors.New("校对任务需要正文内容")
 		}
 		user += "【文章正文（可能截断）】\n" + truncateRunes(req.Digest, digestLimit) + "\n"
+	case TaskOutline:
+		if strings.TrimSpace(req.Title) == "" && strings.TrimSpace(req.Digest) == "" && strings.TrimSpace(req.Selection) == "" {
+			return nil, errors.New("大纲任务需要指定文章主题或已有内容")
+		}
+		if req.Title != "" {
+			user += "【文章主题/拟定标题】" + req.Title + "\n"
+		}
+		if req.Instruction != "" {
+			user += "【读者定位与写作偏好】" + req.Instruction + "\n"
+		}
+		if req.Digest != "" {
+			user += "【已有正文或草稿参考】\n" + truncateRunes(req.Digest, digestLimit) + "\n"
+		} else if req.Selection != "" {
+			user += "【核心构思要点】\n" + truncateRunes(req.Selection, digestLimit) + "\n"
+		}
 	default:
 		return nil, errors.New("不支持的任务类型: " + req.Task)
 	}
@@ -132,7 +147,9 @@ func instructionFor(req EditRequest, override string) string {
 func builtinKeys() []string {
 	return []string{
 		"polish:polish", "polish:expand", "polish:shorten", "polish:translate",
+		"polish:code_comment", "polish:code_bug", "polish:code_optimize", "polish:code_test", "polish:code_convert", "polish:code_explain", "polish:mermaid",
 		TaskContinue, TaskTitle, TaskSummary, TaskRefine, TaskTags, TaskProofread,
+		TaskOutline,
 	}
 }
 
@@ -156,6 +173,20 @@ func builtinInstruction(key string) string {
 		return "精简下面的选中文本：保留核心信息与技术要点，删除冗余表述。只输出精简后的完整文本。"
 	case "polish:translate":
 		return "将下面的选中文本翻译为英文：技术术语保留原文，Markdown 结构保持不变。只输出译文。"
+	case "polish:code_comment":
+		return "为下面的代码添加规范、清晰、精准的逐行或核心逻辑注释，保持原语言语法与执行逻辑完全不变。直接输出带有注释的代码，使用对应语言的反引号代码块包裹。"
+	case "polish:code_bug":
+		return "深度审查下面的代码，排查潜在的 Bug、内存泄漏、并发竞态、死锁、空指针、边界条件漏洞或异常未捕获等隐患。若发现问题，先输出修复后的完整代码块，并在代码块后详细说明排查出的隐患原因及修复点；若未发现明显问题，简要说明代码的健壮性并给出防御性编程建议。"
+	case "polish:code_optimize":
+		return "重构与优化下面的代码，重点提升运行性能、减少内存分配、降低时间/空间复杂度或提升代码整洁度与可维护性。先输出优化后的完整代码块，并在代码块后简析关键优化点及性能预期提升。"
+	case "polish:code_test":
+		return "为下面的代码编写高质量、生产级单元测试用例，覆盖正常情况、边界条件与异常分支。只输出符合该语言规范的测试代码块，包含必要的 Mock 或断言。"
+	case "polish:code_convert":
+		return "将下面的代码转换为目标编程语言（见追加说明），保持原有业务逻辑、算法逻辑与错误处理机制，使用目标语言的标准库和地道语法惯用法（idiomatic code）。直接输出转换后的完整代码块。"
+	case "polish:code_explain":
+		return "详细解析下面的代码，用通俗易懂的语言阐述其设计思路、核心算法流程、关键状态变迁及输入输出边界。可使用分步小标题或列表，结构清晰。"
+	case "polish:mermaid":
+		return "根据下面提供的业务逻辑、调用链路或架构描述，生成对应的 Mermaid 格式图表（流程图 graph TD/LR 或时序图 sequenceDiagram）。确保语法合法，节点文案清晰。只输出以 ```mermaid 包裹的代码块，不要任何解释或前后缀。"
 	case TaskContinue:
 		return "顺着文章已有内容自然续写。只输出新续写的部分，不要重复已有内容。"
 	case TaskTitle:
@@ -168,6 +199,8 @@ func builtinInstruction(key string) string {
 		return "为下面的文章推荐 5~8 个标签：贴合文章主题与技术栈，中文优先、通用技术名词保留英文。每个标签单独一行，不带序号和引号，不要输出其他内容。"
 	case TaskProofread:
 		return "校对下面的文章全文，逐条列出问题，不要改写整篇文章。每条格式：原文「…」→ 建议「…」（问题类型），问题类型如错别字、标点、语病、格式。只列真实问题，不确定的不要列；代码块内容只检查明显的语法错误；没有问题时只输出「未发现问题」。"
+	case TaskOutline:
+		return "根据文章主题与偏好，生成一份结构严谨、逻辑递进的 Markdown 技术博文大纲。包含 1 级标题（文章标题）、2 级章节（## ）、3 级子节（### ），并在每个小节下方使用引用块 `> 💡 写作要点：` 简述本节应包含的技术原理、实战示例或注意事项。结构清晰，只输出大纲 Markdown，不要任何客套解释。"
 	default:
 		return ""
 	}

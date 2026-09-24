@@ -37,8 +37,20 @@ export type AIEditRequest = {
     | "summary"
     | "refine"
     | "tags"
-    | "proofread";
-  mode?: "polish" | "expand" | "shorten" | "translate";
+    | "proofread"
+    | "outline";
+  mode?:
+    | "polish"
+    | "expand"
+    | "shorten"
+    | "translate"
+    | "code_comment"
+    | "code_bug"
+    | "code_optimize"
+    | "code_test"
+    | "code_convert"
+    | "code_explain"
+    | "mermaid";
   selection?: string;
   before?: string;
   after?: string;

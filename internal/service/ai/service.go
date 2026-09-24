@@ -23,6 +23,7 @@ const (
 	TaskRefine    = "refine"    // 对上一版结果按追加指令再生成
 	TaskTags      = "tags"      // 全文标签建议
 	TaskProofread = "proofread" // 全文校对，输出问题清单
+	TaskOutline   = "outline"   // 文章多级大纲生成
 )
 
 // EditRequest AI 编辑请求。上下文片段由前端采集：
