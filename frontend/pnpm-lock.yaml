@@ -96,6 +96,12 @@ importers:
         specifier: ^1.1.2
         version: 1.1.2(vue@3.5.22(typescript@5.9.3))
     devDependencies:
+      '@codemirror/state':
+        specifier: 6.5.2
+        version: 6.5.2
+      '@codemirror/view':
+        specifier: 6.39.4
+        version: 6.39.4
       '@commitlint/cli':
         specifier: ^20.1.0
         version: 20.1.0(@types/node@20.19.23)(typescript@5.9.3)
@@ -2087,6 +2093,7 @@ packages:
   eslint@9.38.0:
     resolution: {integrity: sha512-t5aPOpmtJcZcz5UJyY2GbvpDlsK5E8JqRqoKtfiKE3cNh437KIqfJr3A3AKf5k64NPx6d0G3dno6XDY05PqPtw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'

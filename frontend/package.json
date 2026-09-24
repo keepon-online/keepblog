@@ -63,6 +63,8 @@
     "vue3-count-to": "^1.1.2"
   },
   "devDependencies": {
+    "@codemirror/state": "6.5.2",
+    "@codemirror/view": "6.39.4",
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.0.0",
     "@commitlint/types": "^20.0.0",
