@@ -858,6 +858,7 @@ const {
   aiTaskLabel,
   aiApplyType,
   aiOriginalSelection,
+  aiSelRange,
   aiLastRequest,
   aiHistory,
   aiHistoryIdx,
@@ -1183,11 +1184,12 @@ function retryInline() {
 // 应用抽屉结果回写选区
 function applyAIResult() {
   const view = editorRef.value?.getEditorView?.();
-  const sel = captureSelection();
   if (!view || !aiResultText.value) return;
 
-  const from = sel?.from ?? 0;
-  const to = sel?.to ?? 0;
+  const sel = captureSelection();
+  const targetRange = aiSelRange.value || (sel ? { from: sel.from, to: sel.to } : null);
+  const from = targetRange?.from ?? 0;
+  const to = targetRange?.to ?? 0;
 
   view.dispatch({
     changes: { from, to, insert: aiResultText.value },
@@ -1202,10 +1204,11 @@ function applyAIResult() {
 
 function insertBelowAIResult() {
   const view = editorRef.value?.getEditorView?.();
-  const sel = captureSelection();
   if (!view || !aiResultText.value) return;
 
-  const pos = sel?.to ?? view.state.doc.length;
+  const sel = captureSelection();
+  const targetRange = aiSelRange.value || (sel ? { from: sel.from, to: sel.to } : null);
+  const pos = targetRange?.to ?? view.state.doc.length;
   const insertText = "\n\n" + aiResultText.value;
 
   view.dispatch({
@@ -1466,19 +1469,26 @@ function onAiMenuClick(item: any) {
   );
 }
 
+let pendingCodeBlockInfo: ReturnType<typeof detectCodeBlock> = null;
+let pendingCodeSel: ReturnType<typeof captureSelection> = null;
+
 function onAiCodeMenuClick(item: any) {
   aiMenuVisible.value = false;
-  if (item.value === "code_convert") {
-    codeConvertVisible.value = true;
-    return;
-  }
-
   const sel = captureSelection();
   const view = editorRef.value?.getEditorView?.();
   const doc = view?.state?.doc?.toString() || ruleForm.value.postContent;
   const from = sel ? sel.from : 0;
   const to = sel ? sel.to : doc.length;
   const codeInfo = detectCodeBlock(doc, from, to);
+
+  if (item.value === "code_convert") {
+    pendingCodeBlockInfo = codeInfo;
+    pendingCodeSel = sel;
+    codeConvertVisible.value = true;
+    return;
+  }
+
+  const isBlock = !!codeInfo;
   const code = codeInfo?.code || sel?.text || ruleForm.value.postContent;
 
   startAiStream(
@@ -1491,20 +1501,28 @@ function onAiCodeMenuClick(item: any) {
     {
       label: item.label,
       applyType: "replace-selection",
-      selectionText: sel?.text,
-      selectionRange: sel ? { from: sel.from, to: sel.to } : undefined
+      selectionText: isBlock ? codeInfo.fullBlock : sel?.text,
+      selectionRange: isBlock
+        ? { from: codeInfo.from, to: codeInfo.to }
+        : sel
+        ? { from: sel.from, to: sel.to }
+        : undefined
     }
   );
 }
 
 function confirmCodeConvert() {
   codeConvertVisible.value = false;
-  const sel = captureSelection();
+  const sel = pendingCodeSel || captureSelection();
   const view = editorRef.value?.getEditorView?.();
   const doc = view?.state?.doc?.toString() || ruleForm.value.postContent;
   const from = sel ? sel.from : 0;
   const to = sel ? sel.to : doc.length;
-  const codeInfo = detectCodeBlock(doc, from, to);
+  const codeInfo = pendingCodeBlockInfo || detectCodeBlock(doc, from, to);
+  pendingCodeBlockInfo = null;
+  pendingCodeSel = null;
+
+  const isBlock = !!codeInfo;
   const code = codeInfo?.code || sel?.text || ruleForm.value.postContent;
 
   startAiStream(
@@ -1518,8 +1536,12 @@ function confirmCodeConvert() {
     {
       label: `转为 ${targetConvertLang.value}`,
       applyType: "replace-selection",
-      selectionText: sel?.text,
-      selectionRange: sel ? { from: sel.from, to: sel.to } : undefined
+      selectionText: isBlock ? codeInfo.fullBlock : sel?.text,
+      selectionRange: isBlock
+        ? { from: codeInfo.from, to: codeInfo.to }
+        : sel
+        ? { from: sel.from, to: sel.to }
+        : undefined
     }
   );
 }
