@@ -8,6 +8,11 @@
 > 2026-09 起发版 tag 改用语义化版本号（形如 `v2.1.2`）。此前递增数字 tag 的对应关系：
 > v6=2.0.0、v7=2.0.1、v8=2.0.2、v9=2.1.0、v10=2.1.1。
 
+## [3.1.3] - 2026-09-24
+
+### 修复
+- **post_slug 为空导致文章打不开与编辑报错（全链路）**：启动时 `BackfillPostSlug` 幂等补齐存量空 slug（前台 404/后台编辑报 `Missing required param "id"` 由此修复）；`UpdatePost` 对 post_slug/published/create_time/read_count/author 做零值保护，`Save` 不再以零值覆盖，旧 slug 亦空时按 PostId 重生成；详情/删除接口参数兼容 hashids 与数字 id，decode 失败不再越界 panic，详情读出空 slug 就地补齐回写；保存/更新接口返回 postId+postSlug，前端新建发布后"继续编辑"用返回标识跳转、列表行 slug 缺失回退 postId。
+
 ## [3.1.2] - 2026-09-24
 
 ### 修复
