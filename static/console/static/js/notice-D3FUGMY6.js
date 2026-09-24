@@ -1,1 +1,0 @@
-import{h as e}from"./index-CQb2KKfR.js";const a=()=>e.request("get","/api/v1/notice/list"),i=t=>e.request("put","/api/v1/notice/read-all",{data:{}}),o=t=>e.request("delete",`/api/v1/notice/delete/${t}`);export{o as d,a as g,i as m};

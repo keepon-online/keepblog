@@ -187,3 +187,17 @@
     background: rgb(199 201 203); /* 滑块hover颜色 */
   }
 }
+
+/* 修复 md-editor-v3 预览区域及全屏层级穿透遮挡 Element Plus 弹窗/遮罩的问题 */
+.md-editor-preview .md-editor-code .md-editor-code-head {
+  z-index: 2 !important;
+}
+
+.md-editor-catalog-fixed {
+  z-index: 10 !important;
+}
+
+.md-editor.md-editor-fullscreen {
+  z-index: 1500 !important;
+}
+

@@ -1944,6 +1944,24 @@ onMounted(() => {
   width: 100%;
 }
 
+.markdown-editor:not(.md-editor-fullscreen) {
+  isolation: isolate;
+  position: relative;
+  z-index: 1;
+}
+
+:deep(.md-editor-preview .md-editor-code .md-editor-code-head) {
+  z-index: 2 !important;
+}
+
+:deep(.md-editor-catalog-fixed) {
+  z-index: 10 !important;
+}
+
+:deep(.md-editor.md-editor-fullscreen) {
+  z-index: 1500 !important;
+}
+
 .ghost-tip-capsule {
   position: fixed;
   z-index: 2100;
