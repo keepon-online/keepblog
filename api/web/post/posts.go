@@ -3,6 +3,7 @@ package post
 import (
 	"net/http"
 	"regexp"
+	"strconv"
 
 	"gitee.com/jieepre/keepblog/config"
 	"gitee.com/jieepre/keepblog/internal/model"
@@ -30,12 +31,16 @@ func (h *Handler) renderNotFound(c *gin.Context) {
 
 func (h *Handler) Post(c *gin.Context) {
 	id := c.Param("hashids")
-	postIds, err := hash.New().HashidsDecode(id)
-	if err != nil || len(postIds) == 0 {
+	var targetPostId int
+	if postIds, err := hash.New().HashidsDecode(id); err == nil && len(postIds) > 0 {
+		targetPostId = postIds[0]
+	} else if n, err := strconv.Atoi(id); err == nil && n > 0 {
+		targetPostId = n
+	} else {
 		h.renderNotFound(c)
 		return
 	}
-	posts, _ := h.Service.PostService.GetPost(postIds[0])
+	posts, _ := h.Service.PostService.GetPost(targetPostId)
 	// GetPost 对不存在/草稿/未到点定时文章返回零值结构体而非 nil，
 	// 只判 nil 会把空白文章页以 200 渲染出去（软 404）。
 	if posts == nil || posts.PostId == 0 {

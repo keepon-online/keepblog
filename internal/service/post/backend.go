@@ -45,17 +45,44 @@ func (service Service) UpdatePostHashids(postSlug string, postId uint64) error {
 
 // UpdatePost 更新文章
 func (service Service) UpdatePost(obj model.Post) error {
-	// pub_time 显式管理：请求未指定时保留原发布时间，避免 Save 把发布时间
-	// 重置为编辑时刻（定时发布的未来时间也在此保护之下）。
-	if obj.PubTime == 0 {
-		var old model.Post
-		if err := service.db.Table(model.TPostsTable).
-			Select("pub_time").
-			Where("post_id", obj.PostId).
-			Take(&old).Error; err == nil {
+	var old model.Post
+	if err := service.db.Table(model.TPostsTable).
+		Where("post_id", obj.PostId).
+		Take(&old).Error; err == nil {
+		// 1. pub_time 显式管理：请求未指定时保留原发布时间，避免 Save 把发布时间
+		// 重置为编辑时刻（定时发布的未来时间也在此保护之下）。
+		if obj.PubTime == 0 {
 			obj.PubTime = old.PubTime
 		}
+		// 2. 保护 post_slug：若请求未传或为空，保留旧 slug；若旧 slug 亦为空，则基于 PostId 重新生成
+		if obj.PostSlug == "" {
+			if old.PostSlug != "" {
+				obj.PostSlug = old.PostSlug
+			} else {
+				hid, _ := hash.New().HashidsEncode([]int{int(obj.PostId)})
+				obj.PostSlug = hid
+			}
+		}
+		// 3. 保护发布状态：普通编辑请求通常不携带 published 变更，避免被结构体零值(0)误改回未发布状态
+		if obj.IsPublished == 0 && old.IsPublished != 0 {
+			obj.IsPublished = old.IsPublished
+		}
+		// 4. 保护创建时间与阅读量，避免被 0 覆盖
+		if obj.CreateTime == 0 {
+			obj.CreateTime = old.CreateTime
+		}
+		if obj.ReadCount == 0 {
+			obj.ReadCount = old.ReadCount
+		}
+		// 5. 若 Author 未传，保留旧 Author
+		if obj.Author == "" {
+			obj.Author = old.Author
+		}
+	} else if obj.PostSlug == "" && obj.PostId != 0 {
+		hid, _ := hash.New().HashidsEncode([]int{int(obj.PostId)})
+		obj.PostSlug = hid
 	}
+
 	obj.WordCount = uint32(md.CountWords([]byte(obj.PostContent)))
 	if err := service.db.Table(model.TPostsTable).Save(&obj).Error; err != nil {
 		slog.Errorf("更新文章失败: %s", err.Error())

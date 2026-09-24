@@ -34,6 +34,10 @@ type Post struct {
 	Tags         []string `json:"tags" gorm:"-"`
 }
 
+func (Post) TableName() string {
+	return TPostsTable
+}
+
 const TCategoryTable = "category"
 
 type Category struct {

@@ -124,11 +124,11 @@ const formattedCreateTime = computed(() => {
 });
 
 const handleEdit = () => {
-  // detail/:postId 接口对参数做 HashidsDecode，需要传 hashids 编码后的 postSlug，而非数字主键 postId
-  if (ruleForm.value.postSlug) {
+  const id = ruleForm.value.postSlug || (ruleForm.value as any).postId || route.params.id;
+  if (id) {
     router.push({
       name: "内容编辑",
-      params: { id: String(ruleForm.value.postSlug) }
+      params: { id: String(id) }
     });
   }
 };

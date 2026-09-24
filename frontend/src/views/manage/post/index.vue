@@ -174,7 +174,7 @@ const {
                         :icon="useRenderIcon(View)"
                         @click="
                           $router.push({
-                            params: { id: String(row.postSlug) },
+                            params: { id: String(row.postSlug || row.postId) },
                             name: '内容预览'
                           })
                         "

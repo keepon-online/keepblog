@@ -1,6 +1,8 @@
 package post
 
 import (
+	"errors"
+	"strconv"
 	"strings"
 
 	"gitee.com/jieepre/keepblog/global"
@@ -72,7 +74,11 @@ func (h *Handler) SavePost(c *gin.Context) {
 		h.notifyPublished(postObj)
 	}
 
-	result.Ok(c, nil)
+	hid, _ := hash.New().HashidsEncode([]int{int(id)})
+	result.Ok(c, gin.H{
+		"postId":   id,
+		"postSlug": hid,
+	})
 }
 
 func (h *Handler) UpdatePost(c *gin.Context) {
@@ -126,7 +132,10 @@ func (h *Handler) UpdatePost(c *gin.Context) {
 		_ = global.GORM.Table(model.TPostTagTable).Create(&postTag)
 	}
 
-	result.Ok(c, nil)
+	result.Ok(c, gin.H{
+		"postId":   postObj.PostId,
+		"postSlug": postObj.PostSlug,
+	})
 }
 func (h *Handler) PublishPost(c *gin.Context) {
 	var postObj model.Post
@@ -174,24 +183,45 @@ func (h *Handler) GetList(c *gin.Context) {
 	}
 	result.Ok(c, posts)
 }
+func parsePostID(param string) (int, error) {
+	if ids, err := hash.New().HashidsDecode(param); err == nil && len(ids) > 0 {
+		return ids[0], nil
+	}
+	if id, err := strconv.Atoi(param); err == nil && id > 0 {
+		return id, nil
+	}
+	return 0, errors.New("无效的文章参数")
+}
+
 func (h *Handler) DetailPost(c *gin.Context) {
 	param := c.Param("postId")
-	ids, _ := hash.New().HashidsDecode(param)
-	post, err := h.Service.PostService.GetPostDetail(ids[0])
+	postId, err := parsePostID(param)
+	if err != nil {
+		result.Error(c, "文章参数无效")
+		return
+	}
+	post, err := h.Service.PostService.GetPostDetail(postId)
 	if err != nil {
 		result.Error(c, err.Error())
 		return
 	}
+	// 兜底补齐：若库中 postSlug 为空，补齐并回写
+	if post != nil && post.PostSlug == "" && post.PostId != 0 {
+		hid, _ := hash.New().HashidsEncode([]int{int(post.PostId)})
+		post.PostSlug = hid
+		_ = h.Service.PostService.UpdatePostHashids(hid, post.PostId)
+	}
 	result.Ok(c, post)
 }
+
 func (h *Handler) DeletePost(c *gin.Context) {
 	param := c.Param("postId")
-	ids, err := hash.New().HashidsDecode(param)
+	postId, err := parsePostID(param)
 	if err != nil {
 		result.Error(c, "参数错误")
 		return
 	}
-	err = h.Service.PostService.DeletePost(ids[0])
+	err = h.Service.PostService.DeletePost(postId)
 	if err != nil {
 		result.Error(c, "删除失败")
 		return
@@ -201,12 +231,12 @@ func (h *Handler) DeletePost(c *gin.Context) {
 
 func (h *Handler) UpdatePostCoverImag(c *gin.Context) {
 	param := c.Param("postId")
-	ids, err := hash.New().HashidsDecode(param)
+	postId, err := parsePostID(param)
 	if err != nil {
 		result.Error(c, "参数错误")
 		return
 	}
-	err = h.Service.PostService.UpdatePostCoverImag(ids[0])
+	err = h.Service.PostService.UpdatePostCoverImag(postId)
 	if err != nil {
 		result.Error(c, "更新失败,请稍后重试")
 		return

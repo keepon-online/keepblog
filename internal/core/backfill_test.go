@@ -83,3 +83,28 @@ func TestBackfillPostWordCount_DoesNotTouchLastModifiedTime(t *testing.T) {
 		t.Errorf("回填不应改动 last_modified_time = %d, want 1700000000", got.LastModifiedTime)
 	}
 }
+
+func TestBackfillPostSlug(t *testing.T) {
+	db := newBackfillDB(t)
+	seed := []model.Post{
+		{PostId: 101, Title: "待补齐slug文章", PostSlug: ""},
+		{PostId: 102, Title: "已有slug文章", PostSlug: "customSlug123"},
+	}
+	for i := range seed {
+		if err := db.Create(&seed[i]).Error; err != nil {
+			t.Fatalf("构造种子文章 %d 报错: %v", seed[i].PostId, err)
+		}
+	}
+
+	BackfillPostSlug(db)
+
+	if got := fetchPost(t, db, 101); got.PostSlug == "" {
+		t.Errorf("文章 101 的 PostSlug 未被正确补齐")
+	}
+	if got := fetchPost(t, db, 102); got.PostSlug != "customSlug123" {
+		t.Errorf("已有 PostSlug 的文章被意外覆盖: %s, want customSlug123", got.PostSlug)
+	}
+
+	// 幂等：再次执行无异常
+	BackfillPostSlug(db)
+}

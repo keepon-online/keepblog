@@ -661,7 +661,7 @@
       :is-edit="isEdit"
       :post-id="publishedPostId"
       :post-title="publishedPostTitle"
-      @continue-edit="postPublishCelebrationVisible = false"
+      @continue-edit="handleContinueEdit"
       @write-another="handleWriteAnother"
       @back-to-list="router.push({ name: '内容管理' })"
     />
@@ -786,7 +786,8 @@ const tags = ref<any[]>([]);
 const categories = ref<any[]>([]);
 
 const ruleForm = ref({
-  postId: undefined,
+  postId: undefined as number | undefined,
+  postSlug: "",
   title: "",
   categoryId: undefined,
   tags: [] as string[],
@@ -1577,10 +1578,21 @@ function handleApplyPublishMeta(payload: {
   }
 }
 
+function handleContinueEdit() {
+  postPublishCelebrationVisible.value = false;
+  if (!isEdit.value && publishedPostId.value) {
+    router.replace({
+      name: "内容编辑",
+      params: { id: String(publishedPostId.value) }
+    });
+  }
+}
+
 function handleWriteAnother() {
   postPublishCelebrationVisible.value = false;
   ruleForm.value = {
     postId: undefined,
+    postSlug: "",
     title: "",
     categoryId: undefined,
     tags: [],
@@ -1593,7 +1605,7 @@ function handleWriteAnother() {
     series: ""
   };
   clearDecorations();
-  router.push({ name: "新增文章" });
+  router.push({ path: "/manage/editor" });
 }
 
 // 专注模式切换
@@ -1788,6 +1800,9 @@ const submitForm = async (formEl: FormInstance | undefined) => {
         if (scheduleEnabled.value && scheduleTime.value) {
           payload.pubTime = Number(scheduleTime.value);
           payload.published = 1;
+        } else if (!isEdit.value) {
+          // 新建文章：若状态为公开(1)，默认发布 published=1；若为草稿(0)，则 published=0
+          payload.published = ruleForm.value.status === 1 ? 1 : 0;
         }
 
         let res;
@@ -1802,14 +1817,18 @@ const submitForm = async (formEl: FormInstance | undefined) => {
           message(`${isEdit.value ? "更新" : "发布"}文章成功`, {
             type: "success"
           });
-          publishedPostId.value =
-            res.payload?.id ||
-            res.payload?.postId ||
-            res.payload ||
-            ruleForm.value.postId ||
+          const targetSlug =
+            res.payload?.postSlug ||
+            ruleForm.value.postSlug ||
             (route.params.id as string) ||
+            res.payload?.postId ||
+            res.payload?.id ||
+            ruleForm.value.postId ||
             "";
+          publishedPostId.value = targetSlug;
           publishedPostTitle.value = ruleForm.value.title;
+          if (res.payload?.postId) ruleForm.value.postId = res.payload.postId;
+          if (res.payload?.postSlug) ruleForm.value.postSlug = res.payload.postSlug;
           postPublishCelebrationVisible.value = true;
         } else {
           message(
@@ -1859,6 +1878,7 @@ const initData = async () => {
         const p = postRes.payload;
         ruleForm.value = {
           postId: p.postId,
+          postSlug: p.postSlug || (route.params.id as string) || "",
           title: p.title || "",
           categoryId: p.categoryId,
           tags: Array.isArray(p.tags) ? p.tags.map((t: any) => t.tagName || t) : [],

@@ -183,22 +183,31 @@ export function usePost() {
   }
 
   async function handleUpdate(row) {
+    const id = row.postSlug || row.postId;
+    if (!id) {
+      message("无法获取文章标识", { type: "warning" });
+      return;
+    }
     await router.push({
       name: "内容编辑",
-      params: { id: String(row.postSlug) }
+      params: { id: String(id) }
     });
   }
 
   async function handleUpdateCoverImage(row) {
-    await updateCover(row.postSlug);
+    const id = row.postSlug || row.postId;
+    if (id) await updateCover(String(id));
   }
   async function handleUpdateAllCoverImage() {
     await updateAllCover();
   }
 
   async function handleDelete(row) {
-    await deletePost(row.postSlug);
-    await onSearch();
+    const id = row.postSlug || row.postId;
+    if (id) {
+      await deletePost(String(id));
+      await onSearch();
+    }
   }
 
   async function handleCurrentChange(val) {
