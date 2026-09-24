@@ -219,7 +219,8 @@ const startOutlineGeneration = () => {
       task: "outline",
       title: topic,
       instruction,
-      model: props.aiModelChoice
+      // "default" 是前端"默认模型"选项的哨兵值，后端按空 name 走顶层默认
+      model: props.aiModelChoice === "default" ? undefined : props.aiModelChoice
     },
     {
       onDelta: delta => {

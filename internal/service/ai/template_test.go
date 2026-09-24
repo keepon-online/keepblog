@@ -134,6 +134,10 @@ func TestResolveModel(t *testing.T) {
 	if _, _, m, _, err := s.resolveModel("default-m"); err != nil || m != "default-m" {
 		t.Errorf("默认名直传: %v", err)
 	}
+	// "default" 是前端"默认模型"选项的哨兵值，视同空 name 走顶层默认
+	if _, _, m, _, err := s.resolveModel("default"); err != nil || m != "default-m" {
+		t.Errorf("哨兵值 default: %v %s", err, m)
+	}
 
 	// 清理测试注入
 	_ = config.StoreForTest(map[string]any{"ai.models": []map[string]any{}})

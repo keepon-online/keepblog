@@ -161,7 +161,9 @@ var ErrModelNotFound = errors.New("未配置的模型名：")
 func (s *Service) resolveModel(name string) (baseURL, apiKey, model string, maxTokens int, err error) {
 	eff := s.effCfg()
 	baseURL, apiKey, model, maxTokens = eff.BaseURL, eff.APIKey, eff.Model, eff.MaxTokens
-	if name == "" {
+	// "default" 是前端"默认模型"选项的哨兵值，与空 name 同义走顶层默认，
+	// 在此兜底防止个别调用点漏做前端转换
+	if name == "" || name == "default" {
 		return baseURL, apiKey, model, maxTokens, nil
 	}
 	if len(eff.Models) > 0 {
