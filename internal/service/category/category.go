@@ -61,11 +61,15 @@ func (service Service) GetCategory(categoryId uint32) (*model.Category, error) {
 	return &categoryInfo, nil
 }
 
-// GetCategoryList 获取所有分类列表（后台管理）
+// GetCategoryList 获取所有分类列表（后台管理，附带文章篇数统计）
 func (service Service) GetCategoryList() ([]model.Category, error) {
 	categories := make([]model.Category, 0)
 
-	err := NewQueryBuilder(service.db).Find(&categories)
+	err := service.db.Table(model.TCategoryTable+" as c").
+		Select("c.*, COUNT(p.post_id) as post_count").
+		Joins("LEFT JOIN post p ON c.category_id = p.category_id AND p.is_deleted = 0 AND p.is_published = 1").
+		Group("c.category_id").
+		Find(&categories).Error
 
 	if err != nil {
 		slog.Errorf("获取分类列表失败: %s", err.Error())

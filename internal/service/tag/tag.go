@@ -72,13 +72,16 @@ func (service Service) Delete(tagId uint32) error {
 	return nil
 }
 
-// GetTagList 获取全部标签列表（后台管理用，不过滤已发布）。
-// 与 GetTags（前台 tag cloud，带样式去重）不同，这里返回原始数据供后台 CRUD。
+// GetTagList 获取全部标签列表（后台管理用，附带文章篇数统计）。
 func (service Service) GetTagList() ([]model.Tag, error) {
 	tagList := make([]model.Tag, 0)
-	if err := service.db.Table(model.TTagTable).
-		Order("tag_id DESC").
-		Find(&tagList).Error; err != nil {
+	err := service.db.Table(model.TTagTable+" as t").
+		Select("t.*, COUNT(pt.post_id) as post_count").
+		Joins("LEFT JOIN post_tag pt ON t.tag_id = pt.tag_id").
+		Group("t.tag_id").
+		Order("t.tag_id DESC").
+		Find(&tagList).Error
+	if err != nil {
 		slog.Errorf("获取标签列表失败: %s", err.Error())
 		return nil, errors.New("获取标签列表失败")
 	}

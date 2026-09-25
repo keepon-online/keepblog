@@ -9,9 +9,11 @@ import {
   changeCategoryState
 } from "@/api/category";
 import { ElMessageBox, type FormInstance, type FormRules } from "element-plus";
-import { reactive, ref, onMounted } from "vue";
+import { reactive, ref, onMounted, h } from "vue";
+import { useRouter } from "vue-router";
 
 export function useCategory() {
+  const router = useRouter();
   const ruleFormRef = ref<FormInstance>();
   const form = ref({
     categoryId: undefined,
@@ -54,12 +56,40 @@ export function useCategory() {
     {
       label: "分类名称",
       prop: "categoryName",
-      minWidth: 120
+      minWidth: 140,
+      cellRenderer: ({ row }) => (
+        <span style="font-weight: 600; color: var(--el-text-color-primary);">
+          {row.categoryName}
+        </span>
+      )
+    },
+    {
+      label: "文章篇数",
+      prop: "postCount",
+      width: 120,
+      cellRenderer: ({ row }) => (
+        <el-tooltip content="点击筛选此分类下的所有文章" placement="top">
+          <el-button
+            link
+            type="primary"
+            onClick={() =>
+              router.push({
+                path: "/manage/post",
+                query: { categoryId: String(row.categoryId) }
+              })
+            }
+          >
+            <el-tag size="small" type="primary" effect="light" class="cursor-pointer">
+              {row.postCount ?? 0} 篇 &rarr;
+            </el-tag>
+          </el-button>
+        </el-tooltip>
+      )
     },
     {
       label: "分类描述",
       prop: "note",
-      minWidth: 100
+      minWidth: 160
     },
     {
       label: "状态",

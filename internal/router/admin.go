@@ -424,6 +424,12 @@ func linkBackendRouter(ctx *core.Context, group *gin.RouterGroup) {
 			Handler:    handler.GetLinkList,
 			Middleware: nil, // 鉴权由 adminGroup 分组级统一生效
 		},
+		{
+			Method:     http.MethodGet,
+			Path:       "/check",
+			Handler:    handler.CheckLink,
+			Middleware: nil, // 鉴权由 adminGroup 分组级统一生效
+		},
 	}
 	RegisterRouter(group, routes)
 }

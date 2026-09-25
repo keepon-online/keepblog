@@ -31,6 +31,15 @@ export function useTag() {
     form.value.tagId = undefined;
     form.value.tagName = "";
   };
+  const tagTypes = ["primary", "success", "warning", "danger", "info"] as const;
+  const getTagType = (name: string) => {
+    let hash = 0;
+    for (let i = 0; i < (name || "").length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return tagTypes[Math.abs(hash) % tagTypes.length];
+  };
+
   const columns: TableColumnList = [
     {
       type: "selection",
@@ -46,14 +55,29 @@ export function useTag() {
     {
       label: "标签名称",
       prop: "tagName",
-      minWidth: 120
+      minWidth: 140,
+      cellRenderer: ({ row }) => (
+        <el-tag size="default" effect="light" type={getTagType(row.tagName)}>
+          #{row.tagName}
+        </el-tag>
+      )
+    },
+    {
+      label: "关联文章数",
+      prop: "postCount",
+      width: 130,
+      cellRenderer: ({ row }) => (
+        <span style="font-weight: 600; color: var(--el-text-color-regular);">
+          {row.postCount ?? 0} 篇
+        </span>
+      )
     },
     {
       label: "创建时间",
       minWidth: 180,
       prop: "createTime",
       formatter: ({ createTime }) =>
-        dayjs.unix(createTime).format("YYYY-MM-DD HH:mm:ss")
+        createTime ? dayjs.unix(createTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     {
       label: "操作",

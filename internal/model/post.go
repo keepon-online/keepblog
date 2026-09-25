@@ -46,6 +46,7 @@ type Category struct {
 	CategoryName string `json:"categoryName" gorm:"default:''"`
 	Note         string `json:"note" gorm:"default:''"`
 	State        uint8  `json:"state" gorm:"default:1"`
+	PostCount    uint32 `json:"postCount" gorm:"->"`
 }
 
 type CategoryCount struct {
@@ -61,6 +62,7 @@ type Tag struct {
 	TagName      string `json:"tagName"`
 	TagStyle     string `json:"tagStyle" gorm:"->;-:migration"`
 	CardTagStyle string `json:"cardTagStyle" gorm:"->;-:migration"`
+	PostCount    uint32 `json:"postCount" gorm:"->"`
 }
 
 const TAboutTable = "about"

@@ -35,3 +35,12 @@ export const changeLinkState = (data?: object) => {
 export const getLink = (id?: number) => {
   return http.request<Result>("get", "/api/v1/site/link/detail/" + id);
 };
+
+export const checkLink = (url: string) => {
+  return http.request<{
+    code: number;
+    message: string;
+    payload: { status: number; msg: string };
+  }>("get", "/api/v1/site/link/check", { params: { url } });
+};
+

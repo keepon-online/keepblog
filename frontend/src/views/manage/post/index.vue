@@ -14,9 +14,10 @@ import {
   Edit,
   Search,
   Refresh,
-  Menu,
   Plus,
-  View
+  View,
+  Check,
+  Close
 } from "@element-plus/icons-vue";
 
 const formRef = ref();
@@ -28,6 +29,11 @@ const {
   pagination,
   buttonClass,
   categories,
+  selectedRows,
+  batchLoading,
+  handleSelectionChange,
+  handleBatchPublish,
+  handleBatchDelete,
   onSearch,
   resetForm,
   handleUpdate,
@@ -41,22 +47,22 @@ const {
 
 <template>
   <div class="post-container">
-    <el-card class="search-card">
+    <el-card shadow="never" class="search-card">
       <el-form ref="formRef" :inline="true" :model="form" class="search-form">
-        <el-form-item label="标题:" prop="title">
+        <el-form-item label="文章标题:" prop="title">
           <el-input
             v-model="form.title"
-            placeholder="请输入标题名称"
+            placeholder="支持关键词模糊匹配"
             clearable
             class="search-input"
           />
         </el-form-item>
-        <el-form-item label="分类：" prop="categoryId">
+        <el-form-item label="所属分类:" prop="categoryId">
           <el-select
             v-model="form.categoryId"
             clearable
             filterable
-            placeholder="请选择分类"
+            placeholder="全部分类"
             class="search-select"
           >
             <el-option
@@ -67,15 +73,15 @@ const {
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="状态：" prop="published">
+        <el-form-item label="发布状态:" prop="published">
           <el-select
             v-model="form.published"
-            placeholder="请选择状态"
+            placeholder="全部状态"
             clearable
             class="search-select"
           >
             <el-option label="已发布" :value="1" />
-            <el-option label="未发布" :value="0" />
+            <el-option label="未发布 (草稿)" :value="0" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -85,7 +91,7 @@ const {
             :loading="loading"
             @click="onSearch"
           >
-            搜索
+            筛选
           </el-button>
           <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
             重置
@@ -94,25 +100,27 @@ const {
       </el-form>
     </el-card>
 
-    <PureTableBar title="文章列表" :columns="columns" @refresh="onSearch">
+    <PureTableBar title="博文内容资产列表" :columns="columns" @refresh="onSearch">
       <template #buttons>
         <el-button
           type="primary"
           :icon="useRenderIcon(Plus)"
           @click="$router.push({ path: '/manage/editor' })"
         >
-          新增
+          撰写文章
         </el-button>
         <el-button
           type="primary"
+          plain
           :icon="useRenderIcon(Refresh)"
           @click="handleUpdateAllCoverImage()"
         >
-          更新封面
+          全量刷新封面
         </el-button>
       </template>
+
       <template v-slot="{ size, dynamicColumns }">
-        <el-card class="table-card">
+        <el-card shadow="never" class="table-card">
           <pure-table
             border
             align-whole="center"
@@ -128,6 +136,7 @@ const {
               background: 'var(--el-table-row-hover-bg-color)',
               color: 'var(--el-text-color-primary)'
             }"
+            @selection-change="handleSelectionChange"
             @page-current-change="handleCurrentChange"
             @page-size-change="onSizeChange"
           >
@@ -142,22 +151,24 @@ const {
               >
                 编辑
               </el-button>
-              <el-popconfirm title="是否确认删除?" @confirm="handleDelete(row)">
-                <template #reference>
-                  <el-button
-                    class="reset-margin"
-                    link
-                    type="danger"
-                    :size="size"
-                    :icon="useRenderIcon(Delete)"
-                  >
-                    删除
-                  </el-button>
-                </template>
-              </el-popconfirm>
+              <el-button
+                class="reset-margin"
+                link
+                type="primary"
+                :size="size"
+                :icon="useRenderIcon(View)"
+                @click="
+                  $router.push({
+                    params: { id: String(row.postSlug || row.postId) },
+                    name: '内容预览'
+                  })
+                "
+              >
+                预览
+              </el-button>
               <el-dropdown>
                 <el-button
-                  class="ml-3 mt-[2px]"
+                  class="ml-2 mt-[2px]"
                   link
                   type="primary"
                   :size="size"
@@ -171,28 +182,29 @@ const {
                         link
                         type="primary"
                         :size="size"
-                        :icon="useRenderIcon(View)"
-                        @click="
-                          $router.push({
-                            params: { id: String(row.postSlug || row.postId) },
-                            name: '内容预览'
-                          })
-                        "
-                      >
-                        预览
-                      </el-button>
-                    </el-dropdown-item>
-                    <el-dropdown-item>
-                      <el-button
-                        :class="buttonClass"
-                        link
-                        type="primary"
-                        :size="size"
                         :icon="useRenderIcon(Folder)"
                         @click="handleUpdateCoverImage(row)"
                       >
-                        封面
+                        随机更换封面
                       </el-button>
+                    </el-dropdown-item>
+                    <el-dropdown-item divided>
+                      <el-popconfirm
+                        :title="`确认永久删除【${row.title}】?`"
+                        @confirm="handleDelete(row)"
+                      >
+                        <template #reference>
+                          <el-button
+                            class="reset-margin !text-red-500"
+                            link
+                            type="danger"
+                            :size="size"
+                            :icon="useRenderIcon(Delete)"
+                          >
+                            彻底删除
+                          </el-button>
+                        </template>
+                      </el-popconfirm>
                     </el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -202,6 +214,44 @@ const {
         </el-card>
       </template>
     </PureTableBar>
+
+    <!-- 批量操作悬浮底栏 -->
+    <transition name="el-zoom-in-bottom">
+      <div v-if="selectedRows.length > 0" class="floating-batch-bar">
+        <div class="batch-info">
+          已选择 <span class="count-num">{{ selectedRows.length }}</span> 篇文章
+        </div>
+        <div class="batch-actions">
+          <el-button
+            type="success"
+            size="small"
+            :loading="batchLoading"
+            :icon="useRenderIcon(Check)"
+            @click="handleBatchPublish(1)"
+          >
+            批量发布
+          </el-button>
+          <el-button
+            type="warning"
+            size="small"
+            :loading="batchLoading"
+            :icon="useRenderIcon(Close)"
+            @click="handleBatchPublish(0)"
+          >
+            批量设为草稿
+          </el-button>
+          <el-button
+            type="danger"
+            size="small"
+            :loading="batchLoading"
+            :icon="useRenderIcon(Delete)"
+            @click="handleBatchDelete"
+          >
+            批量删除
+          </el-button>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -209,62 +259,82 @@ const {
 .post-container {
   padding: 20px;
   background-color: var(--el-bg-color-page);
-  min-height: calc(100vh - 150px);
+  min-height: calc(100vh - 120px);
+  position: relative;
 
   .search-card {
-    margin-bottom: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-    border: none;
+    margin-bottom: 16px;
+    border-radius: 10px;
+    border: 1px solid var(--el-border-color-lighter);
 
     :deep(.el-card__body) {
-      padding: 20px;
+      padding: 18px 20px 2px;
     }
-  }
 
-  .search-form {
     .search-input {
       width: 200px;
     }
 
     .search-select {
-      width: 180px;
+      width: 160px;
     }
   }
 
   .table-card {
-    border-radius: 8px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-    border: none;
+    border-radius: 10px;
+    border: 1px solid var(--el-border-color-lighter);
 
     :deep(.el-card__body) {
       padding: 0;
     }
   }
+
+  .floating-batch-bar {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 10px 22px;
+    background: var(--el-bg-color-overlay);
+    border: 1px solid var(--el-border-color-light);
+    border-radius: 30px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+
+    .batch-info {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--el-text-color-regular);
+
+      .count-num {
+        color: var(--el-color-primary);
+        font-weight: 700;
+        font-size: 15px;
+      }
+    }
+
+    .batch-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+  }
 }
 
-// 响应式优化
 @media (max-width: 768px) {
   .post-container {
     padding: 12px;
 
-    .search-card {
-      :deep(.el-card__body) {
-        padding: 15px;
-      }
-    }
-
-    .search-form {
-      .el-form-item {
-        display: block;
-        margin-right: 0;
-        margin-bottom: 15px;
-      }
-
-      .search-input,
-      .search-select {
-        width: 100%;
-      }
+    .floating-batch-bar {
+      width: 90%;
+      flex-direction: column;
+      gap: 10px;
+      border-radius: 14px;
+      bottom: 16px;
     }
   }
 }
