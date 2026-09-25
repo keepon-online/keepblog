@@ -49,8 +49,8 @@ watch(isDark, () => {
 });
 
 const updateChart = (data: Array<{ name: string; value: number }>) => {
-  if (!barChartRef.value) return;
-
+  // 不在此处判空 ref：setOptions 内部经 nextTick 懒初始化，元素就绪后会自动补建实例；
+  // 提前 return 会在 immediate watch（setup 阶段 ref 尚为 null）时永久丢失首次渲染
   const xData = data.map(e => e.name);
   const yData = data.map(e => e.value);
 

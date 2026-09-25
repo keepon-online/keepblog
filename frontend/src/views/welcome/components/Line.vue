@@ -52,8 +52,8 @@ watch(isDark, () => {
 });
 
 const updateChart = (data: Array<{ name: string; pv: number; uv: number }>) => {
-  if (!lineChartRef.value) return;
-
+  // 不在此处判空 ref：setOptions 内部经 nextTick 懒初始化，元素就绪后会自动补建实例；
+  // 提前 return 会在 immediate watch（setup 阶段 ref 尚为 null）时永久丢失首次渲染
   const xData = data.map(e => e.name);
   const pvData = data.map(e => e.pv || 0);
   const uvData = data.map(e => e.uv || 0);

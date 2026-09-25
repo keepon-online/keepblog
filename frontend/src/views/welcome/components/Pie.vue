@@ -60,8 +60,8 @@ const palette = [
 ];
 
 const updateChart = (data: Array<{ name: string; value: number }>) => {
-  if (!pieChartRef.value) return;
-
+  // 不在此处判空 ref：setOptions 内部经 nextTick 懒初始化，元素就绪后会自动补建实例；
+  // 提前 return 会在 immediate watch（setup 阶段 ref 尚为 null）时永久丢失首次渲染
   const total = data.reduce((acc, cur) => acc + (cur.value || 0), 0);
 
   const options: echarts.EChartsCoreOption = {
