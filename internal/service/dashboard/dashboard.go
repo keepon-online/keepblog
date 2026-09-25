@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+	"fmt"
+	"math"
 	"strings"
 
 	"gorm.io/gorm"
@@ -17,19 +19,24 @@ func NewDashboardService(db *gorm.DB) *Service {
 	return &Service{db: db}
 }
 
-func (s Service) DashboardData() *model.DashboardData {
+func (s Service) DashboardData(daysOpt ...int) *model.DashboardData {
+	days := 30
+	if len(daysOpt) > 0 && daysOpt[0] > 0 {
+		days = daysOpt[0]
+	}
 
 	return &model.DashboardData{
-		Panel: s.PanelGroup(),
-		Pie:   s.Pie(),
-		Bar:   s.Bar(),
-		Line:  s.Line(),
-		Map:   s.MapData(),
+		Panel:    s.PanelGroup(),
+		Pie:      s.Pie(),
+		Bar:      s.Bar(),
+		Line:     s.Line(days),
+		Map:      s.MapData(),
+		TopPosts: s.TopPosts(5),
+		Days:     days,
 	}
 }
 
 func (s Service) PanelGroup() model.PanelGroup {
-
 	var categoryTotal int64
 	var tagTotal int64
 	var postTotal int64
@@ -37,23 +44,25 @@ func (s Service) PanelGroup() model.PanelGroup {
 	var totalWords int64
 	var totalReadCount int64
 	var todayVisit int64
+	var yesterdayVisit int64
+	var weekPostTotal int64
 	var totalMusic int64
 
 	s.db.Table(model.TCategoryTable).Count(&categoryTotal)
-	s.db.Table(model.TPostsTable).Where("is_published=1 and is_deleted=0").Count(&postTotal)
-	s.db.Model(system.AccessLog{}).Select("COUNT(DISTINCT ip )").Scan(&visit)
-	s.db.Model(model.Tag{}).Select("COUNT(DISTINCT tag_name )").Scan(&tagTotal)
+	s.db.Table(model.TPostsTable).Where("is_published = 1 AND is_deleted = 0").Count(&postTotal)
+	s.db.Model(system.AccessLog{}).Select("COUNT(DISTINCT ip)").Scan(&visit)
+	s.db.Model(model.Tag{}).Select("COUNT(DISTINCT tag_name)").Scan(&tagTotal)
 
 	// 新增统计
 	// 总字数
 	s.db.Table(model.TPostsTable).
-		Where("is_published=1 and is_deleted=0").
+		Where("is_published = 1 AND is_deleted = 0").
 		Select("COALESCE(SUM(word_count), 0)").
 		Scan(&totalWords)
 
 	// 总阅读量
 	s.db.Table(model.TPostsTable).
-		Where("is_published=1 and is_deleted=0").
+		Where("is_published = 1 AND is_deleted = 0").
 		Select("COALESCE(SUM(read_count), 0)").
 		Scan(&totalReadCount)
 
@@ -62,6 +71,26 @@ func (s Service) PanelGroup() model.PanelGroup {
 		Where("create_at >= strftime('%s', 'now', 'start of day')").
 		Select("COUNT(DISTINCT ip)").
 		Scan(&todayVisit)
+
+	// 昨日访问
+	s.db.Model(system.AccessLog{}).
+		Where("create_at >= strftime('%s', 'now', 'start of day', '-1 day') AND create_at < strftime('%s', 'now', 'start of day')").
+		Select("COUNT(DISTINCT ip)").
+		Scan(&yesterdayVisit)
+
+	// 本周新增文章
+	s.db.Table(model.TPostsTable).
+		Where("is_published = 1 AND is_deleted = 0 AND create_at >= strftime('%s', 'now', '-7 days')").
+		Count(&weekPostTotal)
+
+	// 环比计算
+	var visitGrowth float64
+	if yesterdayVisit > 0 {
+		visitGrowth = float64(todayVisit-yesterdayVisit) / float64(yesterdayVisit) * 100
+		visitGrowth = math.Round(visitGrowth*10) / 10
+	} else if todayVisit > 0 {
+		visitGrowth = 100.0
+	}
 
 	// 音乐数量
 	s.db.Table("music").Count(&totalMusic)
@@ -74,37 +103,83 @@ func (s Service) PanelGroup() model.PanelGroup {
 		TotalWords:     uint(totalWords),
 		TotalReadCount: uint(totalReadCount),
 		TodayVisit:     uint(todayVisit),
+		YesterdayVisit: uint(yesterdayVisit),
+		VisitGrowth:    visitGrowth,
+		WeekPostTotal:  uint(weekPostTotal),
 		TotalMusic:     uint(totalMusic),
 	}
-
 }
 
 func (s Service) Pie() []map[string]any {
 	pie := make([]map[string]any, 0)
-	s.db.Table(model.TPostsTable).Select("c.category_name `name`,COUNT( post.category_id ) `value` ").
-		Joins("left join  category c ON post.category_id = c.category_id ").
-		Where("post.is_published = 1 AND post.is_deleted = 0 ").Group("post.category_id").Scan(&pie)
+	s.db.Table(model.TPostsTable).Select("c.category_name `name`, COUNT(post.category_id) `value`").
+		Joins("left join category c ON post.category_id = c.category_id").
+		Where("post.is_published = 1 AND post.is_deleted = 0").Group("post.category_id").Scan(&pie)
 
 	return pie
 }
 
 func (s Service) Bar() []map[string]any {
-	pie := make([]map[string]any, 0)
+	bar := make([]map[string]any, 0)
 	s.db.Model(system.AccessLog{}).
-		Select("strftime('%m-%d',create_at,'unixepoch') `name`,SUM(pv) `value`").
-		Where("status = 200 AND url LIKE '%/post/%' AND create_at >= strftime('%s', 'now', '-7 days')").Group("strftime('%m-%d',create_at,'unixepoch')").
-		Find(&pie)
-	return pie
+		Select("strftime('%m-%d', create_at, 'unixepoch', 'localtime') `name`, SUM(pv) `value`").
+		Where("status = 200 AND create_at >= strftime('%s', 'now', '-7 days')").
+		Group("strftime('%m-%d', create_at, 'unixepoch', 'localtime')").
+		Order("name ASC").
+		Find(&bar)
+	return bar
 }
 
-func (s Service) Line() []map[string]any {
-	pie := make([]map[string]any, 0)
+func (s Service) Line(daysOpt ...int) []map[string]any {
+	days := 30
+	if len(daysOpt) > 0 && daysOpt[0] > 0 {
+		days = daysOpt[0]
+	}
+	daysModifier := fmt.Sprintf("-%d days", days)
+
+	line := make([]map[string]any, 0)
 	s.db.Model(system.AccessLog{}).
-		Select("strftime('%m-%d',create_at,'unixepoch') `name`,SUM(pv) `pv`,SUM(uv) `uv`").
-		Where("status = 200 AND url LIKE '%/post/%' AND create_at >= strftime('%s', 'now', '-7 days')").Group("strftime('%m-%d',create_at,'unixepoch')").
-		Find(&pie)
-	return pie
+		Select("strftime('%m-%d', create_at, 'unixepoch', 'localtime') `name`, SUM(pv) `pv`, SUM(uv) `uv`").
+		Where("status = 200 AND create_at >= strftime('%s', 'now', ?)", daysModifier).
+		Group("strftime('%m-%d', create_at, 'unixepoch', 'localtime')").
+		Order("name ASC").
+		Find(&line)
+	return line
 }
+
+func (s Service) TopPosts(limit int) []model.TopPostItem {
+	if limit <= 0 {
+		limit = 5
+	}
+	var list []struct {
+		PostId       uint64 `json:"postId"`
+		Title        string `json:"title"`
+		ReadCount    uint32 `json:"readCount"`
+		CategoryName string `json:"categoryName"`
+		CreateTime   uint64 `json:"createTime"`
+	}
+
+	s.db.Table(model.TPostsTable+" as p").
+		Select("p.post_id, p.title, p.read_count, p.create_time, COALESCE(c.category_name, '未分类') as category_name").
+		Joins("LEFT JOIN category c ON p.category_id = c.category_id").
+		Where("p.is_published = 1 AND p.is_deleted = 0").
+		Order("p.read_count DESC").
+		Limit(limit).
+		Scan(&list)
+
+	res := make([]model.TopPostItem, 0, len(list))
+	for _, item := range list {
+		res = append(res, model.TopPostItem{
+			ID:           item.PostId,
+			Title:        item.Title,
+			ReadCount:    item.ReadCount,
+			CategoryName: item.CategoryName,
+			CreateTime:   item.CreateTime,
+		})
+	}
+	return res
+}
+
 
 // MapData 获取访客地理分布数据（按省份聚合）
 // ip2region格式: 中国|0|江苏省|南京市|电信 或 美国|0|0|0|...

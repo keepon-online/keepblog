@@ -1,31 +1,51 @@
 <template>
   <div class="dashboard-container">
-    <PanelGroup :panel-data="dashboardData.panelGroup" />
-    <el-row :gutter="20" class="charts-container">
+    <!-- 顶部欢迎与快速工作台 -->
+    <WelcomeBanner
+      :panel-data="dashboardData.panelGroup"
+      :loading="loading"
+      @refresh="handleRefresh"
+    />
+
+    <!-- 核心统计指标组 -->
+    <PanelGroup
+      :panel-data="dashboardData.panelGroup"
+      @filter-chart="handleFilterChart"
+    />
+
+    <!-- 图表分析与内容生态区 -->
+    <el-row :gutter="16" class="charts-container">
+      <!-- 流量走势分析 -->
       <el-col
         v-motion
         :xs="24"
         :sm="24"
         :md="24"
-        :lg="12"
-        :xl="12"
+        :lg="16"
+        :xl="16"
         class="chart-col"
-        :initial="{
-          opacity: 0,
-          y: 100
-        }"
-        :enter="{
-          opacity: 1,
-          y: 0,
-          transition: {
-            delay: 200
-          }
-        }"
+        :initial="{ opacity: 0, y: 30 }"
+        :enter="{ opacity: 1, y: 0, transition: { delay: 100 } }"
       >
         <el-card shadow="hover" class="chart-card">
           <template #header>
             <div class="chart-header">
-              <span class="chart-title">近30天浏览统计</span>
+              <div class="header-left">
+                <span class="header-icon">📈</span>
+                <span class="chart-title">流量访问趋势</span>
+              </div>
+              <div class="header-right">
+                <el-radio-group
+                  v-model="selectedDays"
+                  size="small"
+                  class="days-radio-group"
+                  @change="handleDaysChange"
+                >
+                  <el-radio-button :value="7">近7天</el-radio-button>
+                  <el-radio-button :value="14">近14天</el-radio-button>
+                  <el-radio-button :value="30">近30天</el-radio-button>
+                </el-radio-group>
+              </div>
             </div>
           </template>
           <el-skeleton animated :rows="7" :loading="loading">
@@ -36,30 +56,25 @@
         </el-card>
       </el-col>
 
+      <!-- 文章分类占比 -->
       <el-col
         v-motion
         :xs="24"
         :sm="24"
         :md="24"
-        :lg="12"
-        :xl="12"
+        :lg="8"
+        :xl="8"
         class="chart-col"
-        :initial="{
-          opacity: 0,
-          y: 100
-        }"
-        :enter="{
-          opacity: 1,
-          y: 0,
-          transition: {
-            delay: 400
-          }
-        }"
+        :initial="{ opacity: 0, y: 30 }"
+        :enter="{ opacity: 1, y: 0, transition: { delay: 200 } }"
       >
         <el-card shadow="hover" class="chart-card">
           <template #header>
             <div class="chart-header">
-              <span class="chart-title">文章分类占比</span>
+              <div class="header-left">
+                <span class="header-icon">🎯</span>
+                <span class="chart-title">文章分类生态</span>
+              </div>
             </div>
           </template>
           <el-skeleton animated :rows="7" :loading="loading">
@@ -70,33 +85,31 @@
         </el-card>
       </el-col>
 
+      <!-- 近一周访问频次柱状图 -->
       <el-col
         v-motion
         :xs="24"
         :sm="24"
         :md="24"
-        :lg="24"
-        :xl="24"
+        :lg="14"
+        :xl="14"
         class="chart-col"
-        :initial="{
-          opacity: 0,
-          y: 100
-        }"
-        :enter="{
-          opacity: 1,
-          y: 0,
-          transition: {
-            delay: 600
-          }
-        }"
+        :initial="{ opacity: 0, y: 30 }"
+        :enter="{ opacity: 1, y: 0, transition: { delay: 300 } }"
       >
         <el-card shadow="hover" class="chart-card">
           <template #header>
             <div class="chart-header">
-              <span class="chart-title">近一周统计</span>
+              <div class="header-left">
+                <span class="header-icon">📊</span>
+                <span class="chart-title">近7天访问频次</span>
+              </div>
+              <el-tag size="small" type="info" effect="plain" class="header-tag">
+                每日 PV
+              </el-tag>
             </div>
           </template>
-          <el-skeleton animated :rows="7" :loading="loading">
+          <el-skeleton animated :rows="6" :loading="loading">
             <template #default>
               <Bar :bar-data="dashboardData.barChart" />
             </template>
@@ -104,33 +117,63 @@
         </el-card>
       </el-col>
 
+      <!-- 热门博文 Top 5 阅读排行 -->
       <el-col
         v-motion
         :xs="24"
         :sm="24"
-        :md="16"
+        :md="24"
+        :lg="10"
+        :xl="10"
+        class="chart-col"
+        :initial="{ opacity: 0, y: 30 }"
+        :enter="{ opacity: 1, y: 0, transition: { delay: 400 } }"
+      >
+        <el-card shadow="hover" class="chart-card top-posts-card">
+          <template #header>
+            <div class="chart-header">
+              <div class="header-left">
+                <span class="header-icon">🔥</span>
+                <span class="chart-title">热门文章阅读排行</span>
+              </div>
+              <router-link to="/manage/post" class="more-link">
+                更多 &rarr;
+              </router-link>
+            </div>
+          </template>
+          <el-skeleton animated :rows="6" :loading="loading">
+            <template #default>
+              <TopPostList :posts="dashboardData.topPosts" />
+            </template>
+          </el-skeleton>
+        </el-card>
+      </el-col>
+
+      <!-- 访客地理分布地图 -->
+      <el-col
+        v-motion
+        :xs="24"
+        :sm="24"
+        :md="24"
         :lg="16"
         :xl="16"
         class="chart-col"
-        :initial="{
-          opacity: 0,
-          y: 100
-        }"
-        :enter="{
-          opacity: 1,
-          y: 0,
-          transition: {
-            delay: 800
-          }
-        }"
+        :initial="{ opacity: 0, y: 30 }"
+        :enter="{ opacity: 1, y: 0, transition: { delay: 500 } }"
       >
         <el-card shadow="hover" class="chart-card">
           <template #header>
             <div class="chart-header">
-              <span class="chart-title">访客地理分布</span>
+              <div class="header-left">
+                <span class="header-icon">🗺️</span>
+                <span class="chart-title">访客地域热力分布</span>
+              </div>
+              <el-tag size="small" type="primary" effect="plain" class="header-tag">
+                国内地域聚合
+              </el-tag>
             </div>
           </template>
-          <el-skeleton animated :rows="10" :loading="loading">
+          <el-skeleton animated :rows="9" :loading="loading">
             <template #default>
               <ChinaMap :map-data="dashboardData.mapChart" />
             </template>
@@ -138,47 +181,42 @@
         </el-card>
       </el-col>
 
+      <!-- 访客省份 Top 10 -->
       <el-col
         v-motion
         :xs="24"
         :sm="24"
-        :md="8"
+        :md="24"
         :lg="8"
         :xl="8"
         class="chart-col"
-        :initial="{
-          opacity: 0,
-          y: 100
-        }"
-        :enter="{
-          opacity: 1,
-          y: 0,
-          transition: {
-            delay: 900
-          }
-        }"
+        :initial="{ opacity: 0, y: 30 }"
+        :enter="{ opacity: 1, y: 0, transition: { delay: 600 } }"
       >
         <el-card shadow="hover" class="chart-card top10-card">
           <template #header>
             <div class="chart-header">
-              <span class="chart-title">🏆 访客Top10省份</span>
+              <div class="header-left">
+                <span class="header-icon">🏆</span>
+                <span class="chart-title">访客 Top 10 省份</span>
+              </div>
             </div>
           </template>
-          <el-skeleton animated :rows="10" :loading="loading">
+          <el-skeleton animated :rows="9" :loading="loading">
             <template #default>
               <div class="top10-list">
                 <div
                   v-for="(item, index) in top10Provinces"
                   :key="index"
                   class="top10-item"
-                  :style="{ animationDelay: `${index * 0.1}s` }"
+                  :style="{ animationDelay: `${index * 0.08}s` }"
                 >
                   <div class="rank" :class="getRankClass(index)">
                     {{ index + 1 }}
                   </div>
                   <div class="province-name">{{ item.name }}</div>
                   <div class="visitor-count">
-                    <span class="count">{{ item.value }}</span>
+                    <span class="count">{{ item.value.toLocaleString() }}</span>
                     <span class="unit">人</span>
                   </div>
                   <div class="progress-bar">
@@ -189,7 +227,7 @@
                   </div>
                 </div>
                 <div v-if="top10Provinces.length === 0" class="no-data">
-                  暂无数据
+                  <el-empty description="暂无地域访问数据" :image-size="60" />
                 </div>
               </div>
             </template>
@@ -201,22 +239,33 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, computed } from "vue";
+import WelcomeBanner from "./components/WelcomeBanner.vue";
+import PanelGroup from "./components/PanelGroup.vue";
+import Line from "./components/Line.vue";
+import Pie from "./components/Pie.vue";
+import Bar from "./components/Bar.vue";
+import TopPostList from "./components/TopPostList.vue";
+import ChinaMap from "./components/ChinaMap.vue";
+import { getDashboardData, type DashboardPanel, type TopPostItem } from "@/api/dashboard";
+import { message } from "@/utils/message";
+
 defineOptions({
   name: "Dashboard"
 });
-import PanelGroup from "./components/PanelGroup.vue";
-import Bar from "./components/Bar.vue";
-import Pie from "./components/Pie.vue";
-import Line from "./components/Line.vue";
-import ChinaMap from "./components/ChinaMap.vue";
-
-import { ref, onMounted, computed } from "vue";
-import { getDashboardData } from "@/api/dashboard";
 
 const loading = ref<boolean>(true);
+const selectedDays = ref<number>(30);
 
-// 仪表板数据
-const dashboardData = ref({
+// 仪表板数据结构
+const dashboardData = ref<{
+  panelGroup: DashboardPanel;
+  lineChart: Array<{ name: string; pv: number; uv: number }>;
+  pieChart: Array<{ name: string; value: number }>;
+  barChart: Array<{ name: string; value: number }>;
+  mapChart: Array<{ name: string; value: number }>;
+  topPosts: Array<TopPostItem>;
+}>({
   panelGroup: {
     postTotal: 0,
     categoryTotal: 0,
@@ -225,45 +274,65 @@ const dashboardData = ref({
     totalWords: 0,
     totalReadCount: 0,
     todayVisit: 0,
+    yesterdayVisit: 0,
+    visitGrowth: 0,
+    weekPostTotal: 0,
     totalMusic: 0
   },
   lineChart: [],
   pieChart: [],
   barChart: [],
-  mapChart: []
+  mapChart: [],
+  topPosts: []
 });
 
 // 获取仪表板数据
-const fetchDashboardData = async () => {
+const fetchDashboardData = async (days: number = selectedDays.value) => {
+  loading.value = true;
   try {
-    const res = await getDashboardData();
-    if (res.code === 200) {
-      // 处理获取到的数据，注意API返回的数据结构
+    const res = await getDashboardData({ days });
+    if (res.code === 200 && res.payload) {
       dashboardData.value = {
         panelGroup: {
-          postTotal: res.payload.panel.postTotal,
-          categoryTotal: res.payload.panel.categoryTotal,
-          tagTotal: res.payload.panel.tagTotal,
-          visit: res.payload.panel.visit,
-          totalWords: res.payload.panel.totalWords || 0,
-          totalReadCount: res.payload.panel.totalReadCount || 0,
-          todayVisit: res.payload.panel.todayVisit || 0,
-          totalMusic: res.payload.panel.totalMusic || 0
+          postTotal: res.payload.panel?.postTotal || 0,
+          categoryTotal: res.payload.panel?.categoryTotal || 0,
+          tagTotal: res.payload.panel?.tagTotal || 0,
+          visit: res.payload.panel?.visit || 0,
+          totalWords: res.payload.panel?.totalWords || 0,
+          totalReadCount: res.payload.panel?.totalReadCount || 0,
+          todayVisit: res.payload.panel?.todayVisit || 0,
+          yesterdayVisit: res.payload.panel?.yesterdayVisit || 0,
+          visitGrowth: res.payload.panel?.visitGrowth || 0,
+          weekPostTotal: res.payload.panel?.weekPostTotal || 0,
+          totalMusic: res.payload.panel?.totalMusic || 0
         },
-        lineChart: res.payload.line,
-        pieChart: res.payload.pie,
-        barChart: res.payload.bar,
-        mapChart: res.payload.map || []
+        lineChart: res.payload.line || [],
+        pieChart: res.payload.pie || [],
+        barChart: res.payload.bar || [],
+        mapChart: res.payload.map || [],
+        topPosts: res.payload.topPosts || []
       };
-    } else {
-      console.error("获取仪表板数据失败:", res.message);
     }
   } catch (error) {
     console.error("获取仪表板数据异常:", error);
+    message("获取仪表盘数据失败，请重试", { type: "error" });
   } finally {
-    // 数据加载完成后隐藏骨架屏
     loading.value = false;
   }
+};
+
+const handleRefresh = () => {
+  fetchDashboardData(selectedDays.value);
+};
+
+const handleDaysChange = (val: string | number | boolean | undefined) => {
+  if (typeof val === "number") {
+    fetchDashboardData(val);
+  }
+};
+
+const handleFilterChart = (_type: string) => {
+  // 卡片联动事件
 };
 
 onMounted(() => {
@@ -308,7 +377,7 @@ const chineseProvinces = [
   "澳门"
 ];
 
-// Top10省份计算属性（只显示国内省份）
+// Top 10 省份计算属性
 const top10Provinces = computed(() => {
   if (!dashboardData.value.mapChart) return [];
   return [...dashboardData.value.mapChart]
@@ -320,7 +389,7 @@ const top10Provinces = computed(() => {
 // 获取进度条宽度
 const getProgressWidth = (value: number) => {
   const maxValue = top10Provinces.value[0]?.value || 1;
-  return `${(value / maxValue) * 100}%`;
+  return `${Math.min(100, Math.round((value / maxValue) * 100))}%`;
 };
 
 // 获取排名样式类
@@ -328,7 +397,7 @@ const getRankClass = (index: number) => {
   if (index === 0) return "rank-gold";
   if (index === 1) return "rank-silver";
   if (index === 2) return "rank-bronze";
-  return "";
+  return "rank-normal";
 };
 </script>
 
@@ -336,39 +405,75 @@ const getRankClass = (index: number) => {
 .dashboard-container {
   padding: 20px;
   background-color: var(--el-bg-color-page);
-  min-height: calc(100vh - 150px);
+  min-height: calc(100vh - 120px);
 
   .charts-container {
-    margin-top: 20px;
-
     .chart-col {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
 
       .chart-card {
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid var(--el-border-color-light);
-        transition: all 0.3s ease;
+        border-radius: 12px;
+        border: 1px solid var(--el-border-color-lighter);
+        background: var(--el-bg-color-overlay);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
 
         &:hover {
-          box-shadow: var(--el-box-shadow-light);
-          transform: translateY(-2px);
+          box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.08);
+          border-color: var(--el-color-primary-light-5);
         }
 
         :deep(.el-card__header) {
-          padding: 15px 20px;
-          background-color: var(--el-fill-color-light);
-          border-bottom: 1px solid var(--el-border-color-light);
+          padding: 14px 20px;
+          border-bottom: 1px solid var(--el-border-color-extra-light);
+          background-color: transparent;
+        }
+
+        :deep(.el-card__body) {
+          padding: 18px 20px;
         }
 
         .chart-header {
           display: flex;
           align-items: center;
+          justify-content: space-between;
 
-          .chart-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--el-text-color-primary);
+          .header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            .header-icon {
+              font-size: 16px;
+            }
+
+            .chart-title {
+              font-size: 15px;
+              font-weight: 600;
+              color: var(--el-text-color-primary);
+            }
+          }
+
+          .header-right {
+            display: flex;
+            align-items: center;
+          }
+
+          .header-tag {
+            font-size: 11px;
+            border-radius: 4px;
+          }
+
+          .more-link {
+            font-size: 12px;
+            color: var(--el-color-primary);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+
+            &:hover {
+              opacity: 0.8;
+            }
           }
         }
       }
@@ -376,77 +481,82 @@ const getRankClass = (index: number) => {
   }
 }
 
-// 移动端适配
-@media (max-width: 768px) {
-  .dashboard-container {
-    padding: 12px;
+.top-posts-card {
+  :deep(.el-card__body) {
+    height: 310px;
+    overflow-y: auto;
   }
 }
 
-// Top10卡片样式
 .top10-card {
-  height: 100%;
-
   :deep(.el-card__body) {
-    padding: 16px;
-    height: calc(100% - 56px);
+    padding: 14px 16px;
+    height: 480px;
     overflow-y: auto;
   }
 }
 
 .top10-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
   .top10-item {
     display: flex;
     align-items: center;
-    padding: 10px 12px;
-    margin-bottom: 8px;
+    padding: 9px 12px;
     background: var(--el-fill-color-light);
     border-radius: 8px;
-    animation: slideIn 0.5s ease forwards;
+    border: 1px solid var(--el-border-color-extra-light);
+    animation: slideIn 0.4s ease forwards;
     opacity: 0;
-    transition: all 0.3s ease;
+    transition: all 0.25s ease;
 
     &:hover {
-      transform: translateX(5px);
+      transform: translateX(4px);
       background: var(--el-fill-color);
+      border-color: var(--el-color-primary-light-5);
     }
 
     .rank {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: bold;
-      font-size: 14px;
-      background: var(--el-fill-color-darker);
-      color: var(--el-text-color-regular);
+      font-weight: 700;
+      font-size: 12px;
       margin-right: 12px;
       flex-shrink: 0;
 
       &.rank-gold {
-        background: linear-gradient(135deg, #ffd700, #ffb700);
+        background: linear-gradient(135deg, #ffd700, #ffaa00);
         color: #fff;
-        box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+        box-shadow: 0 2px 8px rgba(255, 170, 0, 0.4);
       }
 
       &.rank-silver {
-        background: linear-gradient(135deg, #c0c0c0, #a8a8a8);
+        background: linear-gradient(135deg, #b0bec5, #78909c);
         color: #fff;
-        box-shadow: 0 2px 8px rgba(192, 192, 192, 0.4);
+        box-shadow: 0 2px 8px rgba(120, 144, 156, 0.35);
       }
 
       &.rank-bronze {
-        background: linear-gradient(135deg, #cd7f32, #b8722e);
+        background: linear-gradient(135deg, #d7ccc8, #a1887f);
         color: #fff;
-        box-shadow: 0 2px 8px rgba(205, 127, 50, 0.4);
+        box-shadow: 0 2px 8px rgba(161, 136, 127, 0.35);
+      }
+
+      &.rank-normal {
+        background: var(--el-fill-color-darker);
+        color: var(--el-text-color-regular);
       }
     }
 
     .province-name {
       flex: 1;
-      font-size: 14px;
+      font-size: 13px;
       color: var(--el-text-color-primary);
       font-weight: 500;
     }
@@ -456,20 +566,20 @@ const getRankClass = (index: number) => {
       text-align: right;
 
       .count {
-        font-size: 16px;
-        font-weight: 600;
+        font-size: 14px;
+        font-weight: 700;
         color: var(--el-color-primary);
       }
 
       .unit {
-        font-size: 12px;
-        color: var(--el-text-color-secondary);
+        font-size: 11px;
+        color: var(--el-text-color-placeholder);
         margin-left: 2px;
       }
     }
 
     .progress-bar {
-      width: 60px;
+      width: 56px;
       height: 6px;
       background: var(--el-fill-color-darker);
       border-radius: 3px;
@@ -483,7 +593,7 @@ const getRankClass = (index: number) => {
           var(--el-color-primary)
         );
         border-radius: 3px;
-        transition: width 0.8s ease;
+        transition: width 0.6s ease;
       }
     }
   }
@@ -491,19 +601,23 @@ const getRankClass = (index: number) => {
   .no-data {
     text-align: center;
     padding: 40px 0;
-    color: var(--el-text-color-secondary);
-    font-size: 14px;
   }
 }
 
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateX(-20px);
+    transform: translateX(-12px);
   }
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 12px;
   }
 }
 </style>

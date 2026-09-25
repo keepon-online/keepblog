@@ -1,16 +1,28 @@
+<template>
+  <div class="line-chart-wrapper">
+    <div v-if="lineData && lineData.length > 0" ref="lineChartRef" class="line-chart" />
+    <div v-else class="empty-chart">
+      <el-empty description="暂无访问流量数据" :image-size="80" />
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
-import { useIntervalFn } from "@vueuse/core";
-import { ref, computed, watch, type Ref, defineProps } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted, type Ref } from "vue";
 import { useAppStoreHook } from "@/store/modules/app";
-import {
-  delay,
-  useDark,
-  useECharts,
-  type EchartOptions
-} from "@pureadmin/utils";
+import { delay, useDark, useECharts, type EchartOptions } from "@pureadmin/utils";
+import * as echarts from "echarts/core";
+
+defineOptions({
+  name: "TrafficLineChart"
+});
 
 const props = defineProps<{
-  lineData: any[];
+  lineData: Array<{
+    name: string;
+    pv: number;
+    uv: number;
+  }>;
 }>();
 
 const { isDark } = useDark();
@@ -20,225 +32,219 @@ const theme: EchartOptions["theme"] = computed(() => {
 });
 
 const lineChartRef = ref<HTMLDivElement | null>(null);
-const { setOptions, getInstance, resize } = useECharts(
-  lineChartRef as Ref<HTMLDivElement>,
-  { theme }
-);
+const { setOptions, resize } = useECharts(lineChartRef as Ref<HTMLDivElement>, {
+  theme
+});
 
-const xData = ref([]);
-const pv = ref([]);
-const uv = ref([]);
-let a = 1;
-
-useIntervalFn(() => {
-  if (xData.value.length > 0) {
-    if (a == xData.value.length - 24) {
-      a = 0;
-    }
-    const instance = getInstance();
-    if (instance) {
-      instance.dispatchAction({
-        type: "dataZoom",
-        startValue: a,
-        endValue: a + 24
-      });
-    }
-    a++;
-  }
-}, 2000);
-
+// 监听侧边栏折叠/展开
 watch(
   () => useAppStoreHook().getSidebarStatus,
   () => {
-    delay(600).then(() => resize());
+    delay(400).then(() => resize());
   }
 );
 
-// 更新图表的函数
-const updateChartFromProps = (data: any[]) => {
-  xData.value = data.map(e => e.name);
-  pv.value = data.map(e => e.pv);
-  uv.value = data.map(e => e.uv);
+// 监听深色模式切换
+watch(isDark, () => {
+  if (props.lineData && props.lineData.length > 0) {
+    updateChart(props.lineData);
+  }
+});
 
-  setOptions(
-    {
-      tooltip: {
-        trigger: "axis",
-        backgroundColor: isDark.value
-          ? "rgba(0, 0, 0, 0.8)"
-          : "rgba(255, 255, 255, 0.9)",
-        borderColor: isDark.value ? "#303133" : "#e4e7ed",
-        textStyle: {
-          color: isDark.value
-            ? "rgba(255, 255, 255, 0.9)"
-            : "rgba(0, 0, 0, 0.9)"
+const updateChart = (data: Array<{ name: string; pv: number; uv: number }>) => {
+  if (!lineChartRef.value) return;
+
+  const xData = data.map(e => e.name);
+  const pvData = data.map(e => e.pv || 0);
+  const uvData = data.map(e => e.uv || 0);
+
+  const primaryColor = "#409eff";
+  const successColor = "#67c23a";
+
+  const options: echarts.EChartsCoreOption = {
+    backgroundColor: "transparent",
+    tooltip: {
+      trigger: "axis",
+      backgroundColor: isDark.value ? "rgba(24, 24, 28, 0.92)" : "rgba(255, 255, 255, 0.96)",
+      borderColor: isDark.value ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)",
+      borderWidth: 1,
+      padding: [10, 14],
+      textStyle: {
+        color: isDark.value ? "#f2f2f2" : "#303133",
+        fontSize: 13
+      },
+      extraCssText: "box-shadow: 0 8px 24px -4px rgba(0,0,0,0.15); border-radius: 8px;",
+      formatter: (params: any) => {
+        if (!Array.isArray(params) || params.length === 0) return "";
+        let str = `<div style="font-weight: 600; margin-bottom: 6px;">${params[0].axisValue} 访问明细</div>`;
+        let pv = 0;
+        let uv = 0;
+        params.forEach(item => {
+          if (item.seriesName === "浏览量 (PV)") pv = item.value;
+          if (item.seriesName === "独立访客 (UV)") uv = item.value;
+          str += `<div style="display: flex; align-items: center; justify-content: space-between; gap: 20px; font-size: 12px; margin-top: 3px;">
+            <span>${item.marker} ${item.seriesName}</span>
+            <span style="font-weight: 600;">${item.value.toLocaleString()}</span>
+          </div>`;
+        });
+        if (uv > 0) {
+          const ratio = (pv / uv).toFixed(1);
+          str += `<div style="margin-top: 6px; padding-top: 4px; border-top: 1px dashed ${
+            isDark.value ? "#444" : "#eee"
+          }; font-size: 11px; color: #909399;">
+            人均浏览量: <span style="font-weight: 600; color: ${primaryColor}">${ratio}</span> 页/人
+          </div>`;
+        }
+        return str;
+      }
+    },
+    legend: {
+      right: "10px",
+      top: "0px",
+      icon: "circle",
+      itemWidth: 8,
+      itemHeight: 8,
+      textStyle: {
+        color: isDark.value ? "rgba(255, 255, 255, 0.65)" : "#606266",
+        fontSize: 12
+      },
+      data: ["浏览量 (PV)", "独立访客 (UV)"]
+    },
+    grid: {
+      top: "36px",
+      left: "12px",
+      right: "12px",
+      bottom: "8px",
+      containLabel: true
+    },
+    xAxis: {
+      type: "category",
+      boundaryGap: false,
+      data: xData,
+      axisLine: {
+        lineStyle: {
+          color: isDark.value ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"
         }
       },
-      grid: {
-        top: "30px",
-        left: "40px",
-        right: "20px",
-        bottom: "40px"
+      axisTick: {
+        show: false
       },
-      legend: {
-        //@ts-expect-error
-        right: true,
-        data: ["PV", "UV"],
-        textStyle: {
-          color: isDark.value
-            ? "rgba(255, 255, 255, 0.7)"
-            : "rgba(0, 0, 0, 0.65)"
+      axisLabel: {
+        color: isDark.value ? "rgba(255, 255, 255, 0.55)" : "#909399",
+        fontSize: 12
+      }
+    },
+    yAxis: {
+      type: "value",
+      splitLine: {
+        lineStyle: {
+          type: "dashed",
+          color: isDark.value ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)"
         }
       },
-      calculable: true,
-      xAxis: [
-        {
-          triggerEvent: true,
-          type: "category",
-          splitLine: {
-            show: false
-          },
-          axisTick: {
-            show: false
-          },
-          axisLine: {
-            lineStyle: {
-              color: isDark.value ? "#303133" : "#e4e7ed"
-            }
-          },
-          axisLabel: {
-            color: isDark.value
-              ? "rgba(255, 255, 255, 0.7)"
-              : "rgba(0, 0, 0, 0.65)"
-          },
-          data: xData.value
-        }
-      ],
-      yAxis: [
-        {
-          triggerEvent: true,
-          type: "value",
-          splitLine: {
-            show: true,
-            lineStyle: {
-              type: "dashed"
-            }
-          },
-          axisLine: {
-            show: false
-          },
-          axisTick: {
-            show: false
-          },
-          axisLabel: {
-            color: isDark.value
-              ? "rgba(255, 255, 255, 0.7)"
-              : "rgba(0, 0, 0, 0.65)"
-          }
-        }
-      ],
-      dataZoom: [
-        {
-          type: "slider",
-          show: false,
-          realtime: true,
-          startValue: 0,
-          endValue: 24
-        }
-      ],
-      series: [
-        {
-          name: "PV",
-          type: "line",
-          smooth: true,
-          symbolSize: 6,
-          symbol: "circle",
-          color: "#f56c6c",
-          lineStyle: {
-            width: 3
-          },
-          markPoint: {
-            label: {
-              color: "#fff"
-            },
-            data: [
-              {
-                type: "max",
-                name: "最大值"
-              },
-              {
-                type: "min",
-                name: "最小值"
-              }
-            ]
-          },
-          data: pv.value
+      axisLine: {
+        show: false
+      },
+      axisTick: {
+        show: false
+      },
+      axisLabel: {
+        color: isDark.value ? "rgba(255, 255, 255, 0.55)" : "#909399",
+        fontSize: 12
+      }
+    },
+    series: [
+      {
+        name: "浏览量 (PV)",
+        type: "line",
+        smooth: 0.35,
+        symbol: "circle",
+        symbolSize: 6,
+        showSymbol: false,
+        itemStyle: {
+          color: primaryColor
         },
-        {
-          name: "UV",
-          type: "line",
-          smooth: true,
-          symbolSize: 6,
-          symbol: "circle",
-          color: "#409EFF",
-          lineStyle: {
-            width: 3
-          },
-          markPoint: {
-            label: {
-              color: "#fff"
-            },
-            data: [
-              {
-                type: "max",
-                name: "最大值"
-              },
-              {
-                type: "min",
-                name: "最小值"
-              }
-            ]
-          },
-          data: uv.value
-        }
-      ],
-      addTooltip: true
-    },
-    {
-      name: "click",
-      callback: () => {
-        // 图表点击事件处理
+        lineStyle: {
+          width: 3,
+          color: primaryColor,
+          shadowColor: "rgba(64, 158, 255, 0.3)",
+          shadowBlur: 8,
+          shadowOffsetY: 4
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: "rgba(64, 158, 255, 0.32)" },
+            { offset: 1, color: "rgba(64, 158, 255, 0.01)" }
+          ])
+        },
+        data: pvData
+      },
+      {
+        name: "独立访客 (UV)",
+        type: "line",
+        smooth: 0.35,
+        symbol: "circle",
+        symbolSize: 6,
+        showSymbol: false,
+        itemStyle: {
+          color: successColor
+        },
+        lineStyle: {
+          width: 2.5,
+          color: successColor,
+          shadowColor: "rgba(103, 194, 58, 0.3)",
+          shadowBlur: 8,
+          shadowOffsetY: 3
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: "rgba(103, 194, 58, 0.28)" },
+            { offset: 1, color: "rgba(103, 194, 58, 0.01)" }
+          ])
+        },
+        data: uvData
       }
-    },
-    {
-      name: "contextmenu",
-      callback: () => {
-        // 右键菜单事件处理
-      }
-    },
-    // 点击空白处
-    {
-      type: "zrender",
-      name: "click",
-      callback: () => {
-        // 空白区域点击处理
-      }
-    }
-  );
+    ]
+  };
+
+  setOptions(options as any);
 };
 
-// 监听数据变化
 watch(
   () => props.lineData,
   newData => {
     if (newData && newData.length > 0) {
-      updateChartFromProps(newData);
+      updateChart(newData);
     }
   },
-  { immediate: true }
+  { immediate: true, deep: true }
 );
+
+onMounted(() => {
+  window.addEventListener("resize", resize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", resize);
+});
 </script>
 
-<template>
-  <div ref="lineChartRef" style="width: 100%; height: 300px" />
-</template>
+<style lang="scss" scoped>
+.line-chart-wrapper {
+  width: 100%;
+  height: 310px;
+  position: relative;
+
+  .line-chart {
+    width: 100%;
+    height: 100%;
+  }
+
+  .empty-chart {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+</style>

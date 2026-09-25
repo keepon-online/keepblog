@@ -103,12 +103,7 @@ const updateChart = () => {
 
   const option = {
     title: {
-      text: "访客地理分布",
-      left: "center",
-      textStyle: {
-        color: "#333",
-        fontSize: 16
-      }
+      show: false
     },
     tooltip: {
       trigger: "item",
@@ -127,7 +122,7 @@ const updateChart = () => {
       text: ["高", "低"],
       calculable: true,
       inRange: {
-        color: ["#e0f3f8", "#abd9e9", "#74add1", "#4575b4", "#313695"]
+        color: ["#e0f3f8", "#abd9e9", "#74add1", "#409eff", "#186dbf"]
       }
     },
     series: [
