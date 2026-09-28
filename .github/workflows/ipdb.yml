@@ -4,15 +4,17 @@ on:
   schedule:
     - cron: '0 2 * * 0'
   workflow_dispatch:
+    inputs:
+      force:
+        description: '源数据未变化也强制重建发布（修复/重置用）'
+        type: boolean
+        default: false
   push:
     paths:
       - '.github/workflows/ipdb.yml'
 
 permissions:
   contents: write  # 发布 ipdb Release 需要写权限（bench+smoke 全部通过后才执行）
-
-env:
-  IP2REGION_REF: 096d68ea770676286fc1d05ff9918b6d3e9679cb
 
 jobs:
   build:
@@ -22,25 +24,70 @@ jobs:
       - name: Checkout 项目
         uses: actions/checkout@v4
 
-      - name: Checkout ip2region v3.9.0
+      # 上游数据不再锁死固定提交：自动跟踪 ip2region 最新 release tag。
+      # 取不到 tag 视为失败，留待下次调度重试，绝不带着空 ref 盲跑。
+      - name: 解析上游最新 release
+        id: ref
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="$(gh api repos/lionsoul2014/ip2region/releases/latest --jq .tag_name)"
+          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+            echo "未取到上游最新 release tag" >&2
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout ip2region ${{ steps.ref.outputs.tag }}
         uses: actions/checkout@v4
         with:
           repository: lionsoul2014/ip2region
-          ref: ${{ env.IP2REGION_REF }}
+          ref: ${{ steps.ref.outputs.tag }}
           path: .tmp/ip2region
           fetch-depth: 1
 
+      # 发布判定基于源数据哈希而非 xdb 哈希：xdb 头内嵌生成时间戳，同数据
+      # 每次构建哈希都不同；比对 ipv4_source.txt 才能识别"数据真的变了"。
+      # 源数据未变则跳过全部构建与发布——rolling Release 保持原样，运行时
+      # 每日哈希比对恒定命中"已是最新"，不再产生无效下载与热切换。
+      - name: 检查源数据是否变化
+        id: check
+        run: |
+          SOURCE_SHA="$(sha256sum .tmp/ip2region/data/ipv4_source.txt | cut -d' ' -f1)"
+          SOURCE_COMMIT="$(git -C .tmp/ip2region rev-parse HEAD)"
+          OLD_SOURCE_SHA="$(curl -sfL "https://github.com/${{ github.repository }}/releases/download/ipdb-latest/metadata.json" | jq -r '.source_sha256 // empty')" || true
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "source_commit=$SOURCE_COMMIT" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ inputs.force }}" = "true" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "force 重建，跳过数据比对"
+          elif [ -n "$OLD_SOURCE_SHA" ] && [ "$SOURCE_SHA" = "$OLD_SOURCE_SHA" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "源数据未变化（sha256 ${SOURCE_SHA:0:12}…），跳过构建与发布"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            if [ -n "$OLD_SOURCE_SHA" ]; then
+              echo "源数据有变化：${OLD_SOURCE_SHA:0:12}… → ${SOURCE_SHA:0:12}…"
+            else
+              echo "现有 ipdb-latest 无 source_sha256 记录，首次比对按有变化处理"
+            fi
+          fi
+
       - name: 设置 Go
+        if: steps.check.outputs.changed == 'true'
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
 
       - name: 构建 xdb_maker
+        if: steps.check.outputs.changed == 'true'
         working-directory: .tmp/ip2region/maker/golang
         run: go build -trimpath -o xdb_maker .
 
       - name: 生成 IPv4 xdb
+        if: steps.check.outputs.changed == 'true'
         working-directory: .tmp/ip2region/maker/golang
         run: |
           ./xdb_maker gen \
@@ -49,6 +96,7 @@ jobs:
             --version=ipv4
 
       - name: 校验 xdb
+        if: steps.check.outputs.changed == 'true'
         working-directory: .tmp/ip2region/maker/golang
         run: |
           ./xdb_maker bench \
@@ -59,6 +107,7 @@ jobs:
           go run ./scripts/verify-ipdb.go .tmp/ip2region_v4.xdb
 
       - name: 生成元数据
+        if: steps.check.outputs.changed == 'true'
         run: |
           cd .tmp
           sha256sum ip2region_v4.xdb > SHA256SUMS
@@ -66,15 +115,18 @@ jobs:
           sha256=$(cut -d ' ' -f 1 SHA256SUMS)
           jq -n \
             --arg source_repo "https://github.com/lionsoul2014/ip2region" \
-            --arg source_commit "${{ env.IP2REGION_REF }}" \
+            --arg source_tag "${{ steps.ref.outputs.tag }}" \
+            --arg source_commit "${{ steps.check.outputs.source_commit }}" \
             --arg source_file "data/ipv4_source.txt" \
+            --arg source_sha "${{ steps.check.outputs.source_sha }}" \
             --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg sha256 "$sha256" \
             --argjson size "$size" \
-            '{source_repository:$source_repo,source_commit:$source_commit,source_file:$source_file,generated_at:$generated_at,generator:"xdb_maker",sha256:$sha256,size_bytes:$size}' \
+            '{source_repository:$source_repo,source_tag:$source_tag,source_commit:$source_commit,source_file:$source_file,source_sha256:$source_sha,generated_at:$generated_at,generator:"xdb_maker",sha256:$sha256,size_bytes:$size}' \
             > metadata.json
 
       - name: 上传 IP 数据库产物
+        if: steps.check.outputs.changed == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ip2region-v4-${{ github.run_number }}
@@ -85,17 +137,19 @@ jobs:
           retention-days: 90
 
       # ---------- 发布：归档 Release（不可变）+ 滚动 Release（ipdb-latest） ----------
-      # 运行时每日更新只从 ipdb-latest 下载并做 SHA-256 校验；
-      # 回滚时把 config 的 ipdb.updateUrl 指向某个归档 Release 的资产直链即可。
+      # 仅在源数据变化（或 force）时执行；运行时每日更新只从 ipdb-latest 下载
+      # 并做 SHA-256 校验；回滚时把 config 的 ipdb.updateUrl 指向某个归档
+      # Release 的资产直链即可。
 
       - name: 生成发布说明
+        if: steps.check.outputs.changed == 'true'
         run: |
           cd .tmp
           {
             echo "## IP 数据库产物"
             echo
             echo "- 源仓库: https://github.com/lionsoul2014/ip2region"
-            echo "- 源提交: \`${IP2REGION_REF}\`"
+            echo "- 上游版本: \`${{ steps.ref.outputs.tag }}\`（源数据 sha256 \`${{ steps.check.outputs.source_sha }}\`）"
             echo "- 生成时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
             echo "- SHA-256: \`$(cut -d ' ' -f1 SHA256SUMS)\`"
             echo "- 大小: $(stat -c '%s' ip2region_v4.xdb) bytes"
@@ -105,6 +159,7 @@ jobs:
           } > release-notes.md
 
       - name: 发布归档 Release（ipdb-v*，不可变）
+        if: steps.check.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -115,6 +170,7 @@ jobs:
             .tmp/ip2region_v4.xdb .tmp/SHA256SUMS .tmp/metadata.json
 
       - name: 重建滚动 Release（ipdb-latest）
+        if: steps.check.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
