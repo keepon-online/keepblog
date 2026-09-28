@@ -3,7 +3,7 @@
   <div id="menu-mask"></div>
   <div id="sidebar-menus">
     <div class="avatar-img is-center">
-      <img alt="avatar" src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png"/></div>
+      <img alt="avatar" src="{{if .site.Avatar}}{{.site.Avatar}}{{else}}/images/avatar.png{{end}}"/></div>
     <div class="sidebar-site-data site-data is-center"><a href="/archives/">
       <div class="headline">文章</div>
       <div class="length-num">{{if .cardInfo}}{{.cardInfo.Post}}{{else}}0{{end}}</div>

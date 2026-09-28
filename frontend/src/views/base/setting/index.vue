@@ -59,6 +59,26 @@
               </el-col>
 
               <el-col :xs="24" :sm="24" :md="12" :lg="12">
+                <el-form-item label="站长头像 (Avatar)" prop="avatar">
+                  <div class="flex items-center gap-3 w-full">
+                    <el-avatar
+                      :size="36"
+                      :src="WebsiteForm.avatar || '/images/avatar.png'"
+                      class="flex-shrink-0"
+                    />
+                    <el-input
+                      v-model="WebsiteForm.avatar"
+                      placeholder="留空默认使用内置 Gopher 极客头像"
+                      clearable
+                    />
+                  </div>
+                  <div class="form-tip">
+                    显示在前台侧栏卡片上的头像，留空默认使用项目专属 Gopher 极客头像
+                  </div>
+                </el-form-item>
+              </el-col>
+
+              <el-col :span="24">
                 <el-form-item label="网站域名" prop="url">
                   <el-input
                     v-model="WebsiteForm.url"
@@ -403,6 +423,7 @@ const WebsiteForm = ref({
   url: "",
   notice: "",
   description: "",
+  avatar: "",
   stat: "",
   site: "",
   googleSite: "",
@@ -441,6 +462,7 @@ const submitWebsiteForm = async () => {
       url: WebsiteForm.value.url,
       notice: WebsiteForm.value.notice,
       description: WebsiteForm.value.description,
+      avatar: WebsiteForm.value.avatar,
       stat: WebsiteForm.value.stat,
       site: WebsiteForm.value.site,
       googleSite: WebsiteForm.value.googleSite,

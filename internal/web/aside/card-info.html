@@ -2,7 +2,7 @@
     <div class="card-info-header-bg"></div>
     <div class="card-info-avatar is-center">
         <div class="avatar-img">
-            <img alt="avatar" src="https://i.loli.net/2021/02/24/5O1day2nriDzjSu.png" />
+            <img alt="avatar" src="{{if .site.Avatar}}{{.site.Avatar}}{{else}}/images/avatar.png{{end}}" />
             <span class="avatar-status" title="保持在线"></span>
         </div>
         <div class="author-info__name">{{.site.Title}}</div>

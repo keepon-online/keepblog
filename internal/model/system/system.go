@@ -73,6 +73,7 @@ type WebSite struct {
 	Notice        string `json:"notice"`        //公告
 	Title         string `json:"title"`         //页面标题
 	Description   string `json:"description"`   //页面简述
+	Avatar        string `json:"avatar"`        //站长头像
 	URL           string `json:"url"`           //页面地址
 	Keywords      string `json:"keywords"`      //关键词
 	Copyright     string `json:"copyright"`     //版权
