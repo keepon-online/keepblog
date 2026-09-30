@@ -154,8 +154,20 @@ const totalNetworkRate = ref({
   sentRateFormat: "0 B/s"
 });
 
-// CPU 核心展开/收起控制
+// ================= CPU 核心自适应与热力矩阵相关逻辑 =================
+// 核心展示模式：auto（智能自适应） | heatmap（热力方阵） | card（丰富详细卡片）
+const coreViewMode = ref<"auto" | "heatmap" | "card">("auto");
 const showAllCores = ref(false);
+
+const coreCount = computed(() => server.value.cpu?.coreDetails?.length || 0);
+
+// 实际生效的视图模式（核心数大于8默认热力图，<=8默认详细卡片）
+const activeCoreView = computed(() => {
+  if (coreViewMode.value !== "auto") return coreViewMode.value;
+  return coreCount.value > 8 ? "heatmap" : "card";
+});
+
+// 卡片视图下展示的核心（若很多核且未展开，默认只展示前8核）
 const displayedCores = computed(() => {
   const cores = server.value.cpu?.coreDetails || [];
   if (showAllCores.value || cores.length <= 8) {
@@ -163,6 +175,97 @@ const displayedCores = computed(() => {
   }
   return cores.slice(0, 8);
 });
+
+// 多核偏斜度与极值诊断统计
+const coreDiagnostics = computed(() => {
+  const cores = server.value.cpu?.coreDetails || [];
+  if (cores.length === 0) {
+    return {
+      maxIndex: 0,
+      maxVal: 0,
+      minIndex: 0,
+      minVal: 0,
+      avgVal: 0,
+      skew: 0,
+      isSkewed: false,
+      statusText: "无核心数据",
+      statusType: "info" as const
+    };
+  }
+
+  let maxVal = cores[0];
+  let maxIndex = 0;
+  let minVal = cores[0];
+  let minIndex = 0;
+  let sum = 0;
+
+  cores.forEach((val, idx) => {
+    sum += val;
+    if (val > maxVal) {
+      maxVal = val;
+      maxIndex = idx;
+    }
+    if (val < minVal) {
+      minVal = val;
+      minIndex = idx;
+    }
+  });
+
+  const avgVal = sum / cores.length;
+  const skew = maxVal - minVal;
+  // 极差大于等于 50% 且最高核心负载达到 70% 时判定为单核计算瓶颈/倾斜
+  const isSkewed = skew >= 50 && maxVal >= 70;
+
+  let statusText = "负载均衡";
+  let statusType: "success" | "warning" | "danger" = "success";
+  if (isSkewed) {
+    statusText = "单核高负荷倾斜";
+    statusType = "danger";
+  } else if (skew >= 35) {
+    statusText = "轻度波动";
+    statusType = "warning";
+  }
+
+  return {
+    maxIndex,
+    maxVal,
+    minIndex,
+    minVal,
+    avgVal,
+    skew,
+    isSkewed,
+    statusText,
+    statusType
+  };
+});
+
+// 热力方块背景色梯度计算
+const getHeatmapColor = (usage: number) => {
+  const val = Math.min(100, Math.max(0, usage || 0));
+  if (val >= 90) return "#ef4444"; // 红色满载
+  if (val >= 75) return "#f97316"; // 橙红高负荷
+  if (val >= 50) return "#eab308"; // 中等黄色
+  if (val >= 25) return "#10b981"; // 翠绿正常
+  if (val >= 10) return "#34d399"; // 浅绿轻载
+  return "var(--el-fill-color, #e2e8f0)"; // 极低空闲
+};
+
+// 热力方块文字前景色计算
+const getHeatmapTextColor = (usage: number) => {
+  const val = Math.min(100, Math.max(0, usage || 0));
+  if (val >= 25) return "#ffffff";
+  return "var(--el-text-color-regular, #475569)";
+};
+
+// 核心工作状态文字描述
+const getCoreStatusText = (usage: number) => {
+  const val = Math.min(100, Math.max(0, usage || 0));
+  if (val >= 85) return "满载高负荷";
+  if (val >= 60) return "计算繁忙";
+  if (val >= 30) return "正常计算";
+  return "平稳空闲";
+};
+// ===================================================================
 
 // 磁盘主分区计算 (优先根挂载点 '/')
 const primaryDisk = computed(() => {
@@ -1067,7 +1170,7 @@ onBeforeUnmount(() => {
       </el-col>
     </el-row>
 
-    <!-- CPU 核心负载矩阵 -->
+    <!-- ================= CPU 核心负载分布矩阵 (自适应双模：热力矩阵 vs 详细卡片) ================= -->
     <el-row
       v-if="server.cpu?.coreDetails?.length"
       :gutter="16"
@@ -1081,54 +1184,196 @@ onBeforeUnmount(() => {
                 <el-icon class="section-icon cpu"><Cpu /></el-icon>
                 <span class="section-title">CPU 核心负载分布矩阵</span>
                 <el-tag size="small" type="info" class="ml-2">
-                  共 {{ server.cpu?.coreDetails?.length || 0 }} 核心
+                  共 {{ coreCount }} 核心 / 线程
+                </el-tag>
+                <el-tag
+                  size="small"
+                  :type="coreDiagnostics.statusType"
+                  effect="light"
+                  class="ml-2"
+                >
+                  {{ coreDiagnostics.statusText }} (极差 {{ coreDiagnostics.skew.toFixed(0) }}%)
                 </el-tag>
               </div>
-              <div
-                v-if="(server.cpu?.coreDetails?.length || 0) > 8"
-                class="header-right"
-              >
-                <el-button
-                  link
-                  type="primary"
-                  size="small"
-                  @click="showAllCores = !showAllCores"
-                >
-                  {{ showAllCores ? '收起部分核心' : `展开全部 (${server.cpu?.coreDetails?.length} 核)` }}
-                  <el-icon class="el-icon--right">
-                    <ArrowUp v-if="showAllCores" />
-                    <ArrowDown v-else />
-                  </el-icon>
-                </el-button>
+
+              <div class="header-right">
+                <el-radio-group v-model="coreViewMode" size="small">
+                  <el-radio-button value="auto">
+                    自适应 ({{ activeCoreView === 'heatmap' ? '热力' : '卡片' }})
+                  </el-radio-button>
+                  <el-radio-button value="heatmap">热力方阵</el-radio-button>
+                  <el-radio-button value="card">详细卡片</el-radio-button>
+                </el-radio-group>
               </div>
             </div>
           </template>
 
-          <div class="cores-matrix-grid">
+          <!-- 顶部核心极值与偏斜诊断指示栏 -->
+          <div class="core-summary-strip">
+            <div class="summary-pill max-pill">
+              <span class="pill-icon">🔥</span>
+              <span class="pill-label">最高负载核心：</span>
+              <span class="pill-value text-red font-bold">
+                Core #{{ coreDiagnostics.maxIndex }} ({{ coreDiagnostics.maxVal.toFixed(0) }}%)
+              </span>
+            </div>
+
+            <div class="summary-pill min-pill">
+              <span class="pill-icon">❄️</span>
+              <span class="pill-label">最闲核心：</span>
+              <span class="pill-value text-green font-semibold">
+                Core #{{ coreDiagnostics.minIndex }} ({{ coreDiagnostics.minVal.toFixed(0) }}%)
+              </span>
+            </div>
+
+            <div class="summary-pill avg-pill">
+              <span class="pill-icon">⚖️</span>
+              <span class="pill-label">核心均值：</span>
+              <span class="pill-value text-blue font-semibold">
+                {{ coreDiagnostics.avgVal.toFixed(1) }}%
+              </span>
+            </div>
+
+            <div v-if="coreDiagnostics.isSkewed" class="summary-pill desc-pill">
+              <span class="pill-icon">⚠️</span>
+              <span class="pill-label text-red">
+                检测到单核高负荷倾斜，可能存在单线程计算瓶颈或密集任务锁定
+              </span>
+            </div>
+          </div>
+
+          <!-- 视图 A：热力方块矩阵 (Heatmap Matrix) - 针对超多核心与高配主机 -->
+          <div v-if="activeCoreView === 'heatmap'" class="cores-heatmap-container">
+            <div class="heatmap-tiles-grid">
+              <el-tooltip
+                v-for="(usage, index) in server.cpu?.coreDetails || []"
+                :key="index"
+                placement="top"
+                :show-after="80"
+              >
+                <template #content>
+                  <div class="heatmap-tip-content">
+                    <div class="font-bold">CPU 核心 #{{ index }}</div>
+                    <div>
+                      当前负载：<span :style="{ color: getUsageColor(usage || 0) }">{{ (usage || 0).toFixed(1) }}%</span>
+                    </div>
+                    <div>状态研判：{{ getCoreStatusText(usage || 0) }}</div>
+                    <div v-if="index === coreDiagnostics.maxIndex" class="text-orange mt-1">
+                      🔥 当前全机负载最高核心
+                    </div>
+                  </div>
+                </template>
+
+                <div
+                  class="heatmap-tile"
+                  :class="{
+                    'is-max-core': index === coreDiagnostics.maxIndex && coreDiagnostics.maxVal >= 60,
+                    'is-hot': (usage || 0) >= 80
+                  }"
+                  :style="{
+                    backgroundColor: getHeatmapColor(usage || 0),
+                    color: getHeatmapTextColor(usage || 0)
+                  }"
+                >
+                  <span class="tile-id">#{{ index }}</span>
+                  <span class="tile-val">{{ (usage || 0).toFixed(0) }}%</span>
+                  <span
+                    v-if="index === coreDiagnostics.maxIndex && coreDiagnostics.maxVal >= 70"
+                    class="tile-crown-dot"
+                  />
+                </div>
+              </el-tooltip>
+            </div>
+
+            <!-- 热力色阶图例 -->
+            <div class="heatmap-legend-bar">
+              <span class="legend-text">负载热度：</span>
+              <div class="legend-scale">
+                <span class="legend-block block-idle">0-10% 空闲</span>
+                <span class="legend-block block-light">10-25%</span>
+                <span class="legend-block block-normal">25-50% 正常</span>
+                <span class="legend-block block-mid">50-75% 中等</span>
+                <span class="legend-block block-busy">75-90% 繁忙</span>
+                <span class="legend-block block-full">90%+ 满载</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 视图 B：详细卡片模式 (Card Mode) - 针对少核心 (1~8核) 或精细检查 -->
+          <div
+            v-else
+            class="cores-cards-container"
+            :class="{ 'few-cores': coreCount <= 4 }"
+          >
             <div
               v-for="(usage, index) in displayedCores"
               :key="index"
-              class="core-cell-box"
+              class="core-detail-card"
+              :class="{
+                'is-extreme': index === coreDiagnostics.maxIndex && coreDiagnostics.maxVal >= 70
+              }"
             >
-              <div class="core-cell-header">
-                <span class="core-index">Core #{{ index }}</span>
+              <div class="card-header-line">
+                <div class="core-tag-box">
+                  <span class="core-number">Core #{{ index }}</span>
+                  <el-tag
+                    size="small"
+                    :type="getUsageColor(usage || 0) === '#f56c6c' ? 'danger' : ((usage || 0) >= 50 ? 'warning' : 'success')"
+                    effect="plain"
+                    class="status-tag"
+                  >
+                    {{ getCoreStatusText(usage || 0) }}
+                  </el-tag>
+                </div>
                 <span
-                  class="core-val"
+                  class="core-exact-percent"
                   :style="{ color: getUsageColor(usage || 0) }"
                 >
-                  {{ (usage || 0).toFixed(0) }}%
+                  {{ (usage || 0).toFixed(1) }}%
                 </span>
               </div>
-              <div class="core-bar-track">
+
+              <!-- 粗进度条与平滑色彩过渡 -->
+              <div class="core-track">
                 <div
-                  class="core-bar-fill"
+                  class="core-fill"
                   :style="{
                     width: `${Math.min(100, Math.max(0, usage || 0))}%`,
                     background: getCoreGradient(usage || 0)
                   }"
                 />
               </div>
+
+              <!-- 少核心时展示与全局均值的偏离度指标，视觉更丰富 -->
+              <div v-if="coreCount <= 8" class="card-footer-meta">
+                <span class="meta-label">相对均值偏离：</span>
+                <span
+                  class="meta-val font-semibold"
+                  :class="(usage || 0) >= coreDiagnostics.avgVal ? 'text-orange' : 'text-green'"
+                >
+                  {{ ((usage || 0) - coreDiagnostics.avgVal) >= 0 ? '+' : '' }}{{ ((usage || 0) - coreDiagnostics.avgVal).toFixed(1) }}%
+                </span>
+              </div>
             </div>
+          </div>
+
+          <!-- 展开更多核心折叠按钮（仅在详细卡片模式且核心数大于 8 时呈现） -->
+          <div
+            v-if="activeCoreView === 'card' && coreCount > 8"
+            class="expand-toggle-bar"
+          >
+            <el-button
+              type="primary"
+              plain
+              size="small"
+              @click="showAllCores = !showAllCores"
+            >
+              {{ showAllCores ? '收起部分核心 (仅显示前 8 核)' : `展开查看全部 (${coreCount} 核)` }}
+              <el-icon class="el-icon--right">
+                <ArrowUp v-if="showAllCores" />
+                <ArrowDown v-else />
+              </el-icon>
+            </el-button>
           </div>
         </el-card>
       </el-col>
@@ -1699,55 +1944,251 @@ onBeforeUnmount(() => {
   width: 100%;
 }
 
-/* CPU 核心矩阵 */
-.cores-matrix-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+/* ================= 多核矩阵与热力图样式 ================= */
+.core-summary-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
-}
-
-.core-cell-box {
+  padding: 10px 14px;
   background: var(--el-fill-color-light, #f8fafc);
   border: 1px solid var(--el-border-color-lighter, #e2e8f0);
   border-radius: 8px;
-  padding: 10px 12px;
-  transition: all 0.2s ease;
-}
-
-.core-cell-box:hover {
-  transform: translateY(-2px);
-  border-color: var(--el-color-primary, #3b82f6);
-}
-
-.core-cell-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  margin-bottom: 16px;
   font-size: 12px;
-  margin-bottom: 6px;
 }
 
-.core-index {
+.summary-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.summary-pill .pill-icon {
+  font-size: 14px;
+}
+
+.summary-pill .pill-label {
   color: var(--el-text-color-secondary, #64748b);
+}
+
+.summary-pill .pill-value {
+  font-size: 13px;
+}
+
+/* 热力方块容器 */
+.cores-heatmap-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.heatmap-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 8px;
+}
+
+.heatmap-tile {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  position: relative;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.heatmap-tile:hover {
+  transform: translateY(-2px) scale(1.05);
+  z-index: 5;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+}
+
+.heatmap-tile.is-max-core {
+  outline: 2px solid #ef4444;
+  outline-offset: 1px;
+}
+
+.tile-id {
+  font-size: 10px;
+  opacity: 0.85;
+  line-height: 1;
+}
+
+.tile-val {
+  font-weight: 700;
+  font-size: 12px;
+  margin-top: 3px;
+  line-height: 1.1;
+}
+
+.tile-crown-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  box-shadow: 0 0 4px #000000;
+}
+
+.heatmap-tip-content {
+  line-height: 1.6;
+  font-size: 12px;
+}
+
+.heatmap-legend-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px dashed var(--el-border-color-lighter, #e2e8f0);
+}
+
+.legend-text {
+  font-size: 12px;
+  color: var(--el-text-color-secondary, #64748b);
+}
+
+.legend-scale {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.legend-block {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 4px;
   font-weight: 500;
 }
 
-.core-val {
-  font-weight: 700;
+.legend-block.block-idle {
+  background: var(--el-fill-color, #e2e8f0);
+  color: var(--el-text-color-secondary, #64748b);
 }
 
-.core-bar-track {
+.legend-block.block-light {
+  background: #34d399;
+  color: #ffffff;
+}
+
+.legend-block.block-normal {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.legend-block.block-mid {
+  background: #eab308;
+  color: #ffffff;
+}
+
+.legend-block.block-busy {
+  background: #f97316;
+  color: #ffffff;
+}
+
+.legend-block.block-full {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+/* 详细卡片视图 */
+.cores-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.cores-cards-container.few-cores {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.core-detail-card {
+  background: var(--el-fill-color-light, #f8fafc);
+  border: 1px solid var(--el-border-color-lighter, #e2e8f0);
+  border-radius: 8px;
+  padding: 12px 14px;
+  transition: all 0.25s ease;
+}
+
+.core-detail-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--el-color-primary, #3b82f6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.core-detail-card.is-extreme {
+  border-left: 3px solid #ef4444;
+}
+
+.card-header-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.core-tag-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.core-number {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--el-text-color-primary, #0f172a);
+}
+
+.core-exact-percent {
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.core-track {
   width: 100%;
-  height: 6px;
+  height: 8px;
   background: var(--el-border-color-lighter, #e2e8f0);
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
 }
 
-.core-bar-fill {
+.core-fill {
   height: 100%;
-  border-radius: 3px;
+  border-radius: 4px;
   transition: width 0.3s ease;
+}
+
+.card-footer-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--el-border-color-lighter, #e2e8f0);
+}
+
+.card-footer-meta .meta-label {
+  color: var(--el-text-color-secondary, #64748b);
+}
+
+.expand-toggle-bar {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
 }
 
 /* 磁盘挂载卡片网格 */
@@ -1843,7 +2284,7 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 
-/* 颜色类 */
+/* 颜色辅助类 */
 .text-green {
   color: #10b981 !important;
 }
@@ -1896,12 +2337,20 @@ onBeforeUnmount(() => {
     margin-left: 0;
   }
 
-  .cores-matrix-grid {
+  .cores-cards-container {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cores-cards-container.few-cores {
+    grid-template-columns: 1fr;
   }
 
   .disk-cards-grid {
     grid-template-columns: 1fr;
+  }
+
+  .heatmap-tiles-grid {
+    grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
   }
 }
 </style>
