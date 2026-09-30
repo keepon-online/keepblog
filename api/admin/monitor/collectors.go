@@ -5,7 +5,9 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -174,14 +176,24 @@ func (h *Handler) getDiskInfo() ([]DiskInfo, error) {
 		return nil, err
 	}
 
-	var diskInfos []DiskInfo
+	// 按设备去重：容器内同一块盘会以多个 bind mount 出现（如 /app/*、/etc/*），只保留挂载点优先级最高的
+	deviceMap := make(map[string]disk.PartitionStat)
 	for _, partition := range partitions {
-
-		// 过滤掉虚拟文件系统和临时分区，只保留真实的硬盘分区
 		if h.isVirtualFilesystem(partition.Fstype) || h.isTempPartition(partition.Mountpoint) {
 			continue
 		}
+		if existing, ok := deviceMap[partition.Device]; ok {
+			if mountPriority(partition.Mountpoint) < mountPriority(existing.Mountpoint) {
+				deviceMap[partition.Device] = partition
+			}
+		} else {
+			deviceMap[partition.Device] = partition
+		}
+	}
 
+	// 容器内 overlay 根与 bind mount 指向同一块盘，statfs 返回相同总量，按总量二次去重
+	totalMap := make(map[uint64]DiskInfo)
+	for _, partition := range deviceMap {
 		usage, err := disk.Usage(partition.Mountpoint)
 		if err != nil {
 			continue
@@ -191,7 +203,7 @@ func (h *Handler) getDiskInfo() ([]DiskInfo, error) {
 			continue
 		}
 
-		diskInfos = append(diskInfos, DiskInfo{
+		info := DiskInfo{
 			Device:      partition.Device,
 			Mountpoint:  partition.Mountpoint,
 			Fstype:      partition.Fstype,
@@ -202,17 +214,51 @@ func (h *Handler) getDiskInfo() ([]DiskInfo, error) {
 			TotalFormat: h.formatBytes(usage.Total),
 			UsedFormat:  h.formatBytes(usage.Used),
 			FreeFormat:  h.formatBytes(usage.Free),
-		})
+		}
+
+		if existing, ok := totalMap[usage.Total]; ok {
+			if mountPriority(info.Mountpoint) < mountPriority(existing.Mountpoint) {
+				totalMap[usage.Total] = info
+			}
+		} else {
+			totalMap[usage.Total] = info
+		}
 	}
+
+	var diskInfos []DiskInfo
+	for _, info := range totalMap {
+		diskInfos = append(diskInfos, info)
+	}
+
+	sort.Slice(diskInfos, func(i, j int) bool {
+		return diskInfos[i].Mountpoint < diskInfos[j].Mountpoint
+	})
 
 	return diskInfos, nil
 }
 
+// mountPriority 挂载点展示优先级，越小越优先（/ 优于 /app，/app 优于其子目录）
+func mountPriority(mountpoint string) int {
+	switch {
+	case mountpoint == "/":
+		return 0
+	case mountpoint == "/app" || mountpoint == "/data" || mountpoint == "/home":
+		return 1
+	case strings.HasPrefix(mountpoint, "/var/"):
+		return 3
+	case strings.HasPrefix(mountpoint, "/app/"):
+		return 5
+	default:
+		return 10
+	}
+}
+
 // isVirtualFilesystem 判断是否为虚拟文件系统
+// 注意 overlay 不在此列：容器根目录的 fstype 就是 overlay，需要保留，交给挂载点/总量去重处理
 func (h *Handler) isVirtualFilesystem(fstype string) bool {
 	virtualFilesystems := []string{
 		"tmpfs", "devtmpfs", "sysfs", "proc", "cgroup",
-		"cgroup2", "pstore", "squashfs", "overlay",
+		"cgroup2", "pstore", "squashfs",
 		"debugfs", "tracefs", "securityfs", "sockfs",
 		"pipefs", "rpc_pipefs", "rpc_pipe", "binfmt_misc",
 		"devpts", "ramfs", "hugetlbfs", "mqueue",
@@ -232,6 +278,7 @@ func (h *Handler) isTempPartition(mountpoint string) bool {
 		"/dev", "/run", "/sys", "/proc", "/tmp", "/var/tmp",
 		"/boot/efi", "/snap", "/var/lib/docker", "/var/lib/lxc",
 		"/var/lib/kubelet", "/var/lib/containerd", "/lost+found",
+		"/etc", // Docker 注入容器的 bind mount（resolv.conf/hostname/hosts）
 	}
 
 	for _, tp := range tempPartitions {
@@ -342,14 +389,10 @@ func (h *Handler) getRealtimeStats() (*RealtimeStats, error) {
 		return nil, err
 	}
 
-	// 磁盘使用率(取第一个磁盘)
+	// 磁盘使用率(取去重后的代表分区；直接取 partitions[0] 在容器里可能是 Docker 注入的 bind mount)
 	var diskPercent float64
-	partitions, _ := disk.Partitions(false)
-	if len(partitions) > 0 {
-		usage, err := disk.Usage(partitions[0].Mountpoint)
-		if err == nil {
-			diskPercent = usage.UsedPercent
-		}
+	if diskInfos, err := h.getDiskInfo(); err == nil && len(diskInfos) > 0 {
+		diskPercent = diskInfos[0].UsedPercent
 	}
 
 	// 网络流量
