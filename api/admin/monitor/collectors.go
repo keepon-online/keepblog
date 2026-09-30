@@ -96,16 +96,23 @@ func (h *Handler) getGeneralInfo() (*GeneralInfo, error) {
 
 // 获取CPU信息
 func (h *Handler) getCPUInfo() (*CPUInfo, error) {
-	// 获取CPU使用率
-	percents, err := cpu.Percent(time.Second, false)
-	if err != nil {
-		return nil, err
-	}
-
-	// 获取各核心使用率
-	corePercents, err := cpu.Percent(time.Second, true)
+	// 获取各核心使用率（200ms采样兼顾精确度与接口毫秒级高响应）
+	corePercents, err := cpu.Percent(200*time.Millisecond, true)
 	if err != nil {
 		corePercents = []float64{}
+	}
+
+	var usage float64
+	if len(corePercents) > 0 {
+		var sum float64
+		for _, p := range corePercents {
+			sum += p
+		}
+		usage = sum / float64(len(corePercents))
+	} else {
+		if percents, err := cpu.Percent(0, false); err == nil && len(percents) > 0 {
+			usage = percents[0]
+		}
 	}
 
 	// 获取CPU信息
@@ -119,11 +126,6 @@ func (h *Handler) getCPUInfo() (*CPUInfo, error) {
 	if len(infos) > 0 {
 		modelName = infos[0].ModelName
 		frequency = infos[0].Mhz
-	}
-
-	var usage float64
-	if len(percents) > 0 {
-		usage = percents[0]
 	}
 
 	return &CPUInfo{
@@ -361,10 +363,16 @@ func (h *Handler) getLoadInfo() (*LoadInfo, error) {
 
 // 获取进程信息
 func (h *Handler) getProcessInfo() (*ProcessInfo, error) {
-	// 简化实现，只返回基本信息
+	totalProcs := 0
+	if hostInfo, err := host.Info(); err == nil && hostInfo.Procs > 0 {
+		totalProcs = int(hostInfo.Procs)
+	}
+	if totalProcs == 0 {
+		totalProcs = runtime.NumGoroutine()
+	}
 	return &ProcessInfo{
-		Total:    runtime.NumGoroutine(), // 使用goroutine数量作为示例
-		Running:  1,
+		Total:    totalProcs,
+		Running:  runtime.NumGoroutine(),
 		Sleeping: 0,
 		Stopped:  0,
 		Zombie:   0,
@@ -373,8 +381,8 @@ func (h *Handler) getProcessInfo() (*ProcessInfo, error) {
 
 // 获取实时统计数据
 func (h *Handler) getRealtimeStats() (*RealtimeStats, error) {
-	// CPU使用率
-	cpuPercents, err := cpu.Percent(time.Second, false)
+	// CPU使用率（200ms采样）
+	cpuPercents, err := cpu.Percent(200*time.Millisecond, false)
 	if err != nil {
 		return nil, err
 	}
