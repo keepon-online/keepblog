@@ -2,10 +2,19 @@
 defineOptions({
   name: "Monitor"
 });
-import { ref, onMounted, computed, onBeforeUnmount, watch } from "vue";
-import { getServe } from "@/api/monitor";
+
+import {
+  ref,
+  onMounted,
+  computed,
+  onBeforeUnmount,
+  watch,
+  nextTick
+} from "vue";
+import dayjs from "dayjs";
 import { ElMessage } from "element-plus";
-import echarts from "@/utils/echarts"; // 按需引入
+import { getServe } from "@/api/monitor";
+import echarts from "@/utils/echarts";
 import {
   Monitor,
   Refresh,
@@ -15,7 +24,10 @@ import {
   Platform,
   FolderOpened,
   Connection,
-  Timer
+  Timer,
+  Clock,
+  ArrowDown,
+  ArrowUp
 } from "@element-plus/icons-vue";
 
 interface ServerInfo {
@@ -89,30 +101,60 @@ interface ServerInfo {
   timestamp?: number;
 }
 
+// 核心数据状态
 const server = ref<ServerInfo>({});
-const loading = ref(true);
-const refreshInterval = ref<NodeJS.Timeout | null>(null);
+const loading = ref(true); // 首次加载占位
+const refreshing = ref(false); // 手动刷新按钮加载动画
+const autoRefresh = ref(true);
+const refreshIntervalSec = ref(5);
+let timer: ReturnType<typeof setInterval> | null = null;
+const lastUpdatedTime = ref("");
+
+// 图表维度切换
+const activeChartMetric = ref<"resource" | "network">("resource");
+const maxDataPoints = ref<number>(30);
 
 // 历史数据存储
 const historyData = ref<{
   timestamps: string[];
   cpuData: number[];
   memoryData: number[];
+  netRecvData: number[]; // KB/s
+  netSentData: number[]; // KB/s
 }>({
   timestamps: [],
   cpuData: [],
-  memoryData: []
+  memoryData: [],
+  netRecvData: [],
+  netSentData: []
 });
 
-// 图表引用
-const cpuGaugeRef = ref<HTMLElement | null>(null);
-const memGaugeRef = ref<HTMLElement | null>(null);
-const historyChartRef = ref<HTMLElement | null>(null);
-let cpuGaugeChart: echarts.ECharts | null = null;
-let memGaugeChart: echarts.ECharts | null = null;
-let historyChart: echarts.ECharts | null = null;
+// 网络吞吐速率计算快照
+const prevNetworkSnapshot = ref<{
+  timestamp: number;
+  rates: Record<string, { bytesRecv: number; bytesSent: number }>;
+} | null>(null);
 
-// CPU核心显示控制
+const networkRates = ref<
+  Record<
+    string,
+    {
+      recvRate: number;
+      sentRate: number;
+      recvRateFormat: string;
+      sentRateFormat: string;
+    }
+  >
+>({});
+
+const totalNetworkRate = ref({
+  recvRate: 0,
+  sentRate: 0,
+  recvRateFormat: "0 B/s",
+  sentRateFormat: "0 B/s"
+});
+
+// CPU 核心展开/收起控制
 const showAllCores = ref(false);
 const displayedCores = computed(() => {
   const cores = server.value.cpu?.coreDetails || [];
@@ -122,44 +164,113 @@ const displayedCores = computed(() => {
   return cores.slice(0, 8);
 });
 
-// 计算CPU使用状态颜色
-const cpuUsageClass = computed(() => {
-  const usage = server.value.cpu?.usagePercent || 0;
-  if (usage > 80) return "text-red-500";
-  if (usage > 60) return "text-orange-500";
-  return "text-green-500";
+// 磁盘主分区计算 (优先根挂载点 '/')
+const primaryDisk = computed(() => {
+  const disks = server.value.disk || [];
+  if (disks.length === 0) return null;
+  const root = disks.find(d => d.mountpoint === "/");
+  return root || disks[0];
 });
 
-// 计算内存使用状态颜色
-const memUsageClass = computed(() => {
-  const usage = server.value.memory?.usedPercent || 0;
-  if (usage > 80) return "text-red-500";
-  if (usage > 60) return "text-orange-500";
-  return "text-green-500";
+// 系统综合健康评估
+const systemHealth = computed(() => {
+  const cpuVal = server.value.cpu?.usagePercent || 0;
+  const memVal = server.value.memory?.usedPercent || 0;
+  const disks = server.value.disk || [];
+  const maxDisk = disks.reduce(
+    (max, d) => Math.max(max, d.usedPercent || 0),
+    0
+  );
+
+  if (cpuVal > 85 || memVal > 90 || maxDisk > 92) {
+    return {
+      status: "critical",
+      text: "高负载告警",
+      tagType: "danger" as const,
+      color: "#f56c6c"
+    };
+  }
+  if (cpuVal > 70 || memVal > 75 || maxDisk > 80) {
+    return {
+      status: "warning",
+      text: "负载偏高",
+      tagType: "warning" as const,
+      color: "#e6a23c"
+    };
+  }
+  return {
+    status: "healthy",
+    text: "运行平稳",
+    tagType: "success" as const,
+    color: "#67c23a"
+  };
 });
 
-// 获取使用率颜色
+// 格式化网络速率
+const formatRate = (bytesPerSec: number): string => {
+  if (bytesPerSec <= 0 || isNaN(bytesPerSec)) return "0 B/s";
+  const units = ["B/s", "KB/s", "MB/s", "GB/s", "TB/s"];
+  let i = 0;
+  let val = bytesPerSec;
+  while (val >= 1024 && i < units.length - 1) {
+    val /= 1024;
+    i++;
+  }
+  return `${val < 10 ? val.toFixed(2) : val.toFixed(1)} ${units[i]}`;
+};
+
+// 状态色阶
 const getUsageColor = (percent: number) => {
-  if (percent > 80) return "#f56c6c";
-  if (percent > 60) return "#e6a23c";
+  if (percent >= 85) return "#f56c6c";
+  if (percent >= 70) return "#e6a23c";
   return "#67c23a";
 };
 
-// 初始化仪表盘图表
-const initGaugeCharts = () => {
-  if (cpuGaugeRef.value) {
+const getCoreGradient = (percent: number) => {
+  const color = getUsageColor(percent);
+  return `linear-gradient(90deg, ${color}66 0%, ${color} 100%)`;
+};
+
+const getLoadClass = (val?: number) => {
+  if (!val) return "";
+  const cores = server.value.cpu?.cores || 1;
+  if (val > cores * 1.2) return "text-red font-bold";
+  if (val > cores * 0.8) return "text-orange font-medium";
+  return "text-green";
+};
+
+// 图表 DOM 引用与实例
+const cpuGaugeRef = ref<HTMLElement | null>(null);
+const memGaugeRef = ref<HTMLElement | null>(null);
+const historyChartRef = ref<HTMLElement | null>(null);
+let cpuGaugeChart: echarts.ECharts | null = null;
+let memGaugeChart: echarts.ECharts | null = null;
+let historyChart: echarts.ECharts | null = null;
+let themeObserver: MutationObserver | null = null;
+
+const isDark = () => document.documentElement.classList.contains("dark");
+
+// 初始化与更新图表
+const initCharts = () => {
+  if (cpuGaugeRef.value && !cpuGaugeChart) {
     cpuGaugeChart = echarts.init(cpuGaugeRef.value);
-    updateCpuGauge();
   }
-  if (memGaugeRef.value) {
+  if (memGaugeRef.value && !memGaugeChart) {
     memGaugeChart = echarts.init(memGaugeRef.value);
-    updateMemGauge();
   }
-  if (historyChartRef.value) {
+  if (historyChartRef.value && !historyChart) {
     historyChart = echarts.init(historyChartRef.value);
-    updateHistoryChart();
   }
+  renderAllCharts();
   window.addEventListener("resize", handleResize);
+
+  themeObserver = new MutationObserver(() => {
+    renderAllCharts();
+  });
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"]
+  });
 };
 
 const handleResize = () => {
@@ -168,35 +279,32 @@ const handleResize = () => {
   historyChart?.resize();
 };
 
-// 更新CPU仪表盘
 const updateCpuGauge = () => {
   if (!cpuGaugeChart) return;
+  const dark = isDark();
   const value = server.value.cpu?.usagePercent || 0;
+  const color = getUsageColor(value);
   const option = {
     series: [
       {
         type: "gauge",
-        startAngle: 200,
-        endAngle: -20,
+        startAngle: 210,
+        endAngle: -30,
         min: 0,
         max: 100,
         splitNumber: 10,
-        itemStyle: {
-          color: getUsageColor(value)
-        },
+        itemStyle: { color },
         progress: {
           show: true,
           roundCap: true,
           width: 12
         },
-        pointer: {
-          show: false
-        },
+        pointer: { show: false },
         axisLine: {
           roundCap: true,
           lineStyle: {
             width: 12,
-            color: [[1, "#e6e8f0"]]
+            color: [[1, dark ? "rgba(255,255,255,0.08)" : "#f1f5f9"]]
           }
         },
         axisTick: { show: false },
@@ -204,54 +312,51 @@ const updateCpuGauge = () => {
         axisLabel: { show: false },
         title: {
           show: true,
-          offsetCenter: [0, "30%"],
-          fontSize: 14,
-          color: "#666"
+          offsetCenter: [0, "32%"],
+          fontSize: 13,
+          color: dark ? "#94a3b8" : "#64748b"
         },
         detail: {
           valueAnimation: true,
-          offsetCenter: [0, "-10%"],
-          fontSize: 28,
+          offsetCenter: [0, "-8%"],
+          fontSize: 26,
           fontWeight: "bold",
           formatter: "{value}%",
-          color: getUsageColor(value)
+          color
         },
-        data: [{ value: value.toFixed(1), name: "CPU" }]
+        data: [{ value: Number(value.toFixed(1)), name: "CPU 使用率" }]
       }
     ]
   };
   cpuGaugeChart.setOption(option);
 };
 
-// 更新内存仪表盘
 const updateMemGauge = () => {
   if (!memGaugeChart) return;
+  const dark = isDark();
   const value = server.value.memory?.usedPercent || 0;
+  const color = getUsageColor(value);
   const option = {
     series: [
       {
         type: "gauge",
-        startAngle: 200,
-        endAngle: -20,
+        startAngle: 210,
+        endAngle: -30,
         min: 0,
         max: 100,
         splitNumber: 10,
-        itemStyle: {
-          color: getUsageColor(value)
-        },
+        itemStyle: { color },
         progress: {
           show: true,
           roundCap: true,
           width: 12
         },
-        pointer: {
-          show: false
-        },
+        pointer: { show: false },
         axisLine: {
           roundCap: true,
           lineStyle: {
             width: 12,
-            color: [[1, "#e6e8f0"]]
+            color: [[1, dark ? "rgba(255,255,255,0.08)" : "#f1f5f9"]]
           }
         },
         axisTick: { show: false },
@@ -259,340 +364,767 @@ const updateMemGauge = () => {
         axisLabel: { show: false },
         title: {
           show: true,
-          offsetCenter: [0, "30%"],
-          fontSize: 14,
-          color: "#666"
+          offsetCenter: [0, "32%"],
+          fontSize: 13,
+          color: dark ? "#94a3b8" : "#64748b"
         },
         detail: {
           valueAnimation: true,
-          offsetCenter: [0, "-10%"],
-          fontSize: 28,
+          offsetCenter: [0, "-8%"],
+          fontSize: 26,
           fontWeight: "bold",
           formatter: "{value}%",
-          color: getUsageColor(value)
+          color
         },
-        data: [{ value: value.toFixed(1), name: "内存" }]
+        data: [{ value: Number(value.toFixed(1)), name: "内存使用率" }]
       }
     ]
   };
   memGaugeChart.setOption(option);
 };
 
-// 更新历史曲线图
 const updateHistoryChart = () => {
   if (!historyChart) return;
-  const option = {
-    tooltip: {
-      trigger: "axis",
-      axisPointer: { type: "cross" }
-    },
-    legend: {
-      data: ["CPU使用率", "内存使用率"],
-      bottom: 0
-    },
-    grid: {
-      left: "3%",
-      right: "4%",
-      bottom: "15%",
-      top: "10%",
-      containLabel: true
-    },
-    xAxis: {
-      type: "category",
-      boundaryGap: false,
-      data: historyData.value.timestamps,
-      axisLabel: { fontSize: 10 }
-    },
-    yAxis: {
-      type: "value",
-      min: 0,
-      max: 100,
-      axisLabel: { formatter: "{value}%" }
-    },
-    series: [
-      {
-        name: "CPU使用率",
-        type: "line",
-        smooth: true,
-        symbol: "none",
-        areaStyle: {
-          opacity: 0.3,
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: "rgba(59, 130, 246, 0.5)" },
-            { offset: 1, color: "rgba(59, 130, 246, 0.05)" }
-          ])
-        },
-        lineStyle: { width: 2, color: "#3b82f6" },
-        data: historyData.value.cpuData
+  const dark = isDark();
+  const textColor = dark ? "#94a3b8" : "#64748b";
+  const splitLineColor = dark
+    ? "rgba(255, 255, 255, 0.06)"
+    : "rgba(0, 0, 0, 0.05)";
+
+  if (activeChartMetric.value === "resource") {
+    const option = {
+      backgroundColor: "transparent",
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "cross" },
+        valueFormatter: (value: any) => `${Number(value || 0).toFixed(1)}%`
       },
-      {
-        name: "内存使用率",
-        type: "line",
-        smooth: true,
-        symbol: "none",
-        areaStyle: {
-          opacity: 0.3,
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: "rgba(16, 185, 129, 0.5)" },
-            { offset: 1, color: "rgba(16, 185, 129, 0.05)" }
-          ])
+      legend: {
+        data: ["CPU 使用率", "内存使用率"],
+        bottom: 0,
+        textStyle: { color: textColor }
+      },
+      grid: {
+        left: "2%",
+        right: "3%",
+        bottom: "12%",
+        top: "10%",
+        containLabel: true
+      },
+      xAxis: {
+        type: "category",
+        boundaryGap: false,
+        data: historyData.value.timestamps,
+        axisLabel: { color: textColor, fontSize: 11 },
+        axisLine: { lineStyle: { color: dark ? "#334155" : "#e2e8f0" } }
+      },
+      yAxis: {
+        type: "value",
+        min: 0,
+        max: 100,
+        axisLabel: {
+          formatter: "{value}%",
+          color: textColor,
+          fontSize: 11
         },
-        lineStyle: { width: 2, color: "#10b981" },
-        data: historyData.value.memoryData
-      }
-    ]
-  };
-  historyChart.setOption(option);
+        splitLine: { lineStyle: { color: splitLineColor } }
+      },
+      series: [
+        {
+          name: "CPU 使用率",
+          type: "line",
+          smooth: true,
+          symbol: "circle",
+          symbolSize: 4,
+          areaStyle: {
+            opacity: 0.2,
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: "rgba(59, 130, 246, 0.6)" },
+              { offset: 1, color: "rgba(59, 130, 246, 0.02)" }
+            ])
+          },
+          lineStyle: { width: 2.2, color: "#3b82f6" },
+          itemStyle: { color: "#3b82f6" },
+          data: historyData.value.cpuData
+        },
+        {
+          name: "内存使用率",
+          type: "line",
+          smooth: true,
+          symbol: "circle",
+          symbolSize: 4,
+          areaStyle: {
+            opacity: 0.2,
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: "rgba(16, 185, 129, 0.6)" },
+              { offset: 1, color: "rgba(16, 185, 129, 0.02)" }
+            ])
+          },
+          lineStyle: { width: 2.2, color: "#10b981" },
+          itemStyle: { color: "#10b981" },
+          data: historyData.value.memoryData
+        }
+      ]
+    };
+    historyChart.setOption(option, true);
+  } else {
+    // 网络流量吞吐曲线 (单位: KB/s)
+    const option = {
+      backgroundColor: "transparent",
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "cross" },
+        valueFormatter: (value: any) =>
+          formatRate(Number(value || 0) * 1024)
+      },
+      legend: {
+        data: ["实时下行速率 (入网)", "实时上行速率 (出网)"],
+        bottom: 0,
+        textStyle: { color: textColor }
+      },
+      grid: {
+        left: "2%",
+        right: "3%",
+        bottom: "12%",
+        top: "10%",
+        containLabel: true
+      },
+      xAxis: {
+        type: "category",
+        boundaryGap: false,
+        data: historyData.value.timestamps,
+        axisLabel: { color: textColor, fontSize: 11 },
+        axisLine: { lineStyle: { color: dark ? "#334155" : "#e2e8f0" } }
+      },
+      yAxis: {
+        type: "value",
+        axisLabel: {
+          formatter: (val: number) => `${val.toFixed(0)} KB/s`,
+          color: textColor,
+          fontSize: 11
+        },
+        splitLine: { lineStyle: { color: splitLineColor } }
+      },
+      series: [
+        {
+          name: "实时下行速率 (入网)",
+          type: "line",
+          smooth: true,
+          symbol: "circle",
+          symbolSize: 4,
+          areaStyle: {
+            opacity: 0.2,
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: "rgba(16, 185, 129, 0.6)" },
+              { offset: 1, color: "rgba(16, 185, 129, 0.02)" }
+            ])
+          },
+          lineStyle: { width: 2.2, color: "#10b981" },
+          itemStyle: { color: "#10b981" },
+          data: historyData.value.netRecvData
+        },
+        {
+          name: "实时上行速率 (出网)",
+          type: "line",
+          smooth: true,
+          symbol: "circle",
+          symbolSize: 4,
+          areaStyle: {
+            opacity: 0.2,
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: "rgba(139, 92, 246, 0.6)" },
+              { offset: 1, color: "rgba(139, 92, 246, 0.02)" }
+            ])
+          },
+          lineStyle: { width: 2.2, color: "#8b5cf6" },
+          itemStyle: { color: "#8b5cf6" },
+          data: historyData.value.netSentData
+        }
+      ]
+    };
+    historyChart.setOption(option, true);
+  }
 };
 
-// 更新历史数据
+const renderAllCharts = () => {
+  updateCpuGauge();
+  updateMemGauge();
+  updateHistoryChart();
+};
+
+// 计算网络接口实时传输速率
+const updateNetworkRates = () => {
+  const now = Date.now();
+  if (prevNetworkSnapshot.value && server.value.network) {
+    const timeDeltaSec = (now - prevNetworkSnapshot.value.timestamp) / 1000;
+    if (timeDeltaSec > 0.4) {
+      let sumRecvRate = 0;
+      let sumSentRate = 0;
+      const rates: Record<string, any> = {};
+
+      for (const iface of server.value.network) {
+        const prev = prevNetworkSnapshot.value.rates[iface.name];
+        if (
+          prev &&
+          iface.bytesRecv >= prev.bytesRecv &&
+          iface.bytesSent >= prev.bytesSent
+        ) {
+          const recvRate = (iface.bytesRecv - prev.bytesRecv) / timeDeltaSec;
+          const sentRate = (iface.bytesSent - prev.bytesSent) / timeDeltaSec;
+          rates[iface.name] = {
+            recvRate,
+            sentRate,
+            recvRateFormat: formatRate(recvRate),
+            sentRateFormat: formatRate(sentRate)
+          };
+          if (iface.name !== "lo" && iface.isUp) {
+            sumRecvRate += recvRate;
+            sumSentRate += sentRate;
+          }
+        } else {
+          rates[iface.name] = {
+            recvRate: 0,
+            sentRate: 0,
+            recvRateFormat: "0 B/s",
+            sentRateFormat: "0 B/s"
+          };
+        }
+      }
+      networkRates.value = rates;
+      totalNetworkRate.value = {
+        recvRate: sumRecvRate,
+        sentRate: sumSentRate,
+        recvRateFormat: formatRate(sumRecvRate),
+        sentRateFormat: formatRate(sumSentRate)
+      };
+    }
+  }
+
+  // 记录本次快照
+  const snapshotMap: Record<string, { bytesRecv: number; bytesSent: number }> =
+    {};
+  if (server.value.network) {
+    for (const iface of server.value.network) {
+      snapshotMap[iface.name] = {
+        bytesRecv: iface.bytesRecv,
+        bytesSent: iface.bytesSent
+      };
+    }
+  }
+  prevNetworkSnapshot.value = {
+    timestamp: now,
+    rates: snapshotMap
+  };
+};
+
+// 记录历史序列
 const updateHistoryData = () => {
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString("zh-CN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-  });
+  const timeStr = dayjs().format("HH:mm:ss");
 
   historyData.value.timestamps.push(timeStr);
-  historyData.value.cpuData.push(server.value.cpu?.usagePercent || 0);
-  historyData.value.memoryData.push(server.value.memory?.usedPercent || 0);
+  historyData.value.cpuData.push(
+    Number((server.value.cpu?.usagePercent || 0).toFixed(1))
+  );
+  historyData.value.memoryData.push(
+    Number((server.value.memory?.usedPercent || 0).toFixed(1))
+  );
+  historyData.value.netRecvData.push(
+    Number((totalNetworkRate.value.recvRate / 1024).toFixed(1))
+  );
+  historyData.value.netSentData.push(
+    Number((totalNetworkRate.value.sentRate / 1024).toFixed(1))
+  );
 
-  // 只保留最近30个数据点
-  if (historyData.value.timestamps.length > 30) {
+  const limit = maxDataPoints.value;
+  while (historyData.value.timestamps.length > limit) {
     historyData.value.timestamps.shift();
     historyData.value.cpuData.shift();
     historyData.value.memoryData.shift();
+    historyData.value.netRecvData.shift();
+    historyData.value.netSentData.shift();
   }
 };
 
-// 获取服务器信息
-const fetchServerInfo = async () => {
+// 获取服务器监控完整数据
+const fetchServerInfo = async (isManual = false) => {
+  if (isManual) {
+    refreshing.value = true;
+  }
   try {
-    loading.value = true;
     const rep = await getServe();
-    if (rep && rep.code === 200) {
+    if (rep && rep.code === 200 && rep.payload) {
       server.value = rep.payload;
+      lastUpdatedTime.value = dayjs().format("HH:mm:ss");
+      updateNetworkRates();
       updateHistoryData();
-      updateCpuGauge();
-      updateMemGauge();
-      updateHistoryChart();
+      renderAllCharts();
+      if (isManual) {
+        ElMessage.success("监控数据刷新成功");
+      }
     } else {
-      ElMessage.error("获取服务器信息失败");
+      if (isManual) {
+        ElMessage.error(rep?.message || "获取系统监控数据失败");
+      }
     }
-  } catch (error) {
-    console.error("获取服务器信息失败:", error);
+  } catch (error: any) {
+    console.error("fetch server info error:", error);
+    if (isManual) {
+      ElMessage.error(error?.message || "网络请求异常");
+    }
   } finally {
     loading.value = false;
+    refreshing.value = false;
   }
 };
 
-// 刷新数据
-const refreshData = () => {
-  fetchServerInfo();
-  ElMessage.success("数据刷新成功");
+// 控制器交互逻辑
+const manualRefresh = () => {
+  fetchServerInfo(true);
 };
 
-// 自动刷新
+const handleAutoRefreshChange = (val: boolean) => {
+  if (val) {
+    startAutoRefresh();
+    ElMessage.success(`已启用自动刷新 (${refreshIntervalSec.value}秒)`);
+  } else {
+    stopAutoRefresh();
+    ElMessage.info("已暂停自动刷新");
+  }
+};
+
+const handleIntervalChange = () => {
+  if (autoRefresh.value) {
+    startAutoRefresh();
+  }
+};
+
+const handleMetricTabChange = () => {
+  nextTick(() => {
+    updateHistoryChart();
+  });
+};
+
+const handleDataPointsChange = () => {
+  const limit = maxDataPoints.value;
+  while (historyData.value.timestamps.length > limit) {
+    historyData.value.timestamps.shift();
+    historyData.value.cpuData.shift();
+    historyData.value.memoryData.shift();
+    historyData.value.netRecvData.shift();
+    historyData.value.netSentData.shift();
+  }
+  updateHistoryChart();
+};
+
 const startAutoRefresh = () => {
-  if (refreshInterval.value) {
-    clearInterval(refreshInterval.value);
-  }
-  refreshInterval.value = setInterval(fetchServerInfo, 5000); // 5秒刷新一次
+  stopAutoRefresh();
+  timer = setInterval(() => {
+    fetchServerInfo(false);
+  }, refreshIntervalSec.value * 1000);
 };
 
 const stopAutoRefresh = () => {
-  if (refreshInterval.value) {
-    clearInterval(refreshInterval.value);
-    refreshInterval.value = null;
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
   }
 };
 
-onMounted(() => {
-  fetchServerInfo();
-  setTimeout(initGaugeCharts, 100);
-  startAutoRefresh();
+onMounted(async () => {
+  await fetchServerInfo();
+  setTimeout(initCharts, 80);
+  if (autoRefresh.value) {
+    startAutoRefresh();
+  }
 });
 
-// 组件卸载时清除定时器
 onBeforeUnmount(() => {
   stopAutoRefresh();
   window.removeEventListener("resize", handleResize);
+  themeObserver?.disconnect();
   cpuGaugeChart?.dispose();
   memGaugeChart?.dispose();
   historyChart?.dispose();
+  cpuGaugeChart = null;
+  memGaugeChart = null;
+  historyChart = null;
 });
 </script>
 
 <template>
-  <div class="monitor-page">
-    <!-- 资源使用概览 -->
-    <el-row :gutter="16" class="overview-section">
-      <!-- CPU仪表盘 -->
-      <el-col :xs="24" :sm="12" :lg="6">
-        <el-card shadow="hover" class="gauge-card">
-          <div class="gauge-header">
-            <el-icon class="gauge-icon cpu"><Cpu /></el-icon>
-            <span>CPU 使用率</span>
+  <div class="system-monitor-container">
+    <!-- 顶部操作与状态栏 -->
+    <div class="monitor-control-bar">
+      <div class="bar-left">
+        <div class="title-with-icon">
+          <div class="title-icon-box">
+            <el-icon><Monitor /></el-icon>
           </div>
-          <div ref="cpuGaugeRef" class="gauge-chart" />
-          <div class="gauge-info">
-            <div class="info-row">
-              <span>核心数</span>
-              <span class="value">{{ server.cpu?.cores || 0 }} 核</span>
+          <div class="title-text-group">
+            <div class="bar-title">系统服务器监控</div>
+            <div class="bar-subtitle">
+              实时监控 CPU 计算资源、内存占用、磁盘存储与网卡流量吞吐
             </div>
-            <div class="info-row">
-              <span>负载</span>
-              <span class="value">{{
-                server.load?.load1?.toFixed(2) || 0
-              }}</span>
+          </div>
+        </div>
+        <div class="status-indicator">
+          <el-tag
+            :type="systemHealth.tagType"
+            effect="dark"
+            class="status-pulse-tag"
+          >
+            <span
+              class="pulse-dot"
+              :style="{ backgroundColor: systemHealth.color }"
+            />
+            {{ systemHealth.text }}
+          </el-tag>
+          <span v-if="lastUpdatedTime" class="update-time-text">
+            <el-icon><Clock /></el-icon>
+            最后更新：{{ lastUpdatedTime }}
+          </span>
+        </div>
+      </div>
+
+      <div class="bar-right">
+        <div class="control-item">
+          <span class="control-label">自动刷新</span>
+          <el-switch
+            v-model="autoRefresh"
+            inline-prompt
+            active-text="开"
+            inactive-text="关"
+            @change="handleAutoRefreshChange"
+          />
+        </div>
+
+        <div v-if="autoRefresh" class="control-item">
+          <span class="control-label">频率</span>
+          <el-select
+            v-model="refreshIntervalSec"
+            size="small"
+            class="interval-select"
+            @change="handleIntervalChange"
+          >
+            <el-option :value="3" label="3 秒" />
+            <el-option :value="5" label="5 秒" />
+            <el-option :value="10" label="10 秒" />
+            <el-option :value="30" label="30 秒" />
+          </el-select>
+        </div>
+
+        <el-button
+          type="primary"
+          :loading="refreshing"
+          :icon="Refresh"
+          @click="manualRefresh"
+        >
+          刷新数据
+        </el-button>
+      </div>
+    </div>
+
+    <!-- 顶部核心资源四大卡片 -->
+    <el-row :gutter="16" class="top-metrics-row">
+      <!-- 1. CPU 卡片 -->
+      <el-col :xs="24" :sm="12" :lg="6">
+        <el-card shadow="hover" class="metric-card">
+          <div class="card-top-header">
+            <div class="header-badge cpu">
+              <el-icon><Cpu /></el-icon>
+            </div>
+            <div class="header-titles">
+              <span class="card-main-title">CPU 处理器</span>
+              <span class="card-sub-title">计算算力与总体负载</span>
+            </div>
+            <el-tag
+              size="small"
+              :type="getUsageColor(server.cpu?.usagePercent || 0) === '#f56c6c' ? 'danger' : 'info'"
+              class="header-tag"
+            >
+              {{ server.cpu?.cores || 0 }} 核心
+            </el-tag>
+          </div>
+
+          <div ref="cpuGaugeRef" class="gauge-chart-container" />
+
+          <div class="card-info-footer">
+            <div class="info-item">
+              <span class="label">主频 / 架构</span>
+              <span class="val">
+                {{ server.cpu?.frequency ? `${server.cpu.frequency.toFixed(0)} MHz` : '-' }}
+                ({{ server.general?.arch || '-' }})
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="label">平均负载 (1/5/15m)</span>
+              <span class="val load-tag-wrap">
+                <span :class="getLoadClass(server.load?.load1)">
+                  {{ server.load?.load1?.toFixed(2) || '0.00' }}
+                </span>
+                <span class="sep">/</span>
+                <span>{{ server.load?.load5?.toFixed(2) || '0.00' }}</span>
+                <span class="sep">/</span>
+                <span>{{ server.load?.load15?.toFixed(2) || '0.00' }}</span>
+              </span>
             </div>
           </div>
         </el-card>
       </el-col>
 
-      <!-- 内存仪表盘 -->
+      <!-- 2. 内存 卡片 -->
       <el-col :xs="24" :sm="12" :lg="6">
-        <el-card shadow="hover" class="gauge-card">
-          <div class="gauge-header">
-            <el-icon class="gauge-icon memory"><Memo /></el-icon>
-            <span>内存使用率</span>
-          </div>
-          <div ref="memGaugeRef" class="gauge-chart" />
-          <div class="gauge-info">
-            <div class="info-row">
-              <span>已用</span>
-              <span class="value">{{ server.memory?.usedFormat || "-" }}</span>
+        <el-card shadow="hover" class="metric-card">
+          <div class="card-top-header">
+            <div class="header-badge memory">
+              <el-icon><Memo /></el-icon>
             </div>
-            <div class="info-row">
-              <span>总计</span>
-              <span class="value">{{ server.memory?.totalFormat || "-" }}</span>
+            <div class="header-titles">
+              <span class="card-main-title">运行内存 (RAM)</span>
+              <span class="card-sub-title">物理内存与 Swap</span>
+            </div>
+            <el-tag
+              size="small"
+              :type="getUsageColor(server.memory?.usedPercent || 0) === '#f56c6c' ? 'danger' : 'success'"
+              class="header-tag"
+            >
+              {{ server.memory?.totalFormat || '0 B' }}
+            </el-tag>
+          </div>
+
+          <div ref="memGaugeRef" class="gauge-chart-container" />
+
+          <div class="card-info-footer">
+            <div class="info-item">
+              <span class="label">已用 / 可用</span>
+              <span class="val">
+                {{ server.memory?.usedFormat || '-' }} /
+                <span class="text-green">{{ server.memory?.freeFormat || '-' }}</span>
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="label">Swap 交换区</span>
+              <span
+                v-if="server.memory?.swapTotal && server.memory.swapTotal > 0"
+                class="val"
+              >
+                {{ server.memory?.swapUsedFormat }} / {{ server.memory?.swapTotalFormat }}
+                <span class="text-orange">({{ server.memory?.swapUsedPercent?.toFixed(1) }}%)</span>
+              </span>
+              <span v-else class="val text-muted">未启用 (推荐容器配置)</span>
             </div>
           </div>
         </el-card>
       </el-col>
 
-      <!-- Swap内存 -->
+      <!-- 3. 磁盘 卡片 -->
       <el-col :xs="24" :sm="12" :lg="6">
-        <el-card shadow="hover" class="gauge-card">
-          <div class="gauge-header">
-            <el-icon class="gauge-icon swap"><TrendCharts /></el-icon>
-            <span>Swap 交换内存</span>
+        <el-card shadow="hover" class="metric-card">
+          <div class="card-top-header">
+            <div class="header-badge disk">
+              <el-icon><FolderOpened /></el-icon>
+            </div>
+            <div class="header-titles">
+              <span class="card-main-title">存储空间</span>
+              <span class="card-sub-title">主分区及挂载卷</span>
+            </div>
+            <el-tag
+              size="small"
+              :type="primaryDisk && primaryDisk.usedPercent > 85 ? 'danger' : 'info'"
+              class="header-tag"
+            >
+              {{ primaryDisk ? primaryDisk.mountpoint : '无分区' }}
+            </el-tag>
           </div>
-          <div class="swap-chart-area">
+
+          <div class="disk-progress-container">
             <el-progress
               type="dashboard"
-              :percentage="server.memory?.swapUsedPercent || 0"
-              :color="getUsageColor(server.memory?.swapUsedPercent || 0)"
+              :percentage="Number((primaryDisk?.usedPercent || 0).toFixed(1))"
+              :color="getUsageColor(primaryDisk?.usedPercent || 0)"
               :stroke-width="12"
-              :width="140"
+              :width="150"
             >
               <template #default="{ percentage }">
-                <div class="swap-center">
-                  <span class="swap-percent">{{ percentage.toFixed(1) }}%</span>
-                  <span class="swap-label">Swap</span>
+                <div class="gauge-center-content">
+                  <span
+                    class="gauge-center-val"
+                    :style="{ color: getUsageColor(percentage) }"
+                  >
+                    {{ percentage.toFixed(1) }}%
+                  </span>
+                  <span class="gauge-center-label">已使用</span>
                 </div>
               </template>
             </el-progress>
           </div>
-          <div class="gauge-info">
-            <div class="info-row">
-              <span>已用</span>
-              <span class="value orange">{{
-                server.memory?.swapUsedFormat || "0 B"
-              }}</span>
+
+          <div class="card-info-footer">
+            <div class="info-item">
+              <span class="label">已用容量</span>
+              <span class="val">{{ primaryDisk?.usedFormat || '-' }}</span>
             </div>
-            <div class="info-row">
-              <span>总计</span>
-              <span class="value">{{
-                server.memory?.swapTotalFormat || "0 B"
-              }}</span>
+            <div class="info-item">
+              <span class="label">可用 / 总量</span>
+              <span class="val">
+                <span class="text-green">{{ primaryDisk?.freeFormat || '-' }}</span> /
+                <span>{{ primaryDisk?.totalFormat || '-' }}</span>
+              </span>
             </div>
           </div>
         </el-card>
       </el-col>
 
-      <!-- 运行时间 -->
+      <!-- 4. 系统与运行时 卡片 -->
       <el-col :xs="24" :sm="12" :lg="6">
-        <el-card shadow="hover" class="gauge-card">
-          <div class="gauge-header">
-            <el-icon class="gauge-icon uptime"><Timer /></el-icon>
-            <span>系统运行时间</span>
+        <el-card shadow="hover" class="metric-card">
+          <div class="card-top-header">
+            <div class="header-badge system">
+              <el-icon><Platform /></el-icon>
+            </div>
+            <div class="header-titles">
+              <span class="card-main-title">系统与运行时</span>
+              <span class="card-sub-title">
+                {{ server.general?.os?.split(" ").slice(0, 2).join(" ") || 'Linux' }}
+              </span>
+            </div>
+            <el-tag size="small" type="success" effect="light" class="header-tag">
+              {{ server.general?.arch || 'amd64' }}
+            </el-tag>
           </div>
-          <div class="uptime-chart-area">
-            <div class="uptime-value">
-              {{ server.general?.uptimeFormat || "-" }}
+
+          <div class="uptime-display-wrap">
+            <div class="uptime-icon-badge">
+              <el-icon><Timer /></el-icon>
+            </div>
+            <div class="uptime-text-block">
+              <span class="uptime-title">系统已连续运行</span>
+              <span class="uptime-val">
+                {{ server.general?.uptimeFormat || '正在获取...' }}
+              </span>
             </div>
           </div>
-          <div class="gauge-info">
-            <div class="info-row">
-              <span>主机名</span>
-              <span class="value">{{ server.general?.hostname || "-" }}</span>
+
+          <div class="card-info-footer">
+            <div class="info-item">
+              <span class="label">主机名</span>
+              <span class="val truncate" :title="server.general?.hostname">
+                {{ server.general?.hostname || '-' }}
+              </span>
             </div>
-            <div class="info-row">
-              <span>系统</span>
-              <span class="value">{{
-                server.general?.os?.split(" ").slice(0, 2).join(" ") || "-"
-              }}</span>
+            <div class="info-item">
+              <span class="label">Go 运行时 / 协程</span>
+              <span class="val">
+                <span class="text-blue">{{ server.general?.goVersion || '-' }}</span>
+                <span class="text-muted ml-1">({{ server.process?.running || 0 }} 协程)</span>
+              </span>
             </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- 实时曲线图 -->
-    <el-row :gutter="16" class="chart-section">
+    <!-- 实时资源趋势图表 -->
+    <el-row :gutter="16" class="chart-section-row">
       <el-col :span="24">
-        <el-card shadow="hover" class="history-card">
+        <el-card shadow="hover" class="section-card">
           <template #header>
-            <div class="chart-header">
-              <el-icon class="chart-icon"><TrendCharts /></el-icon>
-              <span>实时资源监控曲线</span>
-              <el-tag size="small" type="info">5秒刷新</el-tag>
+            <div class="section-card-header chart-custom-header">
+              <div class="header-left">
+                <el-icon class="section-icon chart"><TrendCharts /></el-icon>
+                <span class="section-title">实时监控动态趋势</span>
+                <el-radio-group
+                  v-model="activeChartMetric"
+                  size="small"
+                  class="ml-3"
+                  @change="handleMetricTabChange"
+                >
+                  <el-radio-button value="resource">
+                    CPU & 内存趋势
+                  </el-radio-button>
+                  <el-radio-button value="network">
+                    网络吞吐速率 (I/O)
+                  </el-radio-button>
+                </el-radio-group>
+              </div>
+
+              <div class="header-right">
+                <span class="points-label">采样点数：</span>
+                <el-radio-group
+                  v-model="maxDataPoints"
+                  size="small"
+                  @change="handleDataPointsChange"
+                >
+                  <el-radio-button :value="30">近 30 次</el-radio-button>
+                  <el-radio-button :value="60">近 60 次</el-radio-button>
+                </el-radio-group>
+              </div>
             </div>
           </template>
-          <div ref="historyChartRef" class="history-chart" />
+
+          <div ref="historyChartRef" class="history-chart-dom" />
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- CPU核心详情 -->
+    <!-- CPU 核心负载矩阵 -->
     <el-row
       v-if="server.cpu?.coreDetails?.length"
       :gutter="16"
-      class="cores-section"
+      class="cores-section-row"
     >
       <el-col :span="24">
-        <el-card shadow="hover">
+        <el-card shadow="hover" class="section-card">
           <template #header>
-            <div class="card-header">
-              <el-icon class="header-icon"><Cpu /></el-icon>
-              <span>CPU 核心使用率</span>
-              <el-tag size="small" type="info" class="core-count"
-                >{{ server.cpu?.coreDetails?.length }} 核心</el-tag
+            <div class="section-card-header">
+              <div class="header-left">
+                <el-icon class="section-icon cpu"><Cpu /></el-icon>
+                <span class="section-title">CPU 核心负载分布矩阵</span>
+                <el-tag size="small" type="info" class="ml-2">
+                  共 {{ server.cpu?.coreDetails?.length || 0 }} 核心
+                </el-tag>
+              </div>
+              <div
+                v-if="(server.cpu?.coreDetails?.length || 0) > 8"
+                class="header-right"
               >
+                <el-button
+                  link
+                  type="primary"
+                  size="small"
+                  @click="showAllCores = !showAllCores"
+                >
+                  {{ showAllCores ? '收起部分核心' : `展开全部 (${server.cpu?.coreDetails?.length} 核)` }}
+                  <el-icon class="el-icon--right">
+                    <ArrowUp v-if="showAllCores" />
+                    <ArrowDown v-else />
+                  </el-icon>
+                </el-button>
+              </div>
             </div>
           </template>
-          <div class="cores-grid">
+
+          <div class="cores-matrix-grid">
             <div
-              v-for="(usage, index) in server.cpu?.coreDetails"
+              v-for="(usage, index) in displayedCores"
               :key="index"
-              class="core-card"
+              class="core-cell-box"
             >
-              <div class="core-header">
-                <span class="core-name">核心 {{ index }}</span>
+              <div class="core-cell-header">
+                <span class="core-index">Core #{{ index }}</span>
                 <span
-                  class="core-percent"
-                  :style="{ color: getUsageColor(usage) }"
-                  >{{ usage?.toFixed(0) }}%</span
+                  class="core-val"
+                  :style="{ color: getUsageColor(usage || 0) }"
                 >
+                  {{ (usage || 0).toFixed(0) }}%
+                </span>
               </div>
-              <div class="core-progress-bg">
+              <div class="core-bar-track">
                 <div
-                  class="core-progress-fill"
+                  class="core-bar-fill"
                   :style="{
-                    width: `${usage}%`,
-                    background: `linear-gradient(90deg, ${getUsageColor(usage)}88, ${getUsageColor(usage)})`
+                    width: `${Math.min(100, Math.max(0, usage || 0))}%`,
+                    background: getCoreGradient(usage || 0)
                   }"
                 />
               </div>
@@ -602,35 +1134,65 @@ onBeforeUnmount(() => {
       </el-col>
     </el-row>
 
-    <!-- 磁盘状态 -->
-    <el-row :gutter="16" class="disk-section">
+    <!-- 磁盘存储挂载状态 -->
+    <el-row :gutter="16" class="disk-section-row">
       <el-col :span="24">
-        <el-card shadow="hover">
+        <el-card shadow="hover" class="section-card">
           <template #header>
-            <div class="card-header">
-              <el-icon class="header-icon disk"><FolderOpened /></el-icon>
-              <span>磁盘存储状态</span>
+            <div class="section-card-header">
+              <div class="header-left">
+                <el-icon class="section-icon disk"><FolderOpened /></el-icon>
+                <span class="section-title">磁盘存储与挂载分区</span>
+                <el-tag size="small" type="info" class="ml-2">
+                  {{ server.disk?.length || 0 }} 个物理/数据分区
+                </el-tag>
+              </div>
             </div>
           </template>
-          <div class="disk-grid">
+
+          <div class="disk-cards-grid">
             <div
-              v-for="(disk, index) in server.disk"
+              v-for="(item, index) in server.disk"
               :key="index"
-              class="disk-item"
+              class="disk-partition-item"
             >
-              <div class="disk-header">
-                <el-tag type="info" size="small">{{ disk.device }}</el-tag>
-                <span class="mount">{{ disk.mountpoint }}</span>
+              <div class="disk-part-top">
+                <div class="disk-mount-wrap">
+                  <span class="disk-mount-point">{{ item.mountpoint }}</span>
+                  <span class="disk-device-badge">{{ item.device }}</span>
+                </div>
+                <el-tag size="small" effect="plain" type="info">
+                  {{ item.fstype || 'ext4' }}
+                </el-tag>
               </div>
-              <el-progress
-                :percentage="disk.usedPercent"
-                :stroke-width="12"
-                :color="getUsageColor(disk.usedPercent)"
-                :format="() => `${disk.usedPercent?.toFixed(1)}%`"
-              />
-              <div class="disk-details">
-                <span class="used">已用: {{ disk.usedFormat }}</span>
-                <span class="total">总计: {{ disk.totalFormat }}</span>
+
+              <div class="disk-progress-row">
+                <el-progress
+                  :percentage="Number((item.usedPercent || 0).toFixed(1))"
+                  :stroke-width="10"
+                  :color="getUsageColor(item.usedPercent || 0)"
+                  :format="() => `${(item.usedPercent || 0).toFixed(1)}%`"
+                />
+              </div>
+
+              <div class="disk-part-stats">
+                <div class="stat-col">
+                  <span class="stat-k">已用容量</span>
+                  <span
+                    class="stat-v"
+                    :style="{ color: getUsageColor(item.usedPercent || 0) }"
+                  >
+                    {{ item.usedFormat }}
+                  </span>
+                </div>
+                <div class="stat-col">
+                  <span class="stat-k">可用空间</span>
+                  <span class="stat-v text-green">{{ item.freeFormat }}</span>
+                </div>
+                <div class="stat-col">
+                  <span class="stat-k">总容量</span>
+                  <span class="stat-v">{{ item.totalFormat }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -638,53 +1200,78 @@ onBeforeUnmount(() => {
       </el-col>
     </el-row>
 
-    <!-- 网络状态 -->
-    <el-row :gutter="16" class="network-section">
+    <!-- 网络接口与流量吞吐 -->
+    <el-row :gutter="16" class="network-section-row">
       <el-col :span="24">
-        <el-card shadow="hover">
+        <el-card shadow="hover" class="section-card">
           <template #header>
-            <div class="card-header">
-              <el-icon class="header-icon network"><Connection /></el-icon>
-              <span>网络接口状态</span>
+            <div class="section-card-header">
+              <div class="header-left">
+                <el-icon class="section-icon network"><Connection /></el-icon>
+                <span class="section-title">网络接口与实时吞吐监控</span>
+                <el-tag size="small" type="success" effect="light" class="ml-2">
+                  实时下行：↓ {{ totalNetworkRate.recvRateFormat }} / 实时上行：↑ {{ totalNetworkRate.sentRateFormat }}
+                </el-tag>
+              </div>
             </div>
           </template>
+
           <el-table
-            :data="server.network?.filter(item => item.isUp) || []"
+            :data="server.network || []"
             stripe
-            :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
+            style="width: 100%"
+            class="custom-network-table"
           >
-            <el-table-column
-              prop="name"
-              label="接口"
-              width="150"
-              align="center"
-            >
+            <el-table-column prop="name" label="网卡接口" min-width="130">
               <template #default="{ row }">
-                <el-tag :type="row.isUp ? 'success' : 'danger'" size="small">
-                  {{ row.name }}
-                </el-tag>
+                <div class="iface-name-col">
+                  <span class="iface-name">{{ row.name }}</span>
+                  <el-tag
+                    :type="row.isUp ? 'success' : 'info'"
+                    size="small"
+                    effect="plain"
+                  >
+                    {{ row.isUp ? 'UP' : 'DOWN' }}
+                  </el-tag>
+                </div>
               </template>
             </el-table-column>
-            <el-table-column label="接收" align="center">
+
+            <el-table-column label="实时下行速率 (入网)" min-width="160">
               <template #default="{ row }">
-                <span class="text-green">↓ {{ row.recvFormat }}</span>
+                <div class="rate-cell text-green">
+                  <span class="arrow font-bold mr-1">↓</span>
+                  <span class="rate-val font-semibold">
+                    {{ networkRates[row.name]?.recvRateFormat || '0 B/s' }}
+                  </span>
+                </div>
               </template>
             </el-table-column>
-            <el-table-column label="发送" align="center">
+
+            <el-table-column label="实时上行速率 (出网)" min-width="160">
               <template #default="{ row }">
-                <span class="text-blue">↑ {{ row.sentFormat }}</span>
+                <div class="rate-cell text-blue">
+                  <span class="arrow font-bold mr-1">↑</span>
+                  <span class="rate-val font-semibold">
+                    {{ networkRates[row.name]?.sentRateFormat || '0 B/s' }}
+                  </span>
+                </div>
               </template>
             </el-table-column>
-            <el-table-column prop="packetsRecv" label="收包数" align="center" />
-            <el-table-column prop="packetsSent" label="发包数" align="center" />
-            <el-table-column label="状态" width="100" align="center">
+
+            <el-table-column prop="recvFormat" label="累计接收流量" min-width="140" />
+            <el-table-column prop="sentFormat" label="累计发送流量" min-width="140" />
+            <el-table-column prop="packetsRecv" label="接收包数" min-width="110" />
+            <el-table-column prop="packetsSent" label="发送包数" min-width="110" />
+
+            <el-table-column label="连接状态" width="110" align="center">
               <template #default="{ row }">
                 <el-tag
                   :type="row.isUp ? 'success' : 'danger'"
                   size="small"
                   effect="light"
                 >
-                  {{ row.isUp ? "● 活跃" : "○ 断开" }}
+                  {{ row.isUp ? '● 活跃' : '○ 断开' }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -693,45 +1280,45 @@ onBeforeUnmount(() => {
       </el-col>
     </el-row>
 
-    <!-- 服务器详细信息 -->
-    <el-row :gutter="16" class="server-section">
+    <!-- 服务器详细参数规格 -->
+    <el-row :gutter="16" class="specs-section-row">
       <el-col :span="24">
-        <el-card shadow="hover">
+        <el-card shadow="hover" class="section-card">
           <template #header>
-            <div class="card-header">
-              <el-icon class="header-icon server"><Platform /></el-icon>
-              <span>服务器详细信息</span>
+            <div class="section-card-header">
+              <div class="header-left">
+                <el-icon class="section-icon server"><Platform /></el-icon>
+                <span class="section-title">服务器环境参数与规格</span>
+              </div>
             </div>
           </template>
-          <el-descriptions :column="4" border>
-            <el-descriptions-item label="主机名">{{
-              server.general?.hostname || "-"
-            }}</el-descriptions-item>
-            <el-descriptions-item label="操作系统">{{
-              server.general?.os || "-"
-            }}</el-descriptions-item>
-            <el-descriptions-item label="系统架构">{{
-              server.general?.arch || "-"
-            }}</el-descriptions-item>
-            <el-descriptions-item label="内核版本">{{
-              server.general?.kernel || "-"
-            }}</el-descriptions-item>
-            <el-descriptions-item label="Go版本">{{
-              server.general?.goVersion || "-"
-            }}</el-descriptions-item>
-            <el-descriptions-item label="CPU型号">{{
-              server.cpu?.modelName || "-"
-            }}</el-descriptions-item>
-            <el-descriptions-item label="CPU频率"
-              >{{
-                server.cpu?.frequency?.toFixed(0) || 0
-              }}
-              MHz</el-descriptions-item
-            >
-            <el-descriptions-item label="系统负载">
-              {{ server.load?.load1?.toFixed(2) || 0 }} /
-              {{ server.load?.load5?.toFixed(2) || 0 }} /
-              {{ server.load?.load15?.toFixed(2) || 0 }}
+
+          <el-descriptions :column="4" border class="server-specs-desc">
+            <el-descriptions-item label="主机名称">
+              {{ server.general?.hostname || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="操作系统">
+              {{ server.general?.os || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="系统架构">
+              {{ server.general?.arch || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="内核版本">
+              {{ server.general?.kernel || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="Go 运行环境">
+              {{ server.general?.goVersion || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="CPU 规格型号">
+              {{ server.cpu?.modelName || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="CPU 标称频率">
+              {{ server.cpu?.frequency ? `${server.cpu.frequency.toFixed(0)} MHz` : '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="系统负载 (1/5/15m)">
+              {{ server.load?.load1?.toFixed(2) || '0.00' }} /
+              {{ server.load?.load5?.toFixed(2) || '0.00' }} /
+              {{ server.load?.load15?.toFixed(2) || '0.00' }}
             </el-descriptions-item>
           </el-descriptions>
         </el-card>
@@ -741,471 +1328,580 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.monitor-page {
-  padding: 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
-  min-height: calc(100vh - 100px);
+.system-monitor-container {
+  padding: 16px 20px 30px;
+  background-color: var(--el-bg-color-page, #f8fafc);
+  min-height: calc(100vh - 90px);
 }
 
-/* 顶部栏 */
-.header-bar {
+/* 顶部操作控制条 */
+.monitor-control-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 18px 24px;
+  background: var(--el-bg-color-overlay, #ffffff);
+  border: 1px solid var(--el-border-color-lighter, #e2e8f0);
   border-radius: 12px;
-  color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   margin-bottom: 20px;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
-.header-left {
+.bar-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 24px;
+  flex-wrap: wrap;
 }
 
-.header-icon {
-  font-size: 28px;
-}
-
-.header-title {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.header-right {
+.title-with-icon {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
-.status-tag {
+.title-icon-box {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: #ffffff;
+  font-size: 22px;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.title-text-group .bar-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--el-text-color-primary, #0f172a);
+  line-height: 1.3;
+}
+
+.title-text-group .bar-subtitle {
+  font-size: 12px;
+  color: var(--el-text-color-secondary, #64748b);
+  margin-top: 2px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.status-pulse-tag {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
 }
 
-.pulse {
-  animation: pulse 1.5s infinite;
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+  animation: pulse-glow 1.8s infinite;
 }
 
-@keyframes pulse {
+@keyframes pulse-glow {
   0%,
   100% {
+    transform: scale(1);
     opacity: 1;
   }
   50% {
-    opacity: 0.5;
+    transform: scale(1.3);
+    opacity: 0.6;
   }
 }
 
-/* 仪表盘卡片 */
-.gauge-card {
-  border-radius: 12px;
-  border: none;
-  margin-bottom: 16px;
+.update-time-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary, #64748b);
 }
 
-.gauge-header {
+.bar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.control-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
-  font-weight: 600;
-  color: #333;
 }
 
-.gauge-icon {
-  font-size: 20px;
-  padding: 6px;
-  border-radius: 8px;
-  color: white;
-}
-
-.gauge-icon.cpu {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-}
-
-.gauge-icon.memory {
-  background: linear-gradient(135deg, #10b981, #059669);
-}
-
-.gauge-icon.swap {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-}
-
-.gauge-icon.uptime {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-}
-
-.gauge-chart {
-  height: 180px;
-}
-
-.swap-chart-area {
-  height: 180px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.swap-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.swap-percent {
-  font-size: 22px;
-  font-weight: bold;
-  color: #f59e0b;
-}
-
-.swap-label {
-  font-size: 12px;
-  color: #999;
-}
-
-.uptime-chart-area {
-  height: 180px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.uptime-value {
-  font-size: 22px;
-  font-weight: bold;
-  color: #8b5cf6;
-  text-align: center;
-}
-
-.info-row .value.orange {
-  color: #f59e0b;
-}
-
-.gauge-info {
-  border-top: 1px solid #eee;
-  padding-top: 12px;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
+.control-label {
   font-size: 13px;
-}
-
-.info-row .value {
-  font-weight: 600;
-  color: #333;
-}
-
-/* 统计卡片 */
-.stat-card {
-  border-radius: 12px;
-  border: none;
-  margin-bottom: 16px;
-  height: 100%;
-}
-
-.stat-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
-  font-weight: 600;
-  color: #333;
-}
-
-.stat-icon {
-  font-size: 20px;
-  padding: 6px;
-  border-radius: 8px;
-  color: white;
-}
-
-.stat-icon.swap {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-}
-
-.stat-icon.uptime {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-}
-
-/* Swap卡片 */
-.swap-content {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.swap-percent {
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.swap-info {
-  flex: 1;
-}
-
-.swap-info .info-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 0;
-  border-bottom: 1px dashed #eee;
-}
-
-.swap-info .info-item:last-child {
-  border-bottom: none;
-}
-
-.swap-info .label {
-  color: #666;
-  font-size: 13px;
-}
-
-.swap-info .value {
-  font-weight: 600;
-  color: #333;
-}
-
-.swap-info .value.orange {
-  color: #f59e0b;
-}
-
-/* 运行时间卡片 */
-.uptime-content {
-  text-align: center;
-}
-
-.uptime-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #8b5cf6;
-  margin-bottom: 16px;
-}
-
-.uptime-details {
-  text-align: left;
-}
-
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-  font-size: 12px;
-}
-
-.detail-item .label {
-  color: #999;
-}
-
-.detail-item .value {
-  color: #333;
+  color: var(--el-text-color-regular, #475569);
   font-weight: 500;
 }
 
-/* 历史曲线 */
-.history-card {
+.interval-select {
+  width: 90px;
+}
+
+/* 顶部四大卡片 */
+.top-metrics-row {
+  margin-bottom: 20px;
+}
+
+.metric-card {
   border-radius: 12px;
-  border: none;
+  border: 1px solid var(--el-border-color-lighter, #e2e8f0);
+  background: var(--el-bg-color-overlay, #ffffff);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-bottom: 16px;
 }
 
-.chart-header {
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+}
+
+.card-top-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-weight: 600;
-}
-
-.chart-icon {
-  font-size: 18px;
-  color: #667eea;
-}
-
-.history-chart {
-  height: 300px;
-}
-
-/* 通用卡片头 */
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-}
-
-.card-header .header-icon {
-  font-size: 18px;
-  color: #667eea;
-}
-
-.card-header .header-icon.disk {
-  color: #ef4444;
-}
-
-.card-header .header-icon.network {
-  color: #3b82f6;
-}
-
-.card-header .header-icon.server {
-  color: #f59e0b;
-}
-
-/* CPU核心显示 */
-.core-count {
-  margin-left: auto;
-}
-
-.cores-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 12px;
-}
-
-.core-card {
-  padding: 12px;
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  transition: all 0.3s ease;
-}
-
-.core-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-color: #cbd5e1;
-}
-
-.core-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 8px;
 }
 
-.core-name {
+.header-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.header-badge.cpu {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.header-badge.memory {
+  background: linear-gradient(135deg, #10b981, #047857);
+}
+
+.header-badge.disk {
+  background: linear-gradient(135deg, #f59e0b, #b45309);
+}
+
+.header-badge.system {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+}
+
+.header-titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-main-title {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--el-text-color-primary, #0f172a);
+}
+
+.card-sub-title {
+  display: block;
+  font-size: 11px;
+  color: var(--el-text-color-secondary, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-tag {
+  flex-shrink: 0;
+}
+
+.gauge-chart-container {
+  height: 165px;
+  width: 100%;
+}
+
+.disk-progress-container {
+  height: 165px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gauge-center-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.gauge-center-val {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.gauge-center-label {
+  font-size: 11px;
+  color: var(--el-text-color-secondary, #64748b);
+  margin-top: 2px;
+}
+
+/* 运行时间卡片展示区 */
+.uptime-display-wrap {
+  height: 165px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.uptime-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.12);
+  color: #8b5cf6;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uptime-text-block .uptime-title {
+  display: block;
   font-size: 12px;
-  color: #64748b;
+  color: var(--el-text-color-secondary, #64748b);
+  margin-bottom: 4px;
+}
+
+.uptime-text-block .uptime-val {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: #8b5cf6;
+}
+
+/* 卡片底栏 */
+.card-info-footer {
+  border-top: 1px dashed var(--el-border-color-lighter, #e2e8f0);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  padding: 3px 0;
+}
+
+.info-item .label {
+  color: var(--el-text-color-secondary, #64748b);
+}
+
+.info-item .val {
+  font-weight: 600;
+  color: var(--el-text-color-primary, #0f172a);
+}
+
+.load-tag-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.load-tag-wrap .sep {
+  color: var(--el-text-color-placeholder, #94a3b8);
+  font-weight: normal;
+}
+
+/* 通用板块卡片 */
+.section-card {
+  border-radius: 12px;
+  border: 1px solid var(--el-border-color-lighter, #e2e8f0);
+  background: var(--el-bg-color-overlay, #ffffff);
+  margin-bottom: 20px;
+}
+
+.section-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.section-card-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.section-icon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.section-icon.chart {
+  color: #3b82f6;
+}
+
+.section-icon.cpu {
+  color: #3b82f6;
+}
+
+.section-icon.disk {
+  color: #f59e0b;
+}
+
+.section-icon.network {
+  color: #10b981;
+}
+
+.section-icon.server {
+  color: #8b5cf6;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--el-text-color-primary, #0f172a);
+}
+
+.chart-custom-header .points-label {
+  font-size: 12px;
+  color: var(--el-text-color-secondary, #64748b);
+}
+
+.history-chart-dom {
+  height: 320px;
+  width: 100%;
+}
+
+/* CPU 核心矩阵 */
+.cores-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.core-cell-box {
+  background: var(--el-fill-color-light, #f8fafc);
+  border: 1px solid var(--el-border-color-lighter, #e2e8f0);
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: all 0.2s ease;
+}
+
+.core-cell-box:hover {
+  transform: translateY(-2px);
+  border-color: var(--el-color-primary, #3b82f6);
+}
+
+.core-cell-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.core-index {
+  color: var(--el-text-color-secondary, #64748b);
   font-weight: 500;
 }
 
-.core-percent {
-  font-size: 14px;
+.core-val {
   font-weight: 700;
 }
 
-.core-progress-bg {
+.core-bar-track {
+  width: 100%;
   height: 6px;
-  background: #e2e8f0;
+  background: var(--el-border-color-lighter, #e2e8f0);
   border-radius: 3px;
   overflow: hidden;
 }
 
-.core-progress-fill {
+.core-bar-fill {
   height: 100%;
   border-radius: 3px;
-  transition: width 0.5s ease;
+  transition: width 0.3s ease;
 }
 
-/* 磁盘网格 */
-.disk-grid {
+/* 磁盘挂载卡片网格 */
+.disk-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
 
-.disk-item {
+.disk-partition-item {
   padding: 16px;
-  background: #f9fafb;
+  background: var(--el-fill-color-light, #f8fafc);
+  border: 1px solid var(--el-border-color-lighter, #e2e8f0);
   border-radius: 10px;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
-.disk-item:hover {
+.disk-partition-item:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--el-border-color, #cbd5e1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
-.disk-header {
+.disk-part-top {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 10px;
   margin-bottom: 12px;
 }
 
-.disk-header .mount {
-  font-size: 13px;
-  color: #666;
+.disk-mount-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.disk-details {
+.disk-mount-point {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--el-text-color-primary, #0f172a);
+}
+
+.disk-device-badge {
+  font-size: 11px;
+  color: var(--el-text-color-secondary, #64748b);
+  background: var(--el-fill-color, #e2e8f0);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.disk-progress-row {
+  margin-bottom: 12px;
+}
+
+.disk-part-stats {
   display: flex;
   justify-content: space-between;
-  margin-top: 10px;
+  border-top: 1px dashed var(--el-border-color-lighter, #e2e8f0);
+  padding-top: 8px;
+}
+
+.stat-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-k {
+  font-size: 11px;
+  color: var(--el-text-color-secondary, #64748b);
+}
+
+.stat-v {
   font-size: 12px;
-  color: #666;
+  font-weight: 600;
+  color: var(--el-text-color-primary, #0f172a);
 }
 
-.disk-details .used {
-  color: #f59e0b;
+/* 网卡列表 */
+.iface-name-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-/* 网络表格 */
+.iface-name {
+  font-weight: 600;
+  color: var(--el-text-color-primary, #0f172a);
+}
+
+.rate-cell {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 颜色类 */
 .text-green {
-  color: #10b981;
-  font-weight: 500;
+  color: #10b981 !important;
 }
 
 .text-blue {
-  color: #3b82f6;
-  font-weight: 500;
+  color: #3b82f6 !important;
 }
 
-/* 各区块间距 */
-.overview-section,
-.chart-section,
-.cores-section,
-.disk-section,
-.network-section,
-.server-section {
-  margin-bottom: 16px;
+.text-orange {
+  color: #f59e0b !important;
 }
 
-/* 响应式 */
+.text-red {
+  color: #f56c6c !important;
+}
+
+.text-muted {
+  color: var(--el-text-color-placeholder, #94a3b8) !important;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 响应式适配 */
 @media (max-width: 768px) {
-  .monitor-page {
-    padding: 12px;
+  .system-monitor-container {
+    padding: 12px 12px 24px;
   }
 
-  .header-bar {
+  .monitor-control-bar {
+    padding: 14px 16px;
+  }
+
+  .bar-left,
+  .bar-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .chart-custom-header {
     flex-direction: column;
+    align-items: flex-start;
     gap: 12px;
   }
 
-  .swap-content {
-    flex-direction: column;
+  .chart-custom-header .header-right {
+    margin-left: 0;
   }
 
-  .cores-grid {
+  .cores-matrix-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .disk-grid {
+  .disk-cards-grid {
     grid-template-columns: 1fr;
   }
-}
-
-/* 卡片动画 */
-.el-card {
-  transition: all 0.3s ease;
-}
-
-.el-card:hover {
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 </style>
