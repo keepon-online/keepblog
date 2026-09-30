@@ -27,7 +27,9 @@ import {
   Timer,
   Clock,
   ArrowDown,
-  ArrowUp
+  ArrowUp,
+  Search,
+  Warning
 } from "@element-plus/icons-vue";
 
 interface ServerInfo {
@@ -75,6 +77,10 @@ interface ServerInfo {
     totalFormat: string;
     usedFormat: string;
     freeFormat: string;
+    inodesTotal?: number;
+    inodesUsed?: number;
+    inodesFree?: number;
+    inodesUsedPercent?: number;
   }>;
   network?: Array<{
     name: string;
@@ -155,19 +161,16 @@ const totalNetworkRate = ref({
 });
 
 // ================= CPU 核心自适应与热力矩阵相关逻辑 =================
-// 核心展示模式：auto（智能自适应） | heatmap（热力方阵） | card（丰富详细卡片）
 const coreViewMode = ref<"auto" | "heatmap" | "card">("auto");
 const showAllCores = ref(false);
 
 const coreCount = computed(() => server.value.cpu?.coreDetails?.length || 0);
 
-// 实际生效的视图模式（核心数大于8默认热力图，<=8默认详细卡片）
 const activeCoreView = computed(() => {
   if (coreViewMode.value !== "auto") return coreViewMode.value;
   return coreCount.value > 8 ? "heatmap" : "card";
 });
 
-// 卡片视图下展示的核心（若很多核且未展开，默认只展示前8核）
 const displayedCores = computed(() => {
   const cores = server.value.cpu?.coreDetails || [];
   if (showAllCores.value || cores.length <= 8) {
@@ -176,7 +179,6 @@ const displayedCores = computed(() => {
   return cores.slice(0, 8);
 });
 
-// 多核偏斜度与极值诊断统计
 const coreDiagnostics = computed(() => {
   const cores = server.value.cpu?.coreDetails || [];
   if (cores.length === 0) {
@@ -213,7 +215,6 @@ const coreDiagnostics = computed(() => {
 
   const avgVal = sum / cores.length;
   const skew = maxVal - minVal;
-  // 极差大于等于 50% 且最高核心负载达到 70% 时判定为单核计算瓶颈/倾斜
   const isSkewed = skew >= 50 && maxVal >= 70;
 
   let statusText = "负载均衡";
@@ -239,25 +240,22 @@ const coreDiagnostics = computed(() => {
   };
 });
 
-// 热力方块背景色梯度计算
 const getHeatmapColor = (usage: number) => {
   const val = Math.min(100, Math.max(0, usage || 0));
-  if (val >= 90) return "#ef4444"; // 红色满载
-  if (val >= 75) return "#f97316"; // 橙红高负荷
-  if (val >= 50) return "#eab308"; // 中等黄色
-  if (val >= 25) return "#10b981"; // 翠绿正常
-  if (val >= 10) return "#34d399"; // 浅绿轻载
-  return "var(--el-fill-color, #e2e8f0)"; // 极低空闲
+  if (val >= 90) return "#ef4444";
+  if (val >= 75) return "#f97316";
+  if (val >= 50) return "#eab308";
+  if (val >= 25) return "#10b981";
+  if (val >= 10) return "#34d399";
+  return "var(--el-fill-color, #e2e8f0)";
 };
 
-// 热力方块文字前景色计算
 const getHeatmapTextColor = (usage: number) => {
   const val = Math.min(100, Math.max(0, usage || 0));
   if (val >= 25) return "#ffffff";
   return "var(--el-text-color-regular, #475569)";
 };
 
-// 核心工作状态文字描述
 const getCoreStatusText = (usage: number) => {
   const val = Math.min(100, Math.max(0, usage || 0));
   if (val >= 85) return "满载高负荷";
@@ -267,23 +265,129 @@ const getCoreStatusText = (usage: number) => {
 };
 // ===================================================================
 
-// 磁盘主分区计算 (优先根挂载点 '/')
-const primaryDisk = computed(() => {
-  const disks = server.value.disk || [];
-  if (disks.length === 0) return null;
-  const root = disks.find(d => d.mountpoint === "/");
-  return root || disks[0];
+// ================= 磁盘存储全局池与过滤排序逻辑 =================
+// 磁盘展示模式：auto（智能推荐） | card（卡片） | table（紧凑表格）
+const diskViewMode = ref<"auto" | "card" | "table">("auto");
+const diskSearchQuery = ref("");
+const diskOnlyAlert = ref(false); // 仅查看告警盘 (> 80% 或 Inode > 85%)
+const diskSortBy = ref<"usage_desc" | "total_desc" | "mountpoint">("usage_desc");
+
+// 实际生效的视图模式（盘数 > 6 时默认采用表格，<= 6 时采用卡片）
+const activeDiskView = computed(() => {
+  if (diskViewMode.value !== "auto") return diskViewMode.value;
+  return (server.value.disk?.length || 0) > 6 ? "table" : "card";
 });
+
+// 格式化字节数
+const formatBytes = (bytes: number): string => {
+  if (bytes <= 0 || isNaN(bytes)) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+  let i = 0;
+  let val = bytes;
+  while (val >= 1024 && i < units.length - 1) {
+    val /= 1024;
+    i++;
+  }
+  return `${val < 10 ? val.toFixed(2) : val.toFixed(1)} ${units[i]}`;
+};
+
+// 全局存储池汇总指标 (Total Storage Pool)
+const storagePool = computed(() => {
+  const disks = server.value.disk || [];
+  if (disks.length === 0) {
+    return {
+      totalBytes: 0,
+      usedBytes: 0,
+      freeBytes: 0,
+      usedPercent: 0,
+      totalFormat: "0 B",
+      usedFormat: "0 B",
+      freeFormat: "0 B",
+      diskCount: 0,
+      maxUsedDisk: null as any,
+      alertCount: 0,
+      hasAlert: false
+    };
+  }
+
+  let totalBytes = 0;
+  let usedBytes = 0;
+  let freeBytes = 0;
+  let maxUsedDisk = disks[0];
+  let alertCount = 0;
+
+  for (const d of disks) {
+    totalBytes += d.total || 0;
+    usedBytes += d.used || 0;
+    freeBytes += d.free || 0;
+    if ((d.usedPercent || 0) > (maxUsedDisk.usedPercent || 0)) {
+      maxUsedDisk = d;
+    }
+    if ((d.usedPercent || 0) >= 85 || (d.inodesUsedPercent || 0) >= 85) {
+      alertCount++;
+    }
+  }
+
+  const usedPercent = totalBytes > 0 ? (usedBytes / totalBytes) * 100 : 0;
+  const hasAlert = (maxUsedDisk?.usedPercent || 0) >= 85;
+
+  return {
+    totalBytes,
+    usedBytes,
+    freeBytes,
+    usedPercent,
+    totalFormat: formatBytes(totalBytes),
+    usedFormat: formatBytes(usedBytes),
+    freeFormat: formatBytes(freeBytes),
+    diskCount: disks.length,
+    maxUsedDisk,
+    alertCount,
+    hasAlert
+  };
+});
+
+// 经过搜索、告警筛选与排序后的磁盘挂载列表
+const filteredDisks = computed(() => {
+  let list = [...(server.value.disk || [])];
+
+  // 1. 告警筛选
+  if (diskOnlyAlert.value) {
+    list = list.filter(
+      d =>
+        (d.usedPercent || 0) >= 80 ||
+        (d.inodesUsedPercent && d.inodesUsedPercent >= 85)
+    );
+  }
+
+  // 2. 关键字搜索 (挂载点、设备名、文件系统类型)
+  const q = diskSearchQuery.value.trim().toLowerCase();
+  if (q) {
+    list = list.filter(
+      d =>
+        d.mountpoint.toLowerCase().includes(q) ||
+        d.device.toLowerCase().includes(q) ||
+        (d.fstype && d.fstype.toLowerCase().includes(q))
+    );
+  }
+
+  // 3. 排序
+  if (diskSortBy.value === "usage_desc") {
+    list.sort((a, b) => (b.usedPercent || 0) - (a.usedPercent || 0));
+  } else if (diskSortBy.value === "total_desc") {
+    list.sort((a, b) => (b.total || 0) - (a.total || 0));
+  } else if (diskSortBy.value === "mountpoint") {
+    list.sort((a, b) => a.mountpoint.localeCompare(b.mountpoint));
+  }
+
+  return list;
+});
+// ===============================================================
 
 // 系统综合健康评估
 const systemHealth = computed(() => {
   const cpuVal = server.value.cpu?.usagePercent || 0;
   const memVal = server.value.memory?.usedPercent || 0;
-  const disks = server.value.disk || [];
-  const maxDisk = disks.reduce(
-    (max, d) => Math.max(max, d.usedPercent || 0),
-    0
-  );
+  const maxDisk = storagePool.value.maxUsedDisk?.usedPercent || 0;
 
   if (cpuVal > 85 || memVal > 90 || maxDisk > 92) {
     return {
@@ -1020,7 +1124,7 @@ onBeforeUnmount(() => {
         </el-card>
       </el-col>
 
-      <!-- 3. 磁盘 卡片 -->
+      <!-- 3. 磁盘全局存储池卡片 (全新升级：全局池聚合 + 最危险分区预警) -->
       <el-col :xs="24" :sm="12" :lg="6">
         <el-card shadow="hover" class="metric-card">
           <div class="card-top-header">
@@ -1028,23 +1132,25 @@ onBeforeUnmount(() => {
               <el-icon><FolderOpened /></el-icon>
             </div>
             <div class="header-titles">
-              <span class="card-main-title">存储空间</span>
-              <span class="card-sub-title">主分区及挂载卷</span>
+              <span class="card-main-title">存储空间池</span>
+              <span class="card-sub-title">
+                {{ storagePool.maxUsedDisk ? `最高负荷: ${storagePool.maxUsedDisk.mountpoint}` : '物理与数据卷' }}
+              </span>
             </div>
             <el-tag
               size="small"
-              :type="primaryDisk && primaryDisk.usedPercent > 85 ? 'danger' : 'info'"
+              :type="storagePool.hasAlert ? 'danger' : 'info'"
               class="header-tag"
             >
-              {{ primaryDisk ? primaryDisk.mountpoint : '无分区' }}
+              {{ storagePool.hasAlert ? `⚠️ 最满 ${storagePool.maxUsedDisk?.usedPercent?.toFixed(0)}%` : `共 ${storagePool.diskCount} 个分区` }}
             </el-tag>
           </div>
 
           <div class="disk-progress-container">
             <el-progress
               type="dashboard"
-              :percentage="Number((primaryDisk?.usedPercent || 0).toFixed(1))"
-              :color="getUsageColor(primaryDisk?.usedPercent || 0)"
+              :percentage="Number(storagePool.usedPercent.toFixed(1))"
+              :color="getUsageColor(storagePool.usedPercent)"
               :stroke-width="12"
               :width="150"
             >
@@ -1056,7 +1162,7 @@ onBeforeUnmount(() => {
                   >
                     {{ percentage.toFixed(1) }}%
                   </span>
-                  <span class="gauge-center-label">已使用</span>
+                  <span class="gauge-center-label">总空间已用</span>
                 </div>
               </template>
             </el-progress>
@@ -1064,15 +1170,14 @@ onBeforeUnmount(() => {
 
           <div class="card-info-footer">
             <div class="info-item">
-              <span class="label">已用容量</span>
-              <span class="val">{{ primaryDisk?.usedFormat || '-' }}</span>
+              <span class="label">总空间 (已用/总量)</span>
+              <span class="val">
+                {{ storagePool.usedFormat }} / {{ storagePool.totalFormat }}
+              </span>
             </div>
             <div class="info-item">
-              <span class="label">可用 / 总量</span>
-              <span class="val">
-                <span class="text-green">{{ primaryDisk?.freeFormat || '-' }}</span> /
-                <span>{{ primaryDisk?.totalFormat || '-' }}</span>
-              </span>
+              <span class="label">总剩余可用空间</span>
+              <span class="val text-green">{{ storagePool.freeFormat }}</span>
             </div>
           </div>
         </el-card>
@@ -1242,7 +1347,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <!-- 视图 A：热力方块矩阵 (Heatmap Matrix) - 针对超多核心与高配主机 -->
+          <!-- 视图 A：热力方块矩阵 (Heatmap Matrix) -->
           <div v-if="activeCoreView === 'heatmap'" class="cores-heatmap-container">
             <div class="heatmap-tiles-grid">
               <el-tooltip
@@ -1299,7 +1404,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <!-- 视图 B：详细卡片模式 (Card Mode) - 针对少核心 (1~8核) 或精细检查 -->
+          <!-- 视图 B：详细卡片模式 (Card Mode) -->
           <div
             v-else
             class="cores-cards-container"
@@ -1333,7 +1438,6 @@ onBeforeUnmount(() => {
                 </span>
               </div>
 
-              <!-- 粗进度条与平滑色彩过渡 -->
               <div class="core-track">
                 <div
                   class="core-fill"
@@ -1344,7 +1448,6 @@ onBeforeUnmount(() => {
                 />
               </div>
 
-              <!-- 少核心时展示与全局均值的偏离度指标，视觉更丰富 -->
               <div v-if="coreCount <= 8" class="card-footer-meta">
                 <span class="meta-label">相对均值偏离：</span>
                 <span
@@ -1357,7 +1460,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <!-- 展开更多核心折叠按钮（仅在详细卡片模式且核心数大于 8 时呈现） -->
+          <!-- 展开更多核心折叠按钮 -->
           <div
             v-if="activeCoreView === 'card' && coreCount > 8"
             class="expand-toggle-bar"
@@ -1379,67 +1482,300 @@ onBeforeUnmount(() => {
       </el-col>
     </el-row>
 
-    <!-- 磁盘存储挂载状态 -->
+    <!-- ================= 磁盘存储与挂载分区 (全新升级：少盘饱满卡片 + 多盘紧凑表格 + Inode监控) ================= -->
     <el-row :gutter="16" class="disk-section-row">
       <el-col :span="24">
         <el-card shadow="hover" class="section-card">
           <template #header>
-            <div class="section-card-header">
+            <div class="section-card-header flex-wrap gap-3">
               <div class="header-left">
                 <el-icon class="section-icon disk"><FolderOpened /></el-icon>
                 <span class="section-title">磁盘存储与挂载分区</span>
                 <el-tag size="small" type="info" class="ml-2">
-                  {{ server.disk?.length || 0 }} 个物理/数据分区
+                  有效物理/数据分区 {{ storagePool.diskCount }} 个
                 </el-tag>
+                <el-tag
+                  v-if="storagePool.alertCount > 0"
+                  size="small"
+                  type="danger"
+                  effect="dark"
+                  class="ml-2"
+                >
+                  ⚠️ {{ storagePool.alertCount }} 个分区高负荷预警
+                </el-tag>
+              </div>
+
+              <!-- 右侧控制栏：告警筛选、排序、搜索、视图切换 -->
+              <div class="header-right flex-wrap gap-2">
+                <el-input
+                  v-if="storagePool.diskCount > 3"
+                  v-model="diskSearchQuery"
+                  placeholder="搜索挂载点 / 设备"
+                  size="small"
+                  clearable
+                  :prefix-icon="Search"
+                  style="width: 170px"
+                />
+
+                <el-checkbox
+                  v-if="storagePool.diskCount > 2"
+                  v-model="diskOnlyAlert"
+                  label="仅看告警 (≥80%)"
+                  size="small"
+                  class="mr-2"
+                />
+
+                <el-select
+                  v-if="storagePool.diskCount > 2"
+                  v-model="diskSortBy"
+                  size="small"
+                  style="width: 130px"
+                >
+                  <el-option value="usage_desc" label="使用率从高到低" />
+                  <el-option value="total_desc" label="总容量从大到小" />
+                  <el-option value="mountpoint" label="挂载路径排序" />
+                </el-select>
+
+                <el-radio-group v-model="diskViewMode" size="small">
+                  <el-radio-button value="auto">
+                    自适应 ({{ activeDiskView === 'table' ? '表格' : '卡片' }})
+                  </el-radio-button>
+                  <el-radio-button value="card">卡片网格</el-radio-button>
+                  <el-radio-button value="table">紧凑表格</el-radio-button>
+                </el-radio-group>
               </div>
             </div>
           </template>
 
-          <div class="disk-cards-grid">
-            <div
-              v-for="(item, index) in server.disk"
-              :key="index"
-              class="disk-partition-item"
+          <!-- 模式一：详细表格视图 (Table Mode) - 适用于盘数较多或需要精确横向对比 -->
+          <div v-if="activeDiskView === 'table'" class="disk-table-container">
+            <el-table
+              :data="filteredDisks"
+              stripe
+              style="width: 100%"
+              class="custom-disk-table"
             >
-              <div class="disk-part-top">
-                <div class="disk-mount-wrap">
-                  <span class="disk-mount-point">{{ item.mountpoint }}</span>
-                  <span class="disk-device-badge">{{ item.device }}</span>
-                </div>
-                <el-tag size="small" effect="plain" type="info">
-                  {{ item.fstype || 'ext4' }}
-                </el-tag>
-              </div>
+              <el-table-column prop="mountpoint" label="挂载路径" min-width="150">
+                <template #default="{ row }">
+                  <div class="disk-table-mount">
+                    <span class="mount-name font-bold">{{ row.mountpoint }}</span>
+                    <span class="device-tag text-muted text-xs">({{ row.device }})</span>
+                  </div>
+                </template>
+              </el-table-column>
 
-              <div class="disk-progress-row">
-                <el-progress
-                  :percentage="Number((item.usedPercent || 0).toFixed(1))"
-                  :stroke-width="10"
-                  :color="getUsageColor(item.usedPercent || 0)"
-                  :format="() => `${(item.usedPercent || 0).toFixed(1)}%`"
-                />
-              </div>
+              <el-table-column prop="fstype" label="文件系统" width="100">
+                <template #default="{ row }">
+                  <el-tag size="small" effect="plain" type="info">
+                    {{ row.fstype || 'ext4' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
 
-              <div class="disk-part-stats">
-                <div class="stat-col">
-                  <span class="stat-k">已用容量</span>
-                  <span
-                    class="stat-v"
-                    :style="{ color: getUsageColor(item.usedPercent || 0) }"
+              <el-table-column label="空间使用率" min-width="180">
+                <template #default="{ row }">
+                  <el-progress
+                    :percentage="Number((row.usedPercent || 0).toFixed(1))"
+                    :stroke-width="10"
+                    :color="getUsageColor(row.usedPercent || 0)"
+                    :format="() => `${(row.usedPercent || 0).toFixed(1)}%`"
+                  />
+                </template>
+              </el-table-column>
+
+              <el-table-column label="已用 / 总量" min-width="160">
+                <template #default="{ row }">
+                  <span>{{ row.usedFormat }} / {{ row.totalFormat }}</span>
+                </template>
+              </el-table-column>
+
+              <el-table-column label="剩余可用空间" min-width="130">
+                <template #default="{ row }">
+                  <span class="text-green font-semibold">{{ row.freeFormat }}</span>
+                </template>
+              </el-table-column>
+
+              <el-table-column label="Inode 占用率" min-width="140">
+                <template #default="{ row }">
+                  <div v-if="row.inodesTotal && row.inodesTotal > 0" class="flex items-center gap-2">
+                    <el-progress
+                      :percentage="Number((row.inodesUsedPercent || 0).toFixed(1))"
+                      :stroke-width="6"
+                      :color="getUsageColor(row.inodesUsedPercent || 0)"
+                      class="flex-1"
+                      :show-text="false"
+                    />
+                    <span class="text-xs" :style="{ color: getUsageColor(row.inodesUsedPercent || 0) }">
+                      {{ (row.inodesUsedPercent || 0).toFixed(0) }}%
+                    </span>
+                  </div>
+                  <span v-else class="text-muted text-xs">-</span>
+                </template>
+              </el-table-column>
+
+              <el-table-column label="健康研判" width="100" align="center">
+                <template #default="{ row }">
+                  <el-tag
+                    :type="(row.usedPercent || 0) >= 85 ? 'danger' : ((row.usedPercent || 0) >= 70 ? 'warning' : 'success')"
+                    size="small"
+                    effect="light"
                   >
-                    {{ item.usedFormat }}
+                    {{ (row.usedPercent || 0) >= 85 ? '高危' : ((row.usedPercent || 0) >= 70 ? '偏紧' : '充裕') }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <!-- 模式二：卡片视图 (Card Mode) - 少盘 (1~2盘) 宽幅饱满展示，多盘网格化 -->
+          <div
+            v-else
+            class="disk-cards-grid"
+            :class="{ 'few-disks-grid': filteredDisks.length <= 2 }"
+          >
+            <!-- 极少盘场景（1~2 盘）：宽幅多维度大卡片，彻底避免单薄留白 -->
+            <template v-if="filteredDisks.length <= 2">
+              <div
+                v-for="(item, index) in filteredDisks"
+                :key="index"
+                class="wide-disk-card"
+                :class="{ 'is-high-usage': (item.usedPercent || 0) >= 85 }"
+              >
+                <!-- 左侧仪表大环 -->
+                <div class="wide-disk-left">
+                  <el-progress
+                    type="dashboard"
+                    :percentage="Number((item.usedPercent || 0).toFixed(1))"
+                    :color="getUsageColor(item.usedPercent || 0)"
+                    :stroke-width="12"
+                    :width="140"
+                  >
+                    <template #default="{ percentage }">
+                      <div class="gauge-center-content">
+                        <span
+                          class="gauge-center-val"
+                          :style="{ color: getUsageColor(percentage) }"
+                        >
+                          {{ percentage.toFixed(1) }}%
+                        </span>
+                        <span class="gauge-center-label">空间已用</span>
+                      </div>
+                    </template>
+                  </el-progress>
+                </div>
+
+                <!-- 右侧详细指标区 -->
+                <div class="wide-disk-right">
+                  <div class="disk-meta-header">
+                    <div class="disk-title-group">
+                      <span class="disk-mount-title">{{ item.mountpoint }}</span>
+                      <span class="disk-device-badge">{{ item.device }}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <el-tag size="small" effect="plain" type="info">
+                        {{ item.fstype || 'ext4' }}
+                      </el-tag>
+                      <el-tag
+                        size="small"
+                        :type="(item.usedPercent || 0) >= 85 ? 'danger' : 'success'"
+                        effect="light"
+                      >
+                        {{ (item.usedPercent || 0) >= 85 ? '空间紧张' : '读写正常 (rw)' }}
+                      </el-tag>
+                    </div>
+                  </div>
+
+                  <!-- 容量数值进度 -->
+                  <div class="wide-progress-box">
+                    <div class="progress-labels">
+                      <span class="text-xs text-muted">存储空间容量</span>
+                      <span class="text-xs font-semibold">
+                        已用 {{ item.usedFormat }} / 剩余 <span class="text-green">{{ item.freeFormat }}</span> (共 {{ item.totalFormat }})
+                      </span>
+                    </div>
+                    <el-progress
+                      :percentage="Number((item.usedPercent || 0).toFixed(1))"
+                      :stroke-width="10"
+                      :color="getUsageColor(item.usedPercent || 0)"
+                      :show-text="false"
+                    />
+                  </div>
+
+                  <!-- Inode 状态条 (业界防故障关键指标) -->
+                  <div class="wide-inode-box">
+                    <div class="progress-labels">
+                      <span class="text-xs text-muted">Inode 索引节点</span>
+                      <span class="text-xs font-semibold">
+                        {{ item.inodesTotal ? `已用 ${item.inodesUsed} / 总量 ${item.inodesTotal} (${(item.inodesUsedPercent || 0).toFixed(1)}%)` : '不适用或无需统计' }}
+                      </span>
+                    </div>
+                    <el-progress
+                      v-if="item.inodesTotal"
+                      :percentage="Number((item.inodesUsedPercent || 0).toFixed(1))"
+                      :stroke-width="6"
+                      :color="getUsageColor(item.inodesUsedPercent || 0)"
+                      :show-text="false"
+                    />
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <!-- 适中盘数场景（3~6 盘）：精简卡片网格 -->
+            <template v-else>
+              <div
+                v-for="(item, index) in filteredDisks"
+                :key="index"
+                class="disk-partition-item"
+                :class="{ 'is-high-usage': (item.usedPercent || 0) >= 85 }"
+              >
+                <div class="disk-part-top">
+                  <div class="disk-mount-wrap">
+                    <span class="disk-mount-point">{{ item.mountpoint }}</span>
+                    <span class="disk-device-badge">{{ item.device }}</span>
+                  </div>
+                  <el-tag size="small" effect="plain" type="info">
+                    {{ item.fstype || 'ext4' }}
+                  </el-tag>
+                </div>
+
+                <div class="disk-progress-row">
+                  <el-progress
+                    :percentage="Number((item.usedPercent || 0).toFixed(1))"
+                    :stroke-width="10"
+                    :color="getUsageColor(item.usedPercent || 0)"
+                    :format="() => `${(item.usedPercent || 0).toFixed(1)}%`"
+                  />
+                </div>
+
+                <div class="disk-part-stats">
+                  <div class="stat-col">
+                    <span class="stat-k">已用容量</span>
+                    <span
+                      class="stat-v"
+                      :style="{ color: getUsageColor(item.usedPercent || 0) }"
+                    >
+                      {{ item.usedFormat }}
+                    </span>
+                  </div>
+                  <div class="stat-col">
+                    <span class="stat-k">可用空间</span>
+                    <span class="stat-v text-green">{{ item.freeFormat }}</span>
+                  </div>
+                  <div class="stat-col">
+                    <span class="stat-k">总容量</span>
+                    <span class="stat-v">{{ item.totalFormat }}</span>
+                  </div>
+                </div>
+
+                <div v-if="item.inodesTotal" class="disk-card-inode-meta">
+                  <span class="text-xs text-muted">Inode 占用：</span>
+                  <span class="text-xs font-semibold" :style="{ color: getUsageColor(item.inodesUsedPercent || 0) }">
+                    {{ (item.inodesUsedPercent || 0).toFixed(1) }}%
                   </span>
                 </div>
-                <div class="stat-col">
-                  <span class="stat-k">可用空间</span>
-                  <span class="stat-v text-green">{{ item.freeFormat }}</span>
-                </div>
-                <div class="stat-col">
-                  <span class="stat-k">总容量</span>
-                  <span class="stat-v">{{ item.totalFormat }}</span>
-                </div>
               </div>
-            </div>
+            </template>
           </div>
         </el-card>
       </el-col>
@@ -2191,13 +2527,100 @@ onBeforeUnmount(() => {
   margin-top: 16px;
 }
 
-/* 磁盘挂载卡片网格 */
+/* ================= 磁盘存储与挂载分区全新样式 ================= */
+.disk-table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.custom-disk-table .disk-table-mount {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .disk-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
 
+/* 极少盘场景（1~2 盘）大号宽幅自适应布局 */
+.disk-cards-grid.few-disks-grid {
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 18px;
+}
+
+.wide-disk-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 22px;
+  background: var(--el-fill-color-light, #f8fafc);
+  border: 1px solid var(--el-border-color-lighter, #e2e8f0);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.wide-disk-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--el-color-primary, #3b82f6);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+}
+
+.wide-disk-card.is-high-usage {
+  border-left: 4px solid #ef4444;
+}
+
+.wide-disk-left {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wide-disk-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.disk-meta-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.disk-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.disk-mount-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--el-text-color-primary, #0f172a);
+}
+
+.wide-progress-box,
+.wide-inode-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 多盘常规卡片 */
 .disk-partition-item {
   padding: 16px;
   background: var(--el-fill-color-light, #f8fafc);
@@ -2210,6 +2633,10 @@ onBeforeUnmount(() => {
   transform: translateY(-2px);
   border-color: var(--el-border-color, #cbd5e1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.disk-partition-item.is-high-usage {
+  border-left: 3px solid #ef4444;
 }
 
 .disk-part-top {
@@ -2265,6 +2692,15 @@ onBeforeUnmount(() => {
   font-size: 12px;
   font-weight: 600;
   color: var(--el-text-color-primary, #0f172a);
+}
+
+.disk-card-inode-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--el-border-color-lighter, #e2e8f0);
 }
 
 /* 网卡列表 */
@@ -2347,6 +2783,19 @@ onBeforeUnmount(() => {
 
   .disk-cards-grid {
     grid-template-columns: 1fr;
+  }
+
+  .disk-cards-grid.few-disks-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wide-disk-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .wide-disk-left {
+    width: 100%;
   }
 
   .heatmap-tiles-grid {

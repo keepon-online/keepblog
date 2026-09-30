@@ -178,12 +178,26 @@ func (h *Handler) getDiskInfo() ([]DiskInfo, error) {
 		return nil, err
 	}
 
-	// 按设备去重：容器内同一块盘会以多个 bind mount 出现（如 /app/*、/etc/*），只保留挂载点优先级最高的
-	deviceMap := make(map[string]disk.PartitionStat)
+	// 过滤虚拟文件系统、loop 镜像设备与临时挂载
+	var candidates []disk.PartitionStat
 	for _, partition := range partitions {
+		// 过滤 loop 虚拟块设备（如 snap 软件包挂载的沙箱镜像）
+		if strings.HasPrefix(partition.Device, "/dev/loop") {
+			continue
+		}
 		if h.isVirtualFilesystem(partition.Fstype) || h.isTempPartition(partition.Mountpoint) {
 			continue
 		}
+		// 过滤 Docker 内部 overlay 衍生路径
+		if strings.Contains(partition.Mountpoint, "docker/overlay2") {
+			continue
+		}
+		candidates = append(candidates, partition)
+	}
+
+	// 设备初筛：同一设备多个挂载点保留优先级最高的挂载点
+	deviceMap := make(map[string]disk.PartitionStat)
+	for _, partition := range candidates {
 		if existing, ok := deviceMap[partition.Device]; ok {
 			if mountPriority(partition.Mountpoint) < mountPriority(existing.Mountpoint) {
 				deviceMap[partition.Device] = partition
@@ -193,42 +207,49 @@ func (h *Handler) getDiskInfo() ([]DiskInfo, error) {
 		}
 	}
 
-	// 容器内 overlay 根与 bind mount 指向同一块盘，statfs 返回相同总量，按总量二次去重
-	totalMap := make(map[uint64]DiskInfo)
+	// 智能去重：仅当容量、已用空间与 Inode 总数完全重合时，才判定为容器/bind mount 的同一物理磁盘映射
+	// 避免将同等规格的多块独立物理磁盘误判去重
+	dedupMap := make(map[string]DiskInfo)
 	for _, partition := range deviceMap {
 		usage, err := disk.Usage(partition.Mountpoint)
 		if err != nil {
 			continue
 		}
-		// 只显示有实际容量的分区（过滤掉容量为0的分区）
-		if usage.Total == 0 {
+		// 过滤无容量或极小无意义微型分区（< 100MB）
+		if usage.Total < 100*1024*1024 {
 			continue
 		}
 
 		info := DiskInfo{
-			Device:      partition.Device,
-			Mountpoint:  partition.Mountpoint,
-			Fstype:      partition.Fstype,
-			Total:       usage.Total,
-			Used:        usage.Used,
-			Free:        usage.Free,
-			UsedPercent: usage.UsedPercent,
-			TotalFormat: h.formatBytes(usage.Total),
-			UsedFormat:  h.formatBytes(usage.Used),
-			FreeFormat:  h.formatBytes(usage.Free),
+			Device:            partition.Device,
+			Mountpoint:        partition.Mountpoint,
+			Fstype:            partition.Fstype,
+			Total:             usage.Total,
+			Used:              usage.Used,
+			Free:              usage.Free,
+			UsedPercent:       h.formatPercent(usage.UsedPercent),
+			TotalFormat:       h.formatBytes(usage.Total),
+			UsedFormat:        h.formatBytes(usage.Used),
+			FreeFormat:        h.formatBytes(usage.Free),
+			InodesTotal:       usage.InodesTotal,
+			InodesUsed:        usage.InodesUsed,
+			InodesFree:        usage.InodesFree,
+			InodesUsedPercent: h.formatPercent(usage.InodesUsedPercent),
 		}
 
-		if existing, ok := totalMap[usage.Total]; ok {
+		// 复合特征签名：容量 + 已用 + Inode 总数完全重合才是同一个底层文件系统
+		signature := fmt.Sprintf("%d_%d_%d", usage.Total, usage.Used, usage.InodesTotal)
+		if existing, ok := dedupMap[signature]; ok {
 			if mountPriority(info.Mountpoint) < mountPriority(existing.Mountpoint) {
-				totalMap[usage.Total] = info
+				dedupMap[signature] = info
 			}
 		} else {
-			totalMap[usage.Total] = info
+			dedupMap[signature] = info
 		}
 	}
 
 	var diskInfos []DiskInfo
-	for _, info := range totalMap {
+	for _, info := range dedupMap {
 		diskInfos = append(diskInfos, info)
 	}
 
@@ -263,7 +284,8 @@ func (h *Handler) isVirtualFilesystem(fstype string) bool {
 		"cgroup2", "pstore", "squashfs",
 		"debugfs", "tracefs", "securityfs", "sockfs",
 		"pipefs", "rpc_pipefs", "rpc_pipe", "binfmt_misc",
-		"devpts", "ramfs", "hugetlbfs", "mqueue",
+		"devpts", "ramfs", "hugetlbfs", "mqueue", "autofs",
+		"iso9660", "udf", "nsfs", "bpf", "configfs", "fusectl",
 	}
 
 	for _, vfs := range virtualFilesystems {
@@ -284,7 +306,7 @@ func (h *Handler) isTempPartition(mountpoint string) bool {
 	}
 
 	for _, tp := range tempPartitions {
-		if mountpoint == tp || len(mountpoint) >= len(tp) && mountpoint[:len(tp)] == tp {
+		if mountpoint == tp || (len(mountpoint) > len(tp) && strings.HasPrefix(mountpoint, tp+"/")) {
 			return true
 		}
 	}
