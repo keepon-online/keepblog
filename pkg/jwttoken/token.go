@@ -26,16 +26,25 @@ func Configure(secret []byte) error {
 	return nil
 }
 
+// 令牌类型：Access/Refresh 同密钥签发，靠类型声明区分用途，
+// 防止 refreshToken 被直接当作 accessToken 调用管理 API。
+const (
+	TokenTypeAccess  = "access"
+	TokenTypeRefresh = "refresh"
+)
+
 // MyClaims JWT 自定义声明
 type MyClaims struct {
-	Username string `json:"username"`
+	Username  string `json:"username"`
+	TokenType string `json:"token_type,omitempty"`
 	jwt.RegisteredClaims
 }
 
 // CreateToken username
 func CreateToken(username string) (tokenString string, err error) {
 	claim := MyClaims{
-		Username: username,
+		Username:  username,
+		TokenType: TokenTypeAccess,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(12 * time.Hour)), // 过期时间3小时
 			IssuedAt:  jwt.NewNumericDate(time.Now()),                     // 签发时间
@@ -49,7 +58,8 @@ func CreateToken(username string) (tokenString string, err error) {
 // AccessToken username
 func AccessToken(username string) (tokenString string, err error) {
 	claim := MyClaims{
-		Username: username,
+		Username:  username,
+		TokenType: TokenTypeAccess,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(2 * time.Hour)), // 过期时间2小时
 			IssuedAt:  jwt.NewNumericDate(time.Now()),                    // 签发时间
@@ -63,7 +73,8 @@ func AccessToken(username string) (tokenString string, err error) {
 // RefreshToken 这里传入的是手机号，因为我项目登陆用的是手机号和密码
 func RefreshToken(username string) (tokenString string, err error) {
 	claim := MyClaims{
-		Username: username,
+		Username:  username,
+		TokenType: TokenTypeRefresh,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)), // 过期时间7天
 			IssuedAt:  jwt.NewNumericDate(time.Now()),                         // 签发时间

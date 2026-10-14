@@ -43,6 +43,7 @@
       <!-- 方式1：本地/OSS 上传 -->
       <el-upload
         :action="uploadAction"
+        :headers="uploadHeaders"
         :show-file-list="false"
         :auto-upload="true"
         accept="image/*"
@@ -146,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import type { UploadFile } from "element-plus";
 import {
   Upload,
@@ -158,6 +159,7 @@ import {
   Picture
 } from "@element-plus/icons-vue";
 import { getRandomCover } from "@/api/post";
+import { getToken } from "@/utils/auth";
 import { message } from "@/utils/message";
 
 const props = defineProps<{
@@ -169,7 +171,12 @@ const emit = defineEmits<{
   (e: "open-tech-cover"): void;
 }>();
 
-const uploadAction = import.meta.env.VITE_BASE_URL + "/api/upload/images";
+const uploadAction = import.meta.env.VITE_BASE_URL + "/api/v1/upload/images";
+// el-upload 直传不经过 http 工具封装，需要手动携带鉴权头
+const uploadHeaders = computed(() => {
+  const { accessToken } = getToken();
+  return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+});
 const previewVisible = ref(false);
 const previewImageUrl = ref("");
 const randomCoverLoading = ref(false);
@@ -192,11 +199,12 @@ const beforeUpload = (file: File) => {
 };
 
 const handleUploadSuccess = (res: any) => {
-  if (res.code === 200) {
-    emit("update:modelValue", res.data?.url || res.data);
+  const url = res?.payload ?? res?.data?.url ?? res?.data;
+  if (res?.code === 200 && typeof url === "string" && url) {
+    emit("update:modelValue", url);
     message("封面图片上传成功", { type: "success" });
   } else {
-    message(res.message || "上传失败", { type: "error" });
+    message(res?.message || "上传失败", { type: "error" });
   }
 };
 

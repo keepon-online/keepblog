@@ -1,8 +1,12 @@
 package link
 
 import (
+	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"strconv"
+	"syscall"
 	"time"
 
 	"gitee.com/jieepre/keepblog/internal/model"
@@ -10,6 +14,28 @@ import (
 	"gitee.com/jieepre/keepblog/pkg/result"
 	"github.com/gin-gonic/gin"
 )
+
+// safeDialer 建立连接时校验对端 IP：回环/私网/链路本地/未指定/组播地址一律拒绝，
+// 防止友链检测接口被用作内网探测（SSRF）。在 Dial 层校验而非仅预解析域名，
+// 可同时挡住 DNS 重绑定。
+var safeDialer = &net.Dialer{
+	Timeout: 5 * time.Second,
+	Control: func(network, address string, _ syscall.RawConn) error {
+		host, _, err := net.SplitHostPort(address)
+		if err != nil {
+			return err
+		}
+		ip := net.ParseIP(host)
+		if ip == nil {
+			return fmt.Errorf("无法解析目标地址")
+		}
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+			ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast() {
+			return fmt.Errorf("目标地址不在允许范围内")
+		}
+		return nil
+	},
+}
 
 type Handler struct {
 	*core.Context
@@ -93,8 +119,21 @@ func (h *Handler) CheckLink(c *gin.Context) {
 		result.Error(c, "url 不能为空")
 		return
 	}
+	u, err := url.Parse(targetUrl)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		result.Ok(c, gin.H{"status": 0, "msg": "无效链接"})
+		return
+	}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = nil // 不使用环境代理，避免绕过拨号校验
+	transport.DialContext = safeDialer.DialContext
 	client := &http.Client{
-		Timeout: 5 * time.Second,
+		Timeout:   5 * time.Second,
+		Transport: transport,
+		// 不跟随跳转：跳转目标同样可能是内网地址
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
 	}
 	req, err := http.NewRequest(http.MethodGet, targetUrl, nil)
 	if err != nil {

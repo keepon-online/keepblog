@@ -91,7 +91,12 @@ func (service *Service) RefreshToken(refreshToken string) (*response.RefreshToke
 		return nil, errors.New("请重新登录")
 	}
 
-	// 检查令牌是否已被撤销（密码修改后的令牌失效检查）
+	// 仅接受 refresh 类型；登出/轮换后写入黑名单的令牌不得再用
+	if parseToken.TokenType != jwttoken.TokenTypeRefresh || jwttoken.IsTokenBlacklisted(refreshToken) {
+		return nil, errors.New("令牌已失效，请重新登录")
+	}
+
+	// 检查令牌是否已被撤销（密码修改/登出后的令牌失效检查）
 	if parseToken.IssuedAt != nil {
 		if !jwttoken.IsUserTokenValid(parseToken.Username, parseToken.IssuedAt.Unix()) {
 			return nil, errors.New("令牌已失效，请重新登录")
@@ -103,11 +108,12 @@ func (service *Service) RefreshToken(refreshToken string) (*response.RefreshToke
 		return nil, errors.New("系统错误，请联系管理员")
 	}
 
-	// 令牌轮换：生成新的refreshToken替换旧的
+	// 令牌轮换：生成新的refreshToken替换旧的，旧 refresh 立即注销，防止重放
 	newRefreshToken, err := jwttoken.RefreshToken(parseToken.Username)
 	if err != nil {
 		return nil, errors.New("系统错误，请联系管理员")
 	}
+	_ = jwttoken.InvalidateToken(refreshToken)
 
 	return &response.RefreshToken{
 		AccessToken:  accessToken,

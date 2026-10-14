@@ -3,117 +3,42 @@ package middleware
 import (
 	"sync"
 	"time"
-
-	"golang.org/x/time/rate"
 )
 
-// MemoryRateLimiter 内存限流器，用于 Redis 不可用时的降级方案
-type MemoryRateLimiter struct {
-	limiters sync.Map
-	mu       sync.RWMutex
-	limit    rate.Limit
-	burst    int
+// windowLimiter 内存降级用的固定窗口计数器：语义与 Redis 路径（Incr + Expire）
+// 保持一致——按「max 次 / window 窗口」计数，窗口到点自动清零。
+type windowLimiter struct {
+	mu      sync.Mutex
+	windows map[string]*windowEntry
 }
 
-// limiterEntry 限流器条目（带过期时间）
-type limiterEntry struct {
-	limiter  *rate.Limiter
-	lastSeen time.Time
+type windowEntry struct {
+	count   int
+	resetAt time.Time
 }
 
-// 全局内存限流器实例
-var (
-	globalMemoryLimiter *MemoryRateLimiter
-	memoryLimiterOnce   sync.Once
-)
+var globalWindowLimiter = &windowLimiter{windows: make(map[string]*windowEntry)}
 
-// GetMemoryLimiter 获取全局内存限流器实例
-func GetMemoryLimiter() *MemoryRateLimiter {
-	memoryLimiterOnce.Do(func() {
-		globalMemoryLimiter = NewMemoryRateLimiter(1, 60) // 每秒1个请求，突发60个
-		go globalMemoryLimiter.cleanupLoop()
-	})
-	return globalMemoryLimiter
-}
+// Allow 判断 key 在当前窗口内是否仍可用，并计入本次请求。
+func (w *windowLimiter) Allow(key string, max int, window time.Duration) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
-// NewMemoryRateLimiter 创建新的内存限流器
-// ratePerSecond: 每秒请求数
-// burst: 突发请求数
-func NewMemoryRateLimiter(ratePerSecond float64, burst int) *MemoryRateLimiter {
-	return &MemoryRateLimiter{
-		limit: rate.Limit(ratePerSecond),
-		burst: burst,
+	now := time.Now()
+	e, ok := w.windows[key]
+	if !ok || now.After(e.resetAt) {
+		e = &windowEntry{resetAt: now.Add(window)}
+		w.windows[key] = e
 	}
-}
+	e.count++
 
-// Allow 检查是否允许请求
-func (m *MemoryRateLimiter) Allow(key string) bool {
-	entry, _ := m.limiters.LoadOrStore(key, &limiterEntry{
-		limiter:  rate.NewLimiter(m.limit, m.burst),
-		lastSeen: time.Now(),
-	})
-
-	le := entry.(*limiterEntry)
-	le.lastSeen = time.Now()
-
-	return le.limiter.Allow()
-}
-
-// AllowN 检查是否允许 n 个请求
-func (m *MemoryRateLimiter) AllowN(key string, n int) bool {
-	entry, _ := m.limiters.LoadOrStore(key, &limiterEntry{
-		limiter:  rate.NewLimiter(m.limit, m.burst),
-		lastSeen: time.Now(),
-	})
-
-	le := entry.(*limiterEntry)
-	le.lastSeen = time.Now()
-
-	return le.limiter.AllowN(time.Now(), n)
-}
-
-// SetRate 设置限流速率
-func (m *MemoryRateLimiter) SetRate(ratePerSecond float64, burst int) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.limit = rate.Limit(ratePerSecond)
-	m.burst = burst
-}
-
-// cleanupLoop 定期清理过期的限流器
-func (m *MemoryRateLimiter) cleanupLoop() {
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		m.cleanup()
-	}
-}
-
-// cleanup 清理超过10分钟未使用的限流器
-func (m *MemoryRateLimiter) cleanup() {
-	threshold := time.Now().Add(-10 * time.Minute)
-
-	m.limiters.Range(func(key, value interface{}) bool {
-		le := value.(*limiterEntry)
-		if le.lastSeen.Before(threshold) {
-			m.limiters.Delete(key)
+	// 简单清理：条目过多时清掉过期窗口，避免只增不减
+	if len(w.windows) > 4096 {
+		for k, v := range w.windows {
+			if now.After(v.resetAt) {
+				delete(w.windows, k)
+			}
 		}
-		return true
-	})
-}
-
-// Reset 重置指定 key 的限流器
-func (m *MemoryRateLimiter) Reset(key string) {
-	m.limiters.Delete(key)
-}
-
-// Stats 返回当前活跃的限流器数量
-func (m *MemoryRateLimiter) Stats() int {
-	count := 0
-	m.limiters.Range(func(_, _ interface{}) bool {
-		count++
-		return true
-	})
-	return count
+	}
+	return e.count <= max
 }

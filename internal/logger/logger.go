@@ -413,9 +413,10 @@ func ReadLogFile(filename string, lines int, search string) ([]string, error) {
 	logDir := currentConfig.Path
 	configMutex.RUnlock()
 
-	filePath := filepath.Join(logDir, filename)
+	// 只取文件名本身，目录成分一律剥离（此前 ../logs-xxx 这类同前缀目录可绕过前缀检查）
+	filePath := filepath.Join(logDir, filepath.Base(filename))
 
-	// 安全检查，防止路径遍历
+	// 双保险：清理后仍须位于日志目录内
 	if !strings.HasPrefix(filepath.Clean(filePath), filepath.Clean(logDir)) {
 		return nil, fmt.Errorf("invalid file path")
 	}

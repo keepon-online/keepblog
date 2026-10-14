@@ -2,6 +2,7 @@ package login
 
 import (
 	"strings"
+	"time"
 
 	"gitee.com/jieepre/keepblog/internal/model/request"
 	"gitee.com/jieepre/keepblog/internal/model/response"
@@ -49,9 +50,13 @@ func (h *Handler) Logout(c *gin.Context) {
 	// 获取当前 Token 并加入黑名单
 	authorization := c.GetHeader("Authorization")
 	if authorization != "" {
-		tokenStr := strings.ReplaceAll(authorization, "Bearer ", "")
+		tokenStr := strings.TrimPrefix(authorization, "Bearer ")
 		if tokenStr != "" {
 			_ = jwttoken.InvalidateToken(tokenStr)
+			// 登出即终结该用户全部会话：refreshToken 不经此处，按用户名 + 签发时间整体失效
+			if claims, err := jwttoken.ParseToken(tokenStr); err == nil {
+				jwttoken.InvalidateUserTokens(claims.Username, time.Now().Unix())
+			}
 		}
 	}
 

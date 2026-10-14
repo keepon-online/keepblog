@@ -23,7 +23,6 @@ var (
 	}
 	// 前缀匹配的路径
 	jwtPrefixWhitelist = []string{
-		"/api/v1/upload/images",
 		"/console",
 		"/static",
 	}
@@ -96,6 +95,20 @@ func JwtVerify() gin.HandlerFunc {
 
 		// 检查 Token 是否在黑名单中（已注销）
 		if jwttoken.IsTokenBlacklisted(tokenStr) {
+			_ = c.Error(errors.New(errors.ErrUnauthorized, "Token已失效，请重新登录"))
+			c.Abort()
+			return
+		}
+
+		// 只接受访问令牌：refreshToken 不得直接调用管理 API
+		if claims.TokenType != jwttoken.TokenTypeAccess {
+			_ = c.Error(errors.New(errors.ErrUnauthorized, "Token 类型错误"))
+			c.Abort()
+			return
+		}
+
+		// 用户级撤销（登出/改密后，签发时间早于撤销时间的令牌一律失效）
+		if claims.IssuedAt != nil && !jwttoken.IsUserTokenValid(claims.Username, claims.IssuedAt.Unix()) {
 			_ = c.Error(errors.New(errors.ErrUnauthorized, "Token已失效，请重新登录"))
 			c.Abort()
 			return

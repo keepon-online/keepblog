@@ -62,6 +62,12 @@ func HandleWebSocket(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
 		return
 	}
+	// 仅接受 access 类型，且需未被注销/未被用户级撤销（与 JwtVerify 同口径）
+	if claims.TokenType != jwttoken.TokenTypeAccess || jwttoken.IsTokenBlacklisted(tokenStr) ||
+		(claims.IssuedAt != nil && !jwttoken.IsUserTokenValid(claims.Username, claims.IssuedAt.Unix())) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+		return
+	}
 
 	// 升级 HTTP 连接为 WebSocket
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)

@@ -25,6 +25,10 @@ func CreateRouters(service *service.AppService, healthChecker *monitor.HealthChe
 	// 设置Gin模式
 	gin.SetMode(gin.ReleaseMode)
 
+	// 仅在反代网段上信任 X-Forwarded-For：直连来源伪造的 XFF 一律忽略，
+	// 否则限流/日志/统计中的客户端 IP 可被任意伪造，限流形同虚设。
+	_ = engine.SetTrustedProxies([]string{"127.0.0.1", "::1", "10.0.12.0/24", "172.16.0.0/12"})
+
 	// 全局中间件
 	engine.Use(middleware.GinLogger(), middleware.GinRecovery(true))
 	engine.Use(middleware.Cors())

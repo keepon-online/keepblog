@@ -143,6 +143,13 @@ func (s *Service) ConfigInfo() AIConfigInfo {
 	row := s.loadAIConfigRow()
 	eff := s.effCfg()
 
+	// models[].apiKey 与顶层 apiKey 同规则：出站只回掩码
+	models := make([]ModelEntry, len(eff.Models))
+	copy(models, eff.Models)
+	for i := range models {
+		models[i].APIKey = maskKey(models[i].APIKey)
+	}
+
 	info := AIConfigInfo{
 		BaseURL:      eff.BaseURL,
 		APIKeySet:    eff.APIKey != "",
@@ -152,7 +159,7 @@ func (s *Service) ConfigInfo() AIConfigInfo {
 		DailyQuota:   eff.DailyQuota,
 		StyleHint:    eff.StyleHint,
 		Timeout:      eff.Timeout,
-		Models:       eff.Models,
+		Models:       models,
 		FromDB: map[string]bool{
 			"baseURL":    row.BaseURL != "",
 			"model":      row.Model != "",

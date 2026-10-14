@@ -31,12 +31,13 @@ func RateLimit(config RateLimitConfig) gin.HandlerFunc {
 
 		rateLimitKey := fmt.Sprintf("rate_limit:%s", key)
 
-		// 获取当前请求计数
+		// 获取当前请求计数；Redis 未启用同样视为不可用，走内存限流降级
+		// （此前未启用时 Incr 恒返回 0,nil，计数永不增长，限流整体失效）
 		currentCount, err := cache.Incr(rateLimitKey)
-		if err != nil {
-			// Redis 不可用时，使用内存限流器降级
-			memLimiter := GetMemoryLimiter()
-			if !memLimiter.Allow(key) {
+		if err != nil || !cache.Enable {
+			// 降级必须沿用本端点的阈值（如登录 5 次/5 分钟），
+			// 否则防爆破在该路径上等于没开
+			if !globalWindowLimiter.Allow(rateLimitKey, config.MaxRequests, config.Window) {
 				result.With(c, http.StatusTooManyRequests, "请求过于频繁，请稍后再试", nil)
 				c.Abort()
 				return

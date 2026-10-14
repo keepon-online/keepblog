@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"regexp"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -150,6 +151,17 @@ func generateRequestID() string {
 	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), time.Now().Nanosecond())
 }
 
+// 请求体日志脱敏：日志会落库/落盘，密码与密钥不得明文记录。
+var (
+	jsonSecretRe = regexp.MustCompile(`(?i)("(?:password|old_password|new_password|api_?key|access_?token|refresh_?token|token|secret)"\s*:\s*")[^"]*(")`)
+	formSecretRe = regexp.MustCompile(`(?i)\b((?:password|old_password|new_password|api_?key|access_?token|refresh_?token|token|secret)=)[^&\s]*`)
+)
+
+func redactRequestBody(body string) string {
+	body = jsonSecretRe.ReplaceAllString(body, "${1}***${2}")
+	return formSecretRe.ReplaceAllString(body, "${1}***")
+}
+
 // 判断是否需要记录请求体
 func shouldLogRequestBody(method, contentType string) bool {
 	if method != "POST" && method != "PUT" && method != "PATCH" {
@@ -175,10 +187,13 @@ func readRequestBody(c *gin.Context) string {
 	// 重新设置请求体，供后续处理使用
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 
+	// 先脱敏敏感字段，再截断，避免密钥以明文形式落盘
+	bodyStr := redactRequestBody(string(body))
+
 	// 限制日志长度，避免日志过大
-	if len(body) > 1024 {
-		return string(body[:1024]) + "...[truncated]"
+	if len(bodyStr) > 1024 {
+		return bodyStr[:1024] + "...[truncated]"
 	}
 
-	return string(body)
+	return bodyStr
 }

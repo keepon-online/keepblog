@@ -22,8 +22,13 @@ func CacheMiddleware(duration time.Duration) gin.HandlerFunc {
 			return
 		}
 
-		// 生成缓存键
+		// 生成缓存键；被排除的路径返回空键，此时不读缓存也不写缓存
+		// （此前空键被照常读写，不同 URL 会共享 "" 键互相串响应）
 		cacheKey := generateCacheKey(c)
+		if cacheKey == "" {
+			c.Next()
+			return
+		}
 
 		// 尝试从缓存获取
 		var cachedResponse CachedResponse

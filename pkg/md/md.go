@@ -2,6 +2,7 @@ package md
 
 import (
 	"bytes"
+	stdhtml "html"
 	"strings"
 	"sync"
 
@@ -42,10 +43,16 @@ func (linkAndImageEnhancer) Transform(node *gast.Document, reader text.Reader, _
 		if entering {
 			switch x := n.(type) {
 			case *gast.Image:
+				// 危险地址（含实体编码绕过）置空，渲染为 src=""
+				if isDangerousDestination(x.Destination) {
+					x.Destination = nil
+				}
 				x.SetAttributeString("loading", []byte("lazy"))
 				x.SetAttributeString("decoding", []byte("async"))
 			case *gast.Link:
-				if isExternalURL(string(x.Destination)) {
+				if isDangerousDestination(x.Destination) {
+					x.Destination = nil
+				} else if isExternalURL(string(x.Destination)) {
 					x.SetAttributeString("target", []byte("_blank"))
 					x.SetAttributeString("rel", []byte("noopener noreferrer"))
 				}
@@ -65,6 +72,24 @@ func isExternalURL(raw string) bool {
 	return strings.HasPrefix(raw, "http://") ||
 		strings.HasPrefix(raw, "https://") ||
 		strings.HasPrefix(raw, "//")
+}
+
+// isDangerousDestination 判断链接/图片来源是否为危险地址（javascript:/vbscript:/file:/data:）。
+// goldmark 自带的检查只看原始字符串前缀，而 `javascript&colon;alert(1)` 这类
+// HTML 实体编码会在写出 URL 属性时被解码还原成可执行 scheme，从而绕过检查；
+// 这里按浏览器解析口径先解码实体、去掉空白与控制字符，再做前缀判断。
+func isDangerousDestination(dest []byte) bool {
+	if len(dest) == 0 {
+		return false
+	}
+	decoded := stdhtml.UnescapeString(string(dest))
+	decoded = strings.Map(func(r rune) rune {
+		if r <= 0x20 || r == 0x7f {
+			return -1
+		}
+		return r
+	}, decoded)
+	return html.IsDangerousURL([]byte(decoded))
 }
 
 // initEngines 懒初始化 goldmark 实例。
