@@ -6,9 +6,10 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { useRouter } from "vue-router";
+import { defineComponent, computed } from "vue";
 import { ElConfigProvider } from "element-plus";
-import { ReDialog } from "@/components/ReDialog";
+import { ReDialog, closeAllDialog } from "@/components/ReDialog";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 
 export default defineComponent({
@@ -17,10 +18,18 @@ export default defineComponent({
     [ElConfigProvider.name]: ElConfigProvider,
     ReDialog
   },
-  computed: {
-    currentLocale() {
+  setup() {
+    const router = useRouter();
+    const currentLocale = computed(() => {
       return zhCn;
-    }
+    });
+    // 切换路由时关闭残留弹层（https://github.com/pure-admin/vue-pure-admin/commit/815f161b）
+    router.beforeEach(() => {
+      closeAllDialog();
+    });
+    return {
+      currentLocale
+    };
   }
 });
 </script>
