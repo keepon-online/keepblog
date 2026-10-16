@@ -37,8 +37,8 @@ dataThemeChange(overallStyle.value);
 const { title } = useNav();
 
 const ruleForm = reactive({
-  username: "admin",
-  password: "Aa123456"
+  username: "",
+  password: ""
 });
 
 const onLogin = async (formEl: FormInstance | undefined) => {
@@ -51,21 +51,22 @@ const onLogin = async (formEl: FormInstance | undefined) => {
           username: ruleForm.username,
           password: ruleForm.password
         })
-        .then(res => {
-          if (res.code === 200) {
-            // 获取后端路由
-            return initRouter().then(() => {
-              disabled.value = true;
-              router
-                .push(getTopMenu(true).path)
-                .then(() => {
-                  message("登录成功", { type: "success" });
-                })
-                .finally(() => (disabled.value = false));
-            });
-          } else {
-            message("登录失败", { type: "error" });
-          }
+        .then(() => {
+          // 获取后端路由
+          return initRouter().then(() => {
+            disabled.value = true;
+            router
+              .push(getTopMenu(true).path)
+              .then(() => {
+                message("登录成功", { type: "success" });
+              })
+              .finally(() => (disabled.value = false));
+          });
+        })
+        .catch(error => {
+          // HTTP 错误（密码错误 400、限流 429 等）此前无 catch，
+          // 失败时界面静默无提示
+          message(error?.message || "登录失败", { type: "error" });
         })
         .finally(() => (loading.value = false));
     }

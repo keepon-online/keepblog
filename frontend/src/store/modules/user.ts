@@ -15,7 +15,6 @@ import {
 } from "@/api/user";
 import { useMultiTagsStoreHook } from "./multiTags";
 import { type DataInfo, setToken, removeToken, userKey } from "@/utils/auth";
-import { message } from "@/utils/message";
 
 export const useUserStore = defineStore("pure-user", {
   state: (): userType => ({
@@ -73,7 +72,9 @@ export const useUserStore = defineStore("pure-user", {
               setToken(data.payload);
               resolve(data);
             } else {
-              message(data.message, { type: "error" });
+              // 非 200 业务码（如限流 429）必须结清 promise：此前只提示不结清，
+              // 调用方的 finally 永不执行，登录按钮会永久停在 loading
+              reject(new Error(data.message || "登录失败"));
             }
           })
           .catch(error => {
