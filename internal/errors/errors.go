@@ -50,13 +50,13 @@ const (
 
 // AppError 应用错误结构
 type AppError struct {
-	Code      ErrorCode              `json:"code"`
-	Message   string                 `json:"message"`
-	Details   string                 `json:"details,omitempty"`
-	Timestamp time.Time              `json:"timestamp"`
-	RequestID string                 `json:"request_id,omitempty"`
-	Stack     string                 `json:"stack,omitempty"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	Code      ErrorCode      `json:"code"`
+	Message   string         `json:"message"`
+	Details   string         `json:"details,omitempty"`
+	Timestamp time.Time      `json:"timestamp"`
+	RequestID string         `json:"request_id,omitempty"`
+	Stack     string         `json:"stack,omitempty"`
+	Metadata  map[string]any `json:"metadata,omitempty"`
 
 	// 内部字段
 	httpStatus int
@@ -110,9 +110,9 @@ func (e *AppError) WithRequestID(requestID string) *AppError {
 }
 
 // WithMetadata 添加元数据
-func (e *AppError) WithMetadata(key string, value interface{}) *AppError {
+func (e *AppError) WithMetadata(key string, value any) *AppError {
 	if e.Metadata == nil {
-		e.Metadata = make(map[string]interface{})
+		e.Metadata = make(map[string]any)
 	}
 	e.Metadata[key] = value
 	return e

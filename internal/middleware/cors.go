@@ -29,7 +29,7 @@ func initAllowedOrigins() map[string]bool {
 	// 从环境变量追加
 	envOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
 	if envOrigins != "" {
-		for _, origin := range strings.Split(envOrigins, ",") {
+		for origin := range strings.SplitSeq(envOrigins, ",") {
 			origin = strings.TrimSpace(origin)
 			if origin != "" {
 				origins[origin] = true

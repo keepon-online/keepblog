@@ -50,7 +50,7 @@ func InitRedis() error {
 }
 
 // Set 设置缓存
-func Set(key string, value interface{}, expiration time.Duration) error {
+func Set(key string, value any, expiration time.Duration) error {
 	if !Enable {
 		return nil
 	}
@@ -64,7 +64,7 @@ func Set(key string, value interface{}, expiration time.Duration) error {
 }
 
 // Get 获取缓存
-func Get(key string, dest interface{}) error {
+func Get(key string, dest any) error {
 	if !Enable {
 		return redis.Nil
 	}

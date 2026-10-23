@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"maps"
 	"runtime"
 	"sync"
 	"time"
@@ -114,9 +115,7 @@ func (m *Metrics) GetMetrics() MetricsResponse {
 
 	// 创建副本返回
 	statusCodes := make(map[string]int64)
-	for k, v := range m.StatusCodes {
-		statusCodes[k] = v
-	}
+	maps.Copy(statusCodes, m.StatusCodes)
 
 	return MetricsResponse{
 		RequestsTotal:     m.RequestsTotal,

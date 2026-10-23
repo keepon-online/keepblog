@@ -142,10 +142,3 @@ func TestResolveModel(t *testing.T) {
 	// 清理测试注入
 	_ = config.StoreForTest(map[string]any{"ai.models": []map[string]any{}})
 }
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

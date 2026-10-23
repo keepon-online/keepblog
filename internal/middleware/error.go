@@ -12,14 +12,14 @@ import (
 
 // ErrorResponse 统一错误响应格式
 type ErrorResponse struct {
-	Success   bool                   `json:"success"`
-	Code      int                    `json:"code"`
-	Message   string                 `json:"message"`
-	Details   string                 `json:"details,omitempty"`
-	RequestID string                 `json:"request_id,omitempty"`
-	Timestamp string                 `json:"timestamp"`
-	Path      string                 `json:"path"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	Success   bool           `json:"success"`
+	Code      int            `json:"code"`
+	Message   string         `json:"message"`
+	Details   string         `json:"details,omitempty"`
+	RequestID string         `json:"request_id,omitempty"`
+	Timestamp string         `json:"timestamp"`
+	Path      string         `json:"path"`
+	Metadata  map[string]any `json:"metadata,omitempty"`
 }
 
 // ErrorHandler 统一错误处理中间件
@@ -83,7 +83,7 @@ func ErrorHandler() gin.HandlerFunc {
 			}
 
 			// 记录原始错误
-			slog.WithFields(map[string]interface{}{
+			slog.WithFields(map[string]any{
 				"request_id":     requestID,
 				"path":           c.Request.URL.Path,
 				"method":         c.Request.Method,
@@ -105,7 +105,7 @@ func ErrorHandler() gin.HandlerFunc {
 
 // logError 记录错误日志
 func logError(err *errors.AppError, c *gin.Context) {
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"error_code": err.Code,
 		"error_msg":  err.Message,
 		"request_id": err.RequestID,

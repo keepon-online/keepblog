@@ -72,6 +72,6 @@ func InitDB() *gorm.DB {
 type Writer struct {
 }
 
-func (w Writer) Printf(format string, args ...interface{}) {
+func (w Writer) Printf(format string, args ...any) {
 	slog.Infof(format, args...)
 }

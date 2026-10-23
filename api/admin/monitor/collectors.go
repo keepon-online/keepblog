@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -288,12 +289,7 @@ func (h *Handler) isVirtualFilesystem(fstype string) bool {
 		"iso9660", "udf", "nsfs", "bpf", "configfs", "fusectl",
 	}
 
-	for _, vfs := range virtualFilesystems {
-		if fstype == vfs {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(virtualFilesystems, fstype)
 }
 
 // isTempPartition 判断是否为临时分区或无关紧要的分区

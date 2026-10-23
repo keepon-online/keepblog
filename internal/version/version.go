@@ -26,10 +26,3 @@ func Info() map[string]string {
 func String() string {
 	return Version + " (" + GitCommit[:min(7, len(GitCommit))] + ")"
 }
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

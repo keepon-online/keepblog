@@ -73,10 +73,7 @@ func Paginate[T any](page *Page[T]) func(db *gorm.DB) *gorm.DB {
 		if page.Total%page.PageSize != 0 {
 			page.Pages++
 		}
-		p := page.CurrentPage
-		if page.CurrentPage > page.Pages {
-			p = page.Pages
-		}
+		p := min(page.CurrentPage, page.Pages)
 		size := page.PageSize
 		offset := int((p - 1) * size)
 		return db.Offset(offset).Limit(int(size))
@@ -132,16 +129,16 @@ func HandleIndexWithPageSize(totalRecords, page, pageSize int, temp string) (str
 	}
 
 	// 构造分页 HTML
-	var paginationHTML string
+	var paginationHTML strings.Builder
 	if totalPages > 1 {
-		paginationHTML += `<div><ul class="pagination">`
+		paginationHTML.WriteString(`<div><ul class="pagination">`)
 
 		// 上一页。禁用态不输出 href（含 href="#" 会被当作指向自身的
 		// 可抓取链接，爬虫与 PJAX 都会无谓地请求一次）。
 		if page > 1 {
-			paginationHTML += fmt.Sprintf(`<li><a class="extend prev" href="%s" data-pjax-content="true"><i class="fas fa-chevron-left fa-fw"></i></a></li>`, pageURL(temp, page-1))
+			paginationHTML.WriteString(fmt.Sprintf(`<li><a class="extend prev" href="%s" data-pjax-content="true"><i class="fas fa-chevron-left fa-fw"></i></a></li>`, pageURL(temp, page-1)))
 		} else {
-			paginationHTML += `<li class="disabled" style="pointer-events: none;cursor: not-allowed;" ><a style="cursor: not-allowed;pointer-events:none"><i class="fas fa-chevron-left fa-fw"></i></a></li>`
+			paginationHTML.WriteString(`<li class="disabled" style="pointer-events: none;cursor: not-allowed;" ><a style="cursor: not-allowed;pointer-events:none"><i class="fas fa-chevron-left fa-fw"></i></a></li>`)
 		}
 
 		// 页码
@@ -159,38 +156,38 @@ func HandleIndexWithPageSize(totalRecords, page, pageSize int, temp string) (str
 		}
 
 		if start > 1 {
-			paginationHTML += fmt.Sprintf(`<li><a href="%s" data-pjax-content="true">1</a></li>`, pageBase(temp))
+			paginationHTML.WriteString(fmt.Sprintf(`<li><a href="%s" data-pjax-content="true">1</a></li>`, pageBase(temp)))
 			if start > 2 {
-				paginationHTML += `<li class="space disabled"><a style="pointer-events: none;cursor: not-allowed;">...</a></li>`
+				paginationHTML.WriteString(`<li class="space disabled"><a style="pointer-events: none;cursor: not-allowed;">...</a></li>`)
 			}
 		}
 
 		for _, p := range pages[start-1 : end] {
 			if p == page {
 				// 当前页不输出 href：页面不应链接到自身。
-				paginationHTML += fmt.Sprintf(`<li class="page-number current"><a aria-current="page">%d</a></li>`, p)
+				paginationHTML.WriteString(fmt.Sprintf(`<li class="page-number current"><a aria-current="page">%d</a></li>`, p))
 			} else {
-				paginationHTML += fmt.Sprintf(`<li><a href="%s" data-pjax-content="true">%d</a></li>`, pageURL(temp, p), p)
+				paginationHTML.WriteString(fmt.Sprintf(`<li><a href="%s" data-pjax-content="true">%d</a></li>`, pageURL(temp, p), p))
 			}
 		}
 
 		if end < totalPages {
 			if end < totalPages-1 {
-				paginationHTML += `<li class="space disabled"><a style="pointer-events: none;cursor: not-allowed;">...</a></li>`
+				paginationHTML.WriteString(`<li class="space disabled"><a style="pointer-events: none;cursor: not-allowed;">...</a></li>`)
 			}
-			paginationHTML += fmt.Sprintf(`<li><a href="%s" data-pjax-content="true">%d</a></li>`, pageURL(temp, totalPages), totalPages)
+			paginationHTML.WriteString(fmt.Sprintf(`<li><a href="%s" data-pjax-content="true">%d</a></li>`, pageURL(temp, totalPages), totalPages))
 		}
 
 		// 下一页
 		if page < totalPages {
-			paginationHTML += fmt.Sprintf(`<li><a class="extend next" href="%s" data-pjax-content="true"><i class="fas fa-chevron-right fa-fw"></i></a></li>`, pageURL(temp, page+1))
+			paginationHTML.WriteString(fmt.Sprintf(`<li><a class="extend next" href="%s" data-pjax-content="true"><i class="fas fa-chevron-right fa-fw"></i></a></li>`, pageURL(temp, page+1)))
 		} else {
-			paginationHTML += `<li class="disabled" style="pointer-events: none;cursor: not-allowed;"><a style="cursor: not-allowed;pointer-events:none"><i class="fas fa-chevron-right fa-fw"></i></a></li>`
+			paginationHTML.WriteString(`<li class="disabled" style="pointer-events: none;cursor: not-allowed;"><a style="cursor: not-allowed;pointer-events:none"><i class="fas fa-chevron-right fa-fw"></i></a></li>`)
 		}
 
-		paginationHTML += `</ul></div>`
+		paginationHTML.WriteString(`</ul></div>`)
 	}
 
-	return paginationHTML, nil
+	return paginationHTML.String(), nil
 
 }

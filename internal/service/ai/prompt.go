@@ -2,6 +2,7 @@ package ai
 
 import (
 	"errors"
+	"slices"
 	"strings"
 
 	"gitee.com/jieepre/keepblog/pkg/ai"
@@ -155,12 +156,7 @@ func builtinKeys() []string {
 
 // IsTemplateKey 校验键是否在可自定义集合内。
 func IsTemplateKey(key string) bool {
-	for _, k := range builtinKeys() {
-		if k == key {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(builtinKeys(), key)
 }
 
 func builtinInstruction(key string) string {

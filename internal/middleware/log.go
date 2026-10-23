@@ -111,7 +111,7 @@ func GinRecovery(stack bool) gin.HandlerFunc {
 				httpRequest, _ := httputil.DumpRequest(c.Request, false)
 
 				// 结构化故障日志
-				panicLog := map[string]interface{}{
+				panicLog := map[string]any{
 					"timestamp":  time.Now().Format(time.DateTime),
 					"error":      fmt.Sprintf("%v", err),
 					"path":       c.Request.URL.Path,

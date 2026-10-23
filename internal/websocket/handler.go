@@ -28,7 +28,7 @@ var upgrader = websocket.Upgrader{
 		}
 		origin := r.Header.Get("Origin")
 		// 支持多个来源，用逗号分隔
-		for _, allowed := range strings.Split(allowedOrigin, ",") {
+		for allowed := range strings.SplitSeq(allowedOrigin, ",") {
 			if strings.TrimSpace(allowed) == origin {
 				return true
 			}
@@ -145,7 +145,7 @@ func (c *Client) writePump() {
 
 			// 合并队列中的消息
 			n := len(c.Send)
-			for i := 0; i < n; i++ {
+			for range n {
 				_, _ = w.Write([]byte{'\n'})
 				_, _ = w.Write(<-c.Send)
 			}

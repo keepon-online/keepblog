@@ -36,9 +36,9 @@ type Hub struct {
 
 // Message WebSocket 消息结构
 type Message struct {
-	Type    string      `json:"type"`    // 消息类型: notice, message, todo, ping, pong
-	Payload interface{} `json:"payload"` // 消息内容
-	Time    int64       `json:"time"`    // 时间戳
+	Type    string `json:"type"`    // 消息类型: notice, message, todo, ping, pong
+	Payload any    `json:"payload"` // 消息内容
+	Time    int64  `json:"time"`    // 时间戳
 }
 
 var (

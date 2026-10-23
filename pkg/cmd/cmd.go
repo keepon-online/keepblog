@@ -97,7 +97,7 @@ func ExecCronjobWithTimeOut(cmdStr, workdir, outPath string, timeout time.Durati
 	return nil
 }
 
-func Execf(cmdStr string, a ...interface{}) (string, error) {
+func Execf(cmdStr string, a ...any) (string, error) {
 	cmd := exec.Command("bash", "-c", fmt.Sprintf(cmdStr, a...))
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

@@ -388,10 +388,7 @@ func (service Service) GetArchivePostsPaged(pageNum, pageSize int) (*model.Archi
 	if start >= totalGroups {
 		return &model.ArchivesPosts{Archives: make(map[string][]model.ArchivePosts)}, totalGroups, int(totalPosts), nil
 	}
-	end := start + pageSize
-	if end > totalGroups {
-		end = totalGroups
-	}
+	end := min(start+pageSize, totalGroups)
 	pagedYearMonths := yearMonths[start:end]
 	rows, err := service.fetchArchiveRows(pagedYearMonths)
 	if err != nil {
@@ -615,16 +612,10 @@ func extractHighlight(content, keyword string, maxLen int) string {
 	}
 
 	// 计算片段起始位置
-	start := idx - maxLen/2
-	if start < 0 {
-		start = 0
-	}
+	start := max(idx-maxLen/2, 0)
 
 	// 计算片段结束位置
-	end := idx + len(keyword) + maxLen/2
-	if end > len(content) {
-		end = len(content)
-	}
+	end := min(idx+len(keyword)+maxLen/2, len(content))
 
 	// 提取片段
 	snippet := content[start:end]

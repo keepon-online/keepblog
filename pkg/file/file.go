@@ -6,7 +6,7 @@ import (
 )
 
 // ContainArray Contain 判断obj是否在target中，target支持的类型array,slice,map   false:不在 true
-func ContainArray(obj interface{}, target interface{}) bool {
+func ContainArray(obj any, target any) bool {
 	targetValue := reflect.ValueOf(target)
 	switch reflect.TypeOf(target).Kind() {
 	case reflect.Slice, reflect.Array:

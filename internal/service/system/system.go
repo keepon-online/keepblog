@@ -202,7 +202,7 @@ func (service *Service) UpdateProfile(username string, req request.UpdateProfile
 	}
 
 	// 构建更新字段
-	updates := make(map[string]interface{})
+	updates := make(map[string]any)
 	if req.NickName != "" {
 		updates["nick_name"] = req.NickName
 	}

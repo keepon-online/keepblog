@@ -4,6 +4,6 @@ package xpack
 
 func RemoveTamper(website string) {}
 
-func LoadGpuInfo() []interface{} {
+func LoadGpuInfo() []any {
 	return nil
 }

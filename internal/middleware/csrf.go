@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"net/http"
+	"slices"
 	"sync"
 	"time"
 
@@ -51,12 +52,7 @@ func generateCSRFToken(length int) (string, error) {
 
 // isMethodIgnored 检查方法是否应该忽略 CSRF 验证
 func isMethodIgnored(method string, ignoreMethods []string) bool {
-	for _, m := range ignoreMethods {
-		if m == method {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ignoreMethods, method)
 }
 
 // cleanupExpiredTokens 定期清理过期 token

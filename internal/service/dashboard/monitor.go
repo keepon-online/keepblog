@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"encoding/json"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -223,13 +224,7 @@ func loadDiskInfo() []response.DiskInfo {
 		mount := fields[6]
 
 		// 检查排除列表
-		isExclude := false
-		for _, exclude := range excludes {
-			if exclude == mount {
-				isExclude = true
-				break
-			}
-		}
+		isExclude := slices.Contains(excludes, mount)
 		if isExclude {
 			continue
 		}
