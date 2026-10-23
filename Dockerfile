@@ -24,7 +24,7 @@ RUN pnpm build
 # ================================
 # 阶段1: 构建 Go
 # ================================
-FROM golang:1.24.11-alpine AS builder
+FROM golang:1.27.3-alpine AS builder
 
 # 构建参数
 ARG VERSION

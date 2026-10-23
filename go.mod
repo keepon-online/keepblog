@@ -1,6 +1,6 @@
 module gitee.com/jieepre/keepblog
 
-go 1.24.11
+go 1.27.3
 
 require (
 	github.com/6tail/lunar-go v1.3.9
