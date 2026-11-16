@@ -22,4 +22,3 @@ func (h *Handler) DashboardData(c *gin.Context) {
 	group := h.Service.Dashboard.DashboardData(days)
 	result.Ok(c, group)
 }
-

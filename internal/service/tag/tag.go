@@ -75,7 +75,7 @@ func (service Service) Delete(tagId uint32) error {
 // GetTagList 获取全部标签列表（后台管理用，附带文章篇数统计）。
 func (service Service) GetTagList() ([]model.Tag, error) {
 	tagList := make([]model.Tag, 0)
-	err := service.db.Table(model.TTagTable+" as t").
+	err := service.db.Table(model.TTagTable + " as t").
 		Select("t.*, COUNT(pt.post_id) as post_count").
 		Joins("LEFT JOIN post_tag pt ON t.tag_id = pt.tag_id").
 		Group("t.tag_id").

@@ -68,7 +68,7 @@ func sendWebhook(webhookURL string, p Payload) {
 		slog.Errorf("[notify] webhook 推送失败: %s", err.Error())
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
 		slog.Errorf("[notify] webhook 返回异常状态码 %d", resp.StatusCode)
 	}
@@ -90,7 +90,7 @@ func sendTelegram(token, chatId string, p Payload) {
 		slog.Errorf("[notify] telegram 推送失败: %s", err.Error())
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
 		slog.Errorf("[notify] telegram 返回异常状态码 %d", resp.StatusCode)
 	}

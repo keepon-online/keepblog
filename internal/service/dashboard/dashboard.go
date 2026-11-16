@@ -159,7 +159,7 @@ func (s Service) TopPosts(limit int) []model.TopPostItem {
 		CreateTime   uint64 `json:"createTime"`
 	}
 
-	s.db.Table(model.TPostsTable+" as p").
+	s.db.Table(model.TPostsTable + " as p").
 		Select("p.post_id, p.title, p.read_count, p.create_time, COALESCE(c.category_name, '未分类') as category_name").
 		Joins("LEFT JOIN category c ON p.category_id = c.category_id").
 		Where("p.is_published = 1 AND p.is_deleted = 0").
@@ -179,7 +179,6 @@ func (s Service) TopPosts(limit int) []model.TopPostItem {
 	}
 	return res
 }
-
 
 // MapData 获取访客地理分布数据（按省份聚合）
 // ip2region格式: 中国|0|江苏省|南京市|电信 或 美国|0|0|0|...

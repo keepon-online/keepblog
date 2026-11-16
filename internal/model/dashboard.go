@@ -42,4 +42,3 @@ type DashboardData struct {
 	TopPosts []TopPostItem    `json:"topPosts"`
 	Days     int              `json:"days"`
 }
-

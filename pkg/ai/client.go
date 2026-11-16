@@ -112,7 +112,7 @@ func (c *Client) StreamChat(ctx context.Context, req StreamRequest) (Usage, erro
 	if err != nil {
 		return zero, fmt.Errorf("request upstream: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 512))

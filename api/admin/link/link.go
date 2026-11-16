@@ -146,7 +146,6 @@ func (h *Handler) CheckLink(c *gin.Context) {
 		result.Ok(c, gin.H{"status": 0, "msg": "访问超时或无法连接"})
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	result.Ok(c, gin.H{"status": resp.StatusCode, "msg": resp.Status})
 }
-

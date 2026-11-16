@@ -65,7 +65,7 @@ func (service Service) GetCategory(categoryId uint32) (*model.Category, error) {
 func (service Service) GetCategoryList() ([]model.Category, error) {
 	categories := make([]model.Category, 0)
 
-	err := service.db.Table(model.TCategoryTable+" as c").
+	err := service.db.Table(model.TCategoryTable + " as c").
 		Select("c.*, COUNT(p.post_id) as post_count").
 		Joins("LEFT JOIN post p ON c.category_id = p.category_id AND p.is_deleted = 0 AND p.is_published = 1").
 		Group("c.category_id").

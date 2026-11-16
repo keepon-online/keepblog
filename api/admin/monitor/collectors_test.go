@@ -4,16 +4,16 @@ import "testing"
 
 func TestMountPriority(t *testing.T) {
 	cases := map[string]int{
-		"/":            0,
-		"/app":         1,
-		"/data":        1,
-		"/home":        1,
-		"/var/www":     3,
-		"/app/config":  5,
-		"/app/logs":    5,
-		"/boot":        10,
-		"/srv/data":    10,
-		"/etc/hosts":   10,
+		"/":           0,
+		"/app":        1,
+		"/data":       1,
+		"/home":       1,
+		"/var/www":    3,
+		"/app/config": 5,
+		"/app/logs":   5,
+		"/boot":       10,
+		"/srv/data":   10,
+		"/etc/hosts":  10,
 	}
 	for mountpoint, want := range cases {
 		if got := mountPriority(mountpoint); got != want {
