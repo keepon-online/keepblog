@@ -127,6 +127,10 @@ type User struct {
 
 	/** 用户头像 */
 	Avatar string `json:"avatar" gorm:"default:''"`
+
+	/** 注册时间 */
+
+	CreatedAt int `json:"createTime" gorm:"column:create_at;autoCreateTime"`
 }
 
 /**********页面显示*********/

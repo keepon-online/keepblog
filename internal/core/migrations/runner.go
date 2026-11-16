@@ -55,6 +55,9 @@ func Run(db *gorm.DB) error {
 	if err := ensurePostSeriesColumn(db); err != nil {
 		return fmt.Errorf("ensure post series column: %w", err)
 	}
+	if err := ensureUserCreateAtColumn(db); err != nil {
+		return fmt.Errorf("ensure user create_at column: %w", err)
+	}
 	return nil
 }
 
@@ -73,6 +76,25 @@ func ensurePostSeriesColumn(db *gorm.DB) error {
 		return nil
 	}
 	return db.Exec("ALTER TABLE post ADD COLUMN series TEXT DEFAULT ''").Error
+}
+
+// ensureUserCreateAtColumn 给 user 补注册时间列（2026-11 加入），同
+// ensurePostSeriesColumn 的幂等补列模式。存量用户的真实注册时间不可考，
+// 补列时回填为补列时刻；新用户由模型 autoCreateTime 自动写入。
+func ensureUserCreateAtColumn(db *gorm.DB) error {
+	var exists int64
+	if err := db.Raw(
+		"SELECT COUNT(1) FROM pragma_table_info('user') WHERE name = 'create_at'",
+	).Scan(&exists).Error; err != nil {
+		return err
+	}
+	if exists > 0 {
+		return nil
+	}
+	if err := db.Exec("ALTER TABLE user ADD COLUMN create_at INTEGER NOT NULL DEFAULT 0").Error; err != nil {
+		return err
+	}
+	return db.Exec("UPDATE user SET create_at = CAST(strftime('%s','now') AS INTEGER) WHERE create_at = 0").Error
 }
 
 // bootstrapLegacySchema 仅处理尚未接入 goose 的旧部署：AutoMigrate 会补齐

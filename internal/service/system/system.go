@@ -175,6 +175,11 @@ func (service *Service) GetUserInfo(username string) (*response.UserInfoResponse
 		loginTime = time.Unix(int64(loginLog.CreatedAt), 0).Format("2006-01-02 15:04:05")
 	}
 
+	registerTime := ""
+	if user.CreatedAt > 0 {
+		registerTime = time.Unix(int64(user.CreatedAt), 0).Format("2006-01-02 15:04:05")
+	}
+
 	return &response.UserInfoResponse{
 		UserId:       user.UserId,
 		Username:     user.Username,
@@ -187,7 +192,7 @@ func (service *Service) GetUserInfo(username string) (*response.UserInfoResponse
 		LoginIP:      loginIP,
 		LoginTime:    loginTime,
 		LoginCount:   int(loginCount),
-		RegisterTime: "2021-01-01 00:00:00", // TODO: 添加用户注册时间字段
+		RegisterTime: registerTime,
 	}, nil
 }
 

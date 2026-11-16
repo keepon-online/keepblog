@@ -161,3 +161,20 @@ func TestChangePassword_InvalidatesOldTokens(t *testing.T) {
 		t.Error("旧密码错误时 ChangePassword 应报错")
 	}
 }
+
+// 注册时间取自 user.create_at（autoCreateTime 写入），不再硬编码占位串
+func TestGetUserInfo_RegisterTimeFromDB(t *testing.T) {
+	testutil.NewTestDB(t)
+	s := NewSystemService(testutil.NewTestDB(t))
+
+	info, err := s.GetUserInfo("admin")
+	if err != nil {
+		t.Fatalf("GetUserInfo 报错: %v", err)
+	}
+	if info.RegisterTime == "" {
+		t.Fatal("RegisterTime 不应为空（fixture 用户应带 create_at）")
+	}
+	if info.RegisterTime == "2021-01-01 00:00:00" {
+		t.Fatalf("RegisterTime 不应再是硬编码占位: %q", info.RegisterTime)
+	}
+}

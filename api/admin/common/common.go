@@ -73,6 +73,11 @@ func (h *Handler) UploadImage(c *gin.Context) {
 	filename := newUUID.String() + ext
 
 	minio := config.Get().Minio
+	// 配置未加载/未配置 Minio 时给明确错误，而不是空指针 panic
+	if minio == nil || minio.BucketName == "" {
+		result.Error(c, "对象存储未配置，无法上传")
+		return
+	}
 	bucketName := minio.BucketName
 	if err := oss.FileUploader(bucketName, filename, contentType, file.Size, open); err != nil {
 		result.Error(c, err.Error())
