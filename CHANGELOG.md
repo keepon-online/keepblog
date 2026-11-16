@@ -8,6 +8,20 @@
 > 2026-09 起发版 tag 改用语义化版本号（形如 `v2.1.2`）。此前递增数字 tag 的对应关系：
 > v6=2.0.0、v7=2.0.1、v8=2.0.2、v9=2.1.0、v10=2.1.1。
 
+## [未发布]
+
+### 安全
+- **修复 11 个可达依赖漏洞**：govulncheck 扫出 11 个影响调用路径的漏洞（stdlib net/http、x/net ×4、gorilla/websocket、x/text、quic-go ×2、goldmark、go-redis）与 2 个不可达漏洞（klauspost/compress）。工具链升至 go 1.27.4，x/net→v0.62.0、x/crypto→v0.59.0、x/text→v0.44.0、websocket→v1.5.3、goldmark→v1.8.7、go-redis→v9.23.0、quic-go→v0.65.0、klauspost/compress→v1.20.4，复扫归零。
+
+### 变更
+- **依赖整体升级**：gin 1.12.0、golang-jwt v5.3.1、viper 1.21.0、goose 3.30.1、minio-go 7.4.1、fsnotify 1.10.1、gopsutil 3.24.5、lunar-go 1.4.7、gocron 1.37.0、gorm 1.31.2 等；全量测试（-race）、lint、govulncheck 验证通过。
+- **3.6.1 安全修复补齐回归测试**：令牌类型区分/轮换注销/用户级撤销（jwttoken 覆盖率 24%→56%）、JWT 中间件全链路（refresh 当 access 拒绝、白名单路径穿越）、上传三道校验（扩展名白名单/文件头识别/大小上限，含 HTML/SVG 载荷与伪装图片）、限流 Redis 不可用降级（固定窗口按端点阈值拦截）、SSRF 拨号层拦截（回环/私网/链路本地/组播/未指定与云元数据地址）。
+- **CI 加两道闸**：master 推送新增 golangci-lint（v2.15，与 Makefile lint 同源）与 govulncheck；清零 19 个存量 errcheck 问题，全仓 gofmt 对齐。
+
+### 修复
+- **用户注册时间不再硬编码**：`user` 表补 `create_at` 列（幂等补列 + 存量回填），个人中心注册时间改读真实值，替换 "2021-01-01 00:00:00" 占位。
+- **上传接口配置缺失时空指针 panic**：MinIO 未配置时返回明确错误而非 panic。
+
 ## [3.6.1] - 2026-10-14
 
 ### 安全
