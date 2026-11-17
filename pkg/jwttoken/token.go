@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"errors"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gookit/slog"
 )

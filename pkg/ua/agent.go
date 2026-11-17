@@ -3,6 +3,7 @@ package ua
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/mssola/user_agent"
 )
 

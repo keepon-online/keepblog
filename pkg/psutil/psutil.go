@@ -6,10 +6,11 @@ package psutil
 
 import (
 	"context"
-	"github.com/shirou/gopsutil/v3/common"
 	"log/slog"
 	"strings"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/common"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"

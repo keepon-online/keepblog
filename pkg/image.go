@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/gookit/slog"
 	"io"
 	"math/big"
 	"net/http"
@@ -13,6 +12,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/gookit/slog"
 )
 
 func CoverImage() string {

@@ -17,6 +17,7 @@
 - **依赖整体升级**：gin 1.12.0、golang-jwt v5.3.1、viper 1.21.0、goose 3.30.1、minio-go 7.4.1、fsnotify 1.10.1、gopsutil 3.24.5、lunar-go 1.4.7、gocron 1.37.0、gorm 1.31.2 等；全量测试（-race）、lint、govulncheck 验证通过。
 - **3.6.1 安全修复补齐回归测试**：令牌类型区分/轮换注销/用户级撤销（jwttoken 覆盖率 24%→56%）、JWT 中间件全链路（refresh 当 access 拒绝、白名单路径穿越）、上传三道校验（扩展名白名单/文件头识别/大小上限，含 HTML/SVG 载荷与伪装图片）、限流 Redis 不可用降级（固定窗口按端点阈值拦截）、SSRF 拨号层拦截（回环/私网/链路本地/组播/未指定与云元数据地址）。
 - **CI 加两道闸**：master 推送新增 golangci-lint（v2.15，与 Makefile lint 同源）与 govulncheck；清零 19 个存量 errcheck 问题，全仓 gofmt 对齐。
+- **修正 .golangci.yml 三处 v1 残留键**（`linters.formatters`/`issues.exclude-use-default`/`output.sort-results`）：此前 formatters 嵌错层级导致 gofmt/goimports 检查从未生效，`config verify` 在 CI 上必然失败；修正后按 goimports 规范整理 19 个文件的 import 分组。
 
 ### 修复
 - **用户注册时间不再硬编码**：`user` 表补 `create_at` 列（幂等补列 + 存量回填），个人中心注册时间改读真实值，替换 "2021-01-01 00:00:00" 占位。

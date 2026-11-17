@@ -25,12 +25,6 @@ linters:
     - unused        # 检测未使用的代码
     - misspell      # 拼写检查
 
-  # v2 把格式化工具归类为 formatter，单独配置
-  formatters:
-    enable:
-      - gofmt       # 格式化检查
-      - goimports   # import 顺序检查
-
   settings:
     staticcheck:
       # 只启用 SA（真实 bug 检测）+ QF（快速修复建议），禁用 ST（风格偏好）。
@@ -44,14 +38,16 @@ linters:
       exclude-functions:
         - (*os.File).Close
 
+# v2 把格式化工具归类为 formatter，与 linters 平级单独配置
+# （此前误嵌在 linters 下，schema 校验不过且从未生效）
+formatters:
+  enable:
+    - gofmt       # 格式化检查
+    - goimports   # import 顺序检查
+
 issues:
   # 每个检查器最多显示的问题数（0 = 不限）
   max-issues-per-linter: 0
   # 每类问题最多显示数（0 = 不限）
   max-same-issues: 0
-  # 不排除默认的误报（保持严格）
-  exclude-use-default: false
-
-output:
-  # 彩色输出 + 按文件分组
-  sort-results: true
+  # v2 默认不套用任何排除预设（等价 v1 的 exclude-use-default: false，保持严格）

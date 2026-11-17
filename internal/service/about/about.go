@@ -2,6 +2,7 @@ package about
 
 import (
 	"errors"
+
 	"github.com/gookit/slog"
 	"gorm.io/gorm"
 

@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"gitee.com/jieepre/keepblog/internal/model/system"
-	"github.com/gookit/slog"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"gitee.com/jieepre/keepblog/internal/model/system"
+	"github.com/gookit/slog"
 )
 
 // CanonicalURL 拼接站内绝对 URL：base 去掉尾部斜杠后接 path（path 以 / 开头）。
